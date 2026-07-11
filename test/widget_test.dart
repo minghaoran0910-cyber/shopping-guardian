@@ -57,4 +57,26 @@ void main() {
       ThemeMode.dark,
     );
   });
+
+  testWidgets('previews items parsed from shared shopping text', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.enterText(
+      find.byType(TextField).first,
+      '【京东】https://3.cn/2V-chiOQ?jkl=@EDoxt4DBLAN@ MU5104 「vivo X300 蔡司2亿超级主摄」',
+    );
+    await tester.tap(find.text('下一步'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('认出了 1 项'), findsOneWidget);
+    expect(find.text('vivo X300 蔡司2亿超级主摄'), findsOneWidget);
+    expect(find.text('京东 · 单品'), findsOneWidget);
+  });
 }

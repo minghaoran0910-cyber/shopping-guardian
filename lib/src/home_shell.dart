@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'copy.dart';
+import 'import/jd_cart_importer.dart';
+import 'import/cart_screenshot_importer.dart';
+import 'import/jd_product_importer.dart';
+import 'import/justoneapi_client.dart';
+import 'import/share_parser.dart';
+import 'import/taobao_product_importer.dart';
 
 enum GuardianDestination {
   analyze(
@@ -40,12 +47,16 @@ class HomeShell extends StatefulWidget {
     required this.locale,
     required this.onThemeChanged,
     required this.onLocaleChanged,
+    required this.justOneApiToken,
+    required this.onJustOneApiTokenChanged,
   });
 
   final ThemeMode themeMode;
   final Locale locale;
   final ValueChanged<ThemeMode> onThemeChanged;
   final ValueChanged<Locale> onLocaleChanged;
+  final String justOneApiToken;
+  final Future<void> Function(String) onJustOneApiTokenChanged;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -60,7 +71,9 @@ class _HomeShellState extends State<HomeShell> {
     final width = MediaQuery.sizeOf(context).width;
     final expanded = width >= 760;
     final body = switch (selected) {
-      GuardianDestination.analyze => const AnalyzePage(),
+      GuardianDestination.analyze => AnalyzePage(
+        justOneApiToken: widget.justOneApiToken,
+      ),
       GuardianDestination.cooldown => const CooldownPage(),
       GuardianDestination.history => const HistoryPage(),
       GuardianDestination.insights => const InsightsPage(),
@@ -69,6 +82,8 @@ class _HomeShellState extends State<HomeShell> {
         locale: widget.locale,
         onThemeChanged: widget.onThemeChanged,
         onLocaleChanged: widget.onLocaleChanged,
+        justOneApiToken: widget.justOneApiToken,
+        onJustOneApiTokenChanged: widget.onJustOneApiTokenChanged,
       ),
     };
 
@@ -220,7 +235,9 @@ class _PageFrame extends StatelessWidget {
 }
 
 class AnalyzePage extends StatefulWidget {
-  const AnalyzePage({super.key});
+  const AnalyzePage({super.key, required this.justOneApiToken});
+
+  final String justOneApiToken;
 
   @override
   State<AnalyzePage> createState() => _AnalyzePageState();
@@ -229,6 +246,7 @@ class AnalyzePage extends StatefulWidget {
 class _AnalyzePageState extends State<AnalyzePage> {
   final inputController = TextEditingController();
   bool showManual = false;
+  bool isImporting = false;
 
   @override
   void dispose() {
@@ -281,16 +299,35 @@ class _AnalyzePageState extends State<AnalyzePage> {
             runSpacing: 12,
             children: [
               OutlinedButton.icon(
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      copy.t(
-                        '截图识别还没接好，先用手动输入。',
-                        'Image import is not ready yet. Use manual entry for now.',
-                      ),
-                    ),
-                  ),
-                ),
+                onPressed: isImporting
+                    ? null
+                    : () async {
+                        setState(() => isImporting = true);
+                        try {
+                          final items = await const CartScreenshotImporter()
+                              .pickAndRecognize();
+                          if (!context.mounted || items.isEmpty) return;
+                          showDialog<void>(
+                            context: context,
+                            builder: (context) =>
+                                _ImportPreviewDialog(items: items),
+                          );
+                        } on PlatformException catch (error) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                copy.t(
+                                  '截图没读出来：${error.message ?? error.code}',
+                                  'Could not read the image: ${error.message ?? error.code}',
+                                ),
+                              ),
+                            ),
+                          );
+                        } finally {
+                          if (mounted) setState(() => isImporting = false);
+                        }
+                      },
                 icon: const Icon(Icons.image_outlined),
                 label: Text(copy.t('选截图', 'Choose image')),
               ),
@@ -322,24 +359,181 @@ class _AnalyzePageState extends State<AnalyzePage> {
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton.icon(
-              onPressed: () {
-                if (inputController.text.trim().isEmpty && !showManual) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        copy.t('先填点商品信息。', 'Add some item details first.'),
-                      ),
-                    ),
-                  );
-                  return;
-                }
-                showDialog<void>(
-                  context: context,
-                  builder: (context) => const _ModelSetupDialog(),
-                );
-              },
-              icon: const Icon(Icons.arrow_forward_rounded),
-              label: Text(copy.t('下一步', 'Continue')),
+              onPressed: isImporting
+                  ? null
+                  : () async {
+                      if (inputController.text.trim().isEmpty && !showManual) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              copy.t(
+                                '先填点商品信息。',
+                                'Add some item details first.',
+                              ),
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+                      final parsed = ShoppingShareParser.parse(
+                        inputController.text,
+                      );
+                      if (parsed.isEmpty) {
+                        setState(() => showManual = true);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              copy.t(
+                                '没认出链接，手动补一下名称和价格。',
+                                'Link not recognized. Add the name and price manually.',
+                              ),
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+                      var previewItems = parsed;
+                      final details = widget.justOneApiToken.isEmpty
+                          ? null
+                          : JustOneApiClient(token: widget.justOneApiToken);
+                      final jdCollections = parsed.where(
+                        (item) =>
+                            item.platform == ShoppingPlatform.jd &&
+                            item.kind == ShareKind.collection,
+                      );
+                      if (jdCollections.isNotEmpty) {
+                        setState(() => isImporting = true);
+                        try {
+                          final imported = <SharedShoppingItem>[];
+                          for (final collection in jdCollections) {
+                            imported.addAll(
+                              await JdCartImporter(
+                                productDetails: details,
+                              ).load(collection.url),
+                            );
+                          }
+                          previewItems = [
+                            ...parsed.where(
+                              (item) =>
+                                  !(item.platform == ShoppingPlatform.jd &&
+                                      item.kind == ShareKind.collection),
+                            ),
+                            ...imported,
+                          ];
+                        } on JdCartImportException catch (error) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                copy.t(
+                                  '京东清单没读出来，${error.message}',
+                                  'Could not read the JD collection: ${error.message}',
+                                ),
+                              ),
+                            ),
+                          );
+                        } finally {
+                          if (mounted) setState(() => isImporting = false);
+                        }
+                      }
+                      final jdProducts = parsed.where(
+                        (item) =>
+                            item.platform == ShoppingPlatform.jd &&
+                            item.kind == ShareKind.product,
+                      );
+                      if (jdProducts.isNotEmpty && details != null) {
+                        setState(() => isImporting = true);
+                        final imported = <SharedShoppingItem>[];
+                        try {
+                          for (final item in jdProducts) {
+                            imported.add(
+                              await JdProductImporter(
+                                productDetails: details,
+                              ).load(item.url),
+                            );
+                          }
+                          previewItems = [
+                            ...previewItems.where(
+                              (item) =>
+                                  !(item.platform == ShoppingPlatform.jd &&
+                                      item.kind == ShareKind.product),
+                            ),
+                            ...imported,
+                          ];
+                        } on Object catch (error) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                copy.t(
+                                  '京东商品没读出来：$error',
+                                  'Could not read the JD item: $error',
+                                ),
+                              ),
+                            ),
+                          );
+                        } finally {
+                          if (mounted) setState(() => isImporting = false);
+                        }
+                      }
+                      final taobaoProducts = parsed.where(
+                        (item) =>
+                            item.platform == ShoppingPlatform.taobao &&
+                            item.kind == ShareKind.product,
+                      );
+                      if (taobaoProducts.isNotEmpty && details != null) {
+                        setState(() => isImporting = true);
+                        final imported = <SharedShoppingItem>[];
+                        try {
+                          for (final item in taobaoProducts) {
+                            imported.add(
+                              await TaobaoProductImporter(
+                                productDetails: details,
+                              ).load(item.url),
+                            );
+                          }
+                          previewItems = [
+                            ...previewItems.where(
+                              (item) =>
+                                  !(item.platform == ShoppingPlatform.taobao &&
+                                      item.kind == ShareKind.product),
+                            ),
+                            ...imported,
+                          ];
+                        } on Object catch (error) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                copy.t(
+                                  '淘宝商品没读出来：$error',
+                                  'Could not read the Taobao item: $error',
+                                ),
+                              ),
+                            ),
+                          );
+                        } finally {
+                          if (mounted) setState(() => isImporting = false);
+                        }
+                      }
+                      if (!context.mounted) return;
+                      showDialog<void>(
+                        context: context,
+                        builder: (context) =>
+                            _ImportPreviewDialog(items: previewItems),
+                      );
+                    },
+              icon: isImporting
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.arrow_forward_rounded),
+              label: Text(
+                isImporting
+                    ? copy.t('正在读取', 'Reading')
+                    : copy.t('下一步', 'Continue'),
+              ),
             ),
           ),
         ],
@@ -474,6 +668,120 @@ class _ManualFields extends StatelessWidget {
   }
 }
 
+class _ImportPreviewDialog extends StatelessWidget {
+  const _ImportPreviewDialog({required this.items});
+
+  final List<SharedShoppingItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = GuardianCopy.of(context);
+    return AlertDialog(
+      title: Text(copy.t('认出了 ${items.length} 项', '${items.length} found')),
+      content: SizedBox(
+        width: 560,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 440),
+          child: ListView.separated(
+            shrinkWrap: true,
+            itemCount: items.length,
+            separatorBuilder: (_, _) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              final platform = switch (item.platform) {
+                ShoppingPlatform.taobao => copy.t('淘宝', 'Taobao'),
+                ShoppingPlatform.jd => copy.t('京东', 'JD'),
+                ShoppingPlatform.unknown => copy.t('其他', 'Other'),
+              };
+              final kind = item.kind == ShareKind.collection
+                  ? copy.t('购物清单', 'Collection')
+                  : copy.t('单品', 'Item');
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        item.kind == ShareKind.collection
+                            ? Icons.shopping_cart_outlined
+                            : Icons.inventory_2_outlined,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.title ?? copy.t('未读到商品名称', 'No title found'),
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            [
+                              platform,
+                              kind,
+                              if (item.price != null)
+                                '¥${item.price!.toStringAsFixed(item.price! % 1 == 0 ? 0 : 2)}',
+                              if (item.quantity > 1) '×${item.quantity}',
+                            ].join(' · '),
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            item.url.host,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: copy.t('编辑', 'Edit'),
+                      onPressed: () {},
+                      icon: const Icon(Icons.edit_outlined),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(copy.t('返回', 'Back')),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(context);
+            showDialog<void>(
+              context: context,
+              builder: (context) => const _ModelSetupDialog(),
+            );
+          },
+          child: Text(copy.t('继续填写', 'Continue')),
+        ),
+      ],
+    );
+  }
+}
+
 class _ModelSetupDialog extends StatelessWidget {
   const _ModelSetupDialog();
 
@@ -576,12 +884,16 @@ class SettingsPage extends StatelessWidget {
     required this.locale,
     required this.onThemeChanged,
     required this.onLocaleChanged,
+    required this.justOneApiToken,
+    required this.onJustOneApiTokenChanged,
   });
 
   final ThemeMode themeMode;
   final Locale locale;
   final ValueChanged<ThemeMode> onThemeChanged;
   final ValueChanged<Locale> onLocaleChanged;
+  final String justOneApiToken;
+  final Future<void> Function(String) onJustOneApiTokenChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -591,6 +903,11 @@ class SettingsPage extends StatelessWidget {
       subtitle: copy.t('按你习惯的方式来。', 'Set things up your way.'),
       child: Column(
         children: [
+          _JustOneApiSettings(
+            initialToken: justOneApiToken,
+            onSaved: onJustOneApiTokenChanged,
+          ),
+          const SizedBox(height: 16),
           _SettingsSection(
             title: copy.t('外观', 'Appearance'),
             icon: Icons.palette_outlined,
@@ -698,6 +1015,116 @@ class SettingsPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _JustOneApiSettings extends StatefulWidget {
+  const _JustOneApiSettings({
+    required this.initialToken,
+    required this.onSaved,
+  });
+
+  final String initialToken;
+  final Future<void> Function(String) onSaved;
+
+  @override
+  State<_JustOneApiSettings> createState() => _JustOneApiSettingsState();
+}
+
+class _JustOneApiSettingsState extends State<_JustOneApiSettings> {
+  late final TextEditingController controller;
+  bool busy = false;
+  bool obscure = true;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = TextEditingController(text: widget.initialToken);
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveAndTest() async {
+    final copy = GuardianCopy.of(context);
+    final token = controller.text.trim();
+    if (token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(copy.t('先填 API Key。', 'Enter an API key.'))),
+      );
+      return;
+    }
+    setState(() => busy = true);
+    try {
+      await JustOneApiClient(token: token).loadJdProduct('63081885510');
+      await widget.onSaved(token);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            copy.t('连接正常，Key 已安全保存。', 'Connected. The key is saved securely.'),
+          ),
+        ),
+      );
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(copy.t('连接失败：$error', 'Connection failed: $error')),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = GuardianCopy.of(context);
+    return _SettingsSection(
+      title: 'JustOneAPI',
+      icon: Icons.inventory_2_outlined,
+      children: [
+        Text(
+          copy.t(
+            '用来补全商品价格、图片和店铺信息。Key 只保存在这台设备。',
+            'Used to fill in prices, images, and shop details. The key stays on this device.',
+          ),
+        ),
+        TextField(
+          controller: controller,
+          obscureText: obscure,
+          decoration: InputDecoration(
+            labelText: 'API Key',
+            hintText: '••••••••••••',
+            suffixIcon: IconButton(
+              onPressed: () => setState(() => obscure = !obscure),
+              icon: Icon(
+                obscure
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+              ),
+            ),
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.tonalIcon(
+            onPressed: busy ? null : _saveAndTest,
+            icon: busy
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.link_rounded),
+            label: Text(copy.t('测试并保存', 'Test and save')),
+          ),
+        ),
+      ],
     );
   }
 }

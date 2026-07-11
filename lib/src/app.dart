@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'home_shell.dart';
+import 'settings/api_key_store.dart';
 import 'theme.dart';
 
 class ShoppingGuardianApp extends StatefulWidget {
@@ -15,11 +16,27 @@ class ShoppingGuardianApp extends StatefulWidget {
 class _ShoppingGuardianAppState extends State<ShoppingGuardianApp> {
   ThemeMode themeMode = ThemeMode.system;
   Locale locale = const Locale('zh');
+  String justOneApiToken = const String.fromEnvironment('JUSTONEAPI_TOKEN');
 
   @override
   void initState() {
     super.initState();
     _loadPreferences();
+    _loadApiKey();
+  }
+
+  Future<void> _loadApiKey() async {
+    try {
+      final saved = await const ApiKeyStore().readJustOneApiToken();
+      if (mounted && saved.isNotEmpty) setState(() => justOneApiToken = saved);
+    } catch (_) {
+      // Secure storage can be unavailable in widget tests.
+    }
+  }
+
+  Future<void> _setJustOneApiToken(String value) async {
+    await const ApiKeyStore().writeJustOneApiToken(value);
+    if (mounted) setState(() => justOneApiToken = value.trim());
   }
 
   Future<void> _loadPreferences() async {
@@ -64,6 +81,8 @@ class _ShoppingGuardianAppState extends State<ShoppingGuardianApp> {
         locale: locale,
         onThemeChanged: _setThemeMode,
         onLocaleChanged: _setLocale,
+        justOneApiToken: justOneApiToken,
+        onJustOneApiTokenChanged: _setJustOneApiToken,
       ),
     );
   }

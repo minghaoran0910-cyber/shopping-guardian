@@ -32,6 +32,12 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/dist/
+
+# Local agent planning notes
+/task_plan.md
+/findings.md
+/progress.md
 
 # Symbolication related
 app.*.symbols
