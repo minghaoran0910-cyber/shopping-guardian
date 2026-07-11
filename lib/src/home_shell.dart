@@ -774,42 +774,190 @@ class _ImportPreviewDialog extends StatelessWidget {
             Navigator.pop(context);
             showDialog<void>(
               context: context,
-              builder: (context) => const _ModelSetupDialog(),
+              builder: (context) => _AnalysisDialog(items: items),
             );
           },
-          child: Text(copy.t('继续填写', 'Continue')),
+          child: Text(copy.t('继续分析', 'Continue')),
         ),
       ],
     );
   }
 }
 
-class _ModelSetupDialog extends StatelessWidget {
-  const _ModelSetupDialog();
+class _AnalysisDialog extends StatefulWidget {
+  const _AnalysisDialog({required this.items});
+  final List<SharedShoppingItem> items;
+  @override
+  State<_AnalysisDialog> createState() => _AnalysisDialogState();
+}
+
+class _AnalysisDialogState extends State<_AnalysisDialog> {
+  final reason = TextEditingController();
+  final budget = TextEditingController();
+  bool analyzing = false;
+
+  @override
+  void dispose() {
+    reason.dispose();
+    budget.dispose();
+    super.dispose();
+  }
+
+  Future<void> _run() async {
+    final copy = GuardianCopy.of(context);
+    if (reason.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(copy.t('写一句为什么想买。', 'Tell us why you want it.')),
+        ),
+      );
+      return;
+    }
+    setState(() => analyzing = true);
+    try {
+      final config = await const ModelConfigStore().read();
+      if (!config.isComplete) throw const ModelClientException('请先在设置里配置并测试模型');
+      final total = widget.items.fold<double>(
+        0,
+        (sum, item) => sum + (item.price ?? 0) * item.quantity,
+      );
+      final advice =
+          await ModelClient(
+            baseUrl: config.baseUrl,
+            apiKey: config.apiKey,
+            model: config.model,
+          ).analyze(
+            itemName: widget.items
+                .map((item) => item.title ?? '未命名商品')
+                .join('、'),
+            price: total,
+            reason: reason.text.trim(),
+            monthlyBudget: double.tryParse(budget.text.trim()),
+          );
+      if (!mounted) return;
+      Navigator.pop(context);
+      showDialog<void>(
+        context: context,
+        builder: (context) => _DecisionDialog(advice: advice, total: total),
+      );
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(copy.t('分析失败：$error', 'Analysis failed: $error')),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => analyzing = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final copy = GuardianCopy.of(context);
     return AlertDialog(
-      icon: const Icon(Icons.key_rounded),
-      title: Text(copy.t('还没配置模型', 'Model not configured')),
+      title: Text(copy.t('买它是为了什么？', 'Why do you want this?')),
       content: SizedBox(
-        width: 420,
-        child: Text(
-          copy.t(
-            '去设置里填 API 地址、密钥和模型名称。',
-            'Add your API URL, key, and model in Settings.',
-          ),
+        width: 520,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: reason,
+              minLines: 3,
+              maxLines: 5,
+              decoration: InputDecoration(labelText: copy.t('购买理由', 'Reason')),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: budget,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: copy.t('本月剩余预算（选填）', 'Budget left (optional)'),
+                prefixText: '¥ ',
+              ),
+            ),
+          ],
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(copy.t('取消', 'Cancel')),
+          child: Text(copy.t('返回', 'Back')),
         ),
         FilledButton(
+          onPressed: analyzing ? null : _run,
+          child: Text(
+            analyzing
+                ? copy.t('分析中…', 'Analyzing…')
+                : copy.t('开始分析', 'Analyze'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DecisionDialog extends StatelessWidget {
+  const _DecisionDialog({required this.advice, required this.total});
+  final PurchaseAdvice advice;
+  final double total;
+  @override
+  Widget build(BuildContext context) {
+    final copy = GuardianCopy.of(context);
+    final title = switch (advice.verdict) {
+      PurchaseVerdict.buy => copy.t('可以买', 'Buy'),
+      PurchaseVerdict.wait => copy.t('先等等', 'Wait'),
+      PurchaseVerdict.skip => copy.t('这次先不买', 'Skip'),
+      PurchaseVerdict.insufficientData => copy.t(
+        '信息还不够',
+        'Not enough information',
+      ),
+    };
+    return AlertDialog(
+      title: Text(title),
+      content: SizedBox(
+        width: 540,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¥${total.toStringAsFixed(2)}',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 10),
+            Text(advice.summary),
+            if (advice.waitDays != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  copy.t(
+                    '建议等 ${advice.waitDays} 天再看。',
+                    'Check again in ${advice.waitDays} days.',
+                  ),
+                ),
+              ),
+            ...advice.reasons.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('• $item'),
+              ),
+            ),
+            ...advice.missingInformation.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('• $item'),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        FilledButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(copy.t('打开设置', 'Open Settings')),
+          child: Text(copy.t('知道了', 'Done')),
         ),
       ],
     );

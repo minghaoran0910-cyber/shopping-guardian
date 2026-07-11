@@ -78,5 +78,11 @@ void main() {
     expect(find.text('认出了 1 项'), findsOneWidget);
     expect(find.text('vivo X300 蔡司2亿超级主摄'), findsOneWidget);
     expect(find.text('京东 · 单品'), findsOneWidget);
+
+    await tester.tap(find.text('继续分析'));
+    await tester.pumpAndSettle();
+    expect(find.text('买它是为了什么？'), findsOneWidget);
+    expect(find.text('购买理由'), findsOneWidget);
+    expect(find.text('本月剩余预算（选填）'), findsOneWidget);
   });
 }
