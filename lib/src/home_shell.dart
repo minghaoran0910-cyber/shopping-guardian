@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'analysis/model_client.dart';
 import 'copy.dart';
 import 'import/jd_cart_importer.dart';
 import 'import/cart_screenshot_importer.dart';
@@ -8,6 +9,7 @@ import 'import/jd_product_importer.dart';
 import 'import/justoneapi_client.dart';
 import 'import/share_parser.dart';
 import 'import/taobao_product_importer.dart';
+import 'settings/model_config_store.dart';
 
 enum GuardianDestination {
   analyze(
@@ -948,42 +950,7 @@ class SettingsPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _SettingsSection(
-            title: copy.t('模型', 'Model'),
-            icon: Icons.hub_outlined,
-            children: [
-              const _LabeledField(
-                label: 'Base URL',
-                hint: 'https://api.example.com/v1',
-              ),
-              const _LabeledField(
-                label: 'API Key',
-                hint: '••••••••••••',
-                obscure: true,
-              ),
-              _LabeledField(
-                label: copy.t('模型名称', 'Model'),
-                hint: 'deepseek-chat',
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.tonalIcon(
-                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        copy.t(
-                          '连接测试还没接好。',
-                          'Connection testing is not ready yet.',
-                        ),
-                      ),
-                    ),
-                  ),
-                  icon: const Icon(Icons.link_rounded),
-                  label: Text(copy.t('测试连接', 'Test connection')),
-                ),
-              ),
-            ],
-          ),
+          const _ModelSettings(),
           const SizedBox(height: 16),
           _SettingsSection(
             title: copy.t('数据', 'Data'),
@@ -1015,6 +982,139 @@ class SettingsPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ModelSettings extends StatefulWidget {
+  const _ModelSettings();
+  @override
+  State<_ModelSettings> createState() => _ModelSettingsState();
+}
+
+class _ModelSettingsState extends State<_ModelSettings> {
+  final baseUrl = TextEditingController();
+  final apiKey = TextEditingController();
+  final model = TextEditingController();
+  bool loading = true;
+  bool testing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final config = await const ModelConfigStore().read();
+      baseUrl.text = config.baseUrl;
+      apiKey.text = config.apiKey;
+      model.text = config.model;
+    } on MissingPluginException {
+      // Native storage is unavailable in widget tests.
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> _testAndSave() async {
+    final copy = GuardianCopy.of(context);
+    final config = ModelConfig(
+      baseUrl: baseUrl.text.trim(),
+      model: model.text.trim(),
+      apiKey: apiKey.text.trim(),
+    );
+    if (!config.isComplete) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(copy.t('三个字段都要填写。', 'Fill in all three fields.')),
+        ),
+      );
+      return;
+    }
+    setState(() => testing = true);
+    try {
+      await ModelClient(
+        baseUrl: config.baseUrl,
+        apiKey: config.apiKey,
+        model: config.model,
+      ).analyze(itemName: '连接测试', price: 1, reason: '只测试连接');
+      await const ModelConfigStore().write(config);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            copy.t('模型连接正常，配置已保存。', 'Connected. Configuration saved.'),
+          ),
+        ),
+      );
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(copy.t('连接失败：$error', 'Connection failed: $error')),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => testing = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    baseUrl.dispose();
+    apiKey.dispose();
+    model.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = GuardianCopy.of(context);
+    return _SettingsSection(
+      title: copy.t('模型', 'Model'),
+      icon: Icons.hub_outlined,
+      children: [
+        TextField(
+          controller: baseUrl,
+          enabled: !loading,
+          decoration: const InputDecoration(
+            labelText: 'Base URL',
+            hintText: 'https://api.example.com/v1',
+          ),
+        ),
+        TextField(
+          controller: apiKey,
+          enabled: !loading,
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'API Key',
+            hintText: '••••••••••••',
+          ),
+        ),
+        TextField(
+          controller: model,
+          enabled: !loading,
+          decoration: InputDecoration(
+            labelText: copy.t('模型名称', 'Model name'),
+            hintText: 'deepseek-chat',
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.tonalIcon(
+            onPressed: loading || testing ? null : _testAndSave,
+            icon: testing
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.link_rounded),
+            label: Text(copy.t('测试并保存', 'Test and save')),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1197,32 +1297,6 @@ class _SettingsSection extends StatelessWidget {
             ..removeLast(),
         ],
       ),
-    );
-  }
-}
-
-class _LabeledField extends StatelessWidget {
-  const _LabeledField({
-    required this.label,
-    required this.hint,
-    this.obscure = false,
-  });
-  final String label;
-  final String hint;
-  final bool obscure;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 8),
-        TextField(
-          obscureText: obscure,
-          decoration: InputDecoration(hintText: hint),
-        ),
-      ],
     );
   }
 }
