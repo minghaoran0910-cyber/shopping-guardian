@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'analysis/model_client.dart';
+import 'history/decision_store.dart';
 import 'copy.dart';
 import 'import/jd_cart_importer.dart';
 import 'import/cart_screenshot_importer.dart';
@@ -838,7 +839,11 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
       Navigator.pop(context);
       showDialog<void>(
         context: context,
-        builder: (context) => _DecisionDialog(advice: advice, total: total),
+        builder: (context) => _DecisionDialog(
+          advice: advice,
+          total: total,
+          itemName: widget.items.map((item) => item.title ?? '未命名商品').join('、'),
+        ),
       );
     } on Object catch (error) {
       if (mounted) {
@@ -900,9 +905,29 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
 }
 
 class _DecisionDialog extends StatelessWidget {
-  const _DecisionDialog({required this.advice, required this.total});
+  const _DecisionDialog({
+    required this.advice,
+    required this.total,
+    required this.itemName,
+  });
   final PurchaseAdvice advice;
   final double total;
+  final String itemName;
+
+  Future<void> _choose(BuildContext context, String choice) async {
+    await const DecisionStore().add(
+      DecisionRecord(
+        itemName: itemName,
+        total: total,
+        verdict: advice.verdict.name,
+        userChoice: choice,
+        summary: advice.summary,
+        createdAt: DateTime.now(),
+      ),
+    );
+    if (context.mounted) Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final copy = GuardianCopy.of(context);
@@ -955,9 +980,21 @@ class _DecisionDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        FilledButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(copy.t('知道了', 'Done')),
+        TextButton(
+          onPressed: () => _choose(context, 'buy'),
+          child: Text(copy.t('决定购买', 'Buy')),
+        ),
+        TextButton(
+          onPressed: () => _choose(context, 'wait'),
+          child: Text(copy.t('稍后再看', 'Wait')),
+        ),
+        TextButton(
+          onPressed: () => _choose(context, 'skip'),
+          child: Text(copy.t('这次不买', 'Skip')),
+        ),
+        TextButton(
+          onPressed: () => _choose(context, 'alternative'),
+          child: Text(copy.t('寻找替代', 'Find alternative')),
         ),
       ],
     );
@@ -985,8 +1022,16 @@ class CooldownPage extends StatelessWidget {
   }
 }
 
-class HistoryPage extends StatelessWidget {
+class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
+
+  @override
+  State<HistoryPage> createState() => _HistoryPageState();
+}
+
+class _HistoryPageState extends State<HistoryPage> {
+  late final Future<List<DecisionRecord>> records = const DecisionStore()
+      .readAll();
 
   @override
   Widget build(BuildContext context) {
@@ -997,10 +1042,48 @@ class HistoryPage extends StatelessWidget {
         '看过什么，最后买没买。',
         'What you considered and what you decided.',
       ),
-      child: _EmptyState(
-        icon: Icons.history_rounded,
-        title: copy.t('还没有记录', 'No history yet'),
-        description: copy.t('分析过的商品会留在这里。', 'Analyzed items will appear here.'),
+      child: FutureBuilder<List<DecisionRecord>>(
+        future: records,
+        builder: (context, snapshot) {
+          final items = snapshot.data ?? const [];
+          if (items.isEmpty) {
+            return _EmptyState(
+              icon: Icons.history_rounded,
+              title: copy.t('还没有记录', 'No history yet'),
+              description: copy.t(
+                '分析过的商品会留在这里。',
+                'Analyzed items will appear here.',
+              ),
+            );
+          }
+          return Column(
+            children: items
+                .map(
+                  (record) => Card(
+                    child: ListTile(
+                      title: Text(
+                        record.itemName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        '${record.summary}\n${record.createdAt.toLocal().toString().substring(0, 16)}',
+                      ),
+                      isThreeLine: true,
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('¥${record.total.toStringAsFixed(2)}'),
+                          Text(record.userChoice),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          );
+        },
       ),
     );
   }
