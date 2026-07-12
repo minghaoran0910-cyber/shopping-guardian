@@ -5,8 +5,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shopping_guardian/main.dart';
 
 void main() {
-  testWidgets('shows the local-first analysis workspace', (tester) async {
+  testWidgets('shows privacy notice on first launch', (tester) async {
     SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.pumpAndSettle();
+    expect(find.text('先说清楚数据去哪儿'), findsOneWidget);
+    expect(find.text('我知道了'), findsOneWidget);
+    await tester.tap(find.text('我知道了'));
+    await tester.pumpAndSettle();
+    expect(find.text('先说清楚数据去哪儿'), findsNothing);
+  });
+
+  testWidgets('shows the local-first analysis workspace', (tester) async {
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     tester.view.physicalSize = const Size(1200, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -21,7 +32,7 @@ void main() {
   });
 
   testWidgets('switches to the cooldown destination', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -35,7 +46,7 @@ void main() {
   });
 
   testWidgets('changes language and theme from settings', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -61,7 +72,7 @@ void main() {
   testWidgets('previews items parsed from shared shopping text', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -87,7 +98,7 @@ void main() {
   });
 
   testWidgets('previews a manually entered product', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
