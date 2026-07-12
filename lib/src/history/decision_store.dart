@@ -10,6 +10,7 @@ class DecisionRecord {
     required this.userChoice,
     required this.summary,
     required this.createdAt,
+    this.waitUntil,
   });
   final String itemName;
   final double total;
@@ -17,14 +18,16 @@ class DecisionRecord {
   final String userChoice;
   final String summary;
   final DateTime createdAt;
+  final DateTime? waitUntil;
 
-  Map<String, Object> toJson() => {
+  Map<String, Object?> toJson() => {
     'itemName': itemName,
     'total': total,
     'verdict': verdict,
     'userChoice': userChoice,
     'summary': summary,
     'createdAt': createdAt.toIso8601String(),
+    'waitUntil': waitUntil?.toIso8601String(),
   };
   factory DecisionRecord.fromJson(Map<String, dynamic> json) => DecisionRecord(
     itemName: '${json['itemName']}',
@@ -33,6 +36,9 @@ class DecisionRecord {
     userChoice: '${json['userChoice']}',
     summary: '${json['summary']}',
     createdAt: DateTime.parse('${json['createdAt']}'),
+    waitUntil: json['waitUntil'] == null
+        ? null
+        : DateTime.parse('${json['waitUntil']}'),
   );
 }
 

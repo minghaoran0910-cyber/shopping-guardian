@@ -31,4 +31,23 @@ void main() {
     expect(records.first.itemName, '键盘');
     expect(records.last.total, 323);
   });
+
+  test('keeps cooldown due dates', () async {
+    SharedPreferences.setMockInitialValues({});
+    const store = DecisionStore();
+    final due = DateTime(2026, 7, 19, 12);
+    await store.add(
+      DecisionRecord(
+        itemName: '相机',
+        total: 6999,
+        verdict: 'wait',
+        userChoice: 'wait',
+        summary: '冷静一周',
+        createdAt: DateTime(2026, 7, 12, 12),
+        waitUntil: due,
+      ),
+    );
+
+    expect((await store.readAll()).single.waitUntil, due);
+  });
 }
