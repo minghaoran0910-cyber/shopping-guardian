@@ -5,6 +5,7 @@ import 'analysis/model_client.dart';
 import 'budget/budget_store.dart';
 import 'export/data_exporter.dart';
 import 'history/decision_store.dart';
+import 'insights/decision_insights.dart';
 import 'copy.dart';
 import 'import/jd_cart_importer.dart';
 import 'import/cart_screenshot_importer.dart';
@@ -1212,8 +1213,16 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 }
 
-class InsightsPage extends StatelessWidget {
+class InsightsPage extends StatefulWidget {
   const InsightsPage({super.key});
+
+  @override
+  State<InsightsPage> createState() => _InsightsPageState();
+}
+
+class _InsightsPageState extends State<InsightsPage> {
+  late final Future<List<DecisionRecord>> records = const DecisionStore()
+      .readAll();
 
   @override
   Widget build(BuildContext context) {
@@ -1221,16 +1230,73 @@ class InsightsPage extends StatelessWidget {
     return _PageFrame(
       title: copy.t('你的习惯', 'Your patterns'),
       subtitle: copy.t('用过一阵子，这里才会有东西。', 'This fills in as you use the app.'),
-      child: _EmptyState(
-        icon: Icons.psychology_outlined,
-        title: copy.t('暂时看不出什么', 'Not enough data yet'),
-        description: copy.t(
-          '有三次以上类似记录后，再来看看。',
-          'Come back after a few similar decisions.',
-        ),
+      child: FutureBuilder<List<DecisionRecord>>(
+        future: records,
+        builder: (context, snapshot) {
+          final insights = DecisionInsights.from(snapshot.data ?? const []);
+          if (!insights.hasEnoughEvidence) {
+            return _EmptyState(
+              icon: Icons.psychology_outlined,
+              title: copy.t('暂时看不出什么', 'Not enough data yet'),
+              description: copy.t(
+                '有三次以上记录后，再来看看。',
+                'Come back after at least three decisions.',
+              ),
+            );
+          }
+          return Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              _InsightCard(
+                label: copy.t('分析过', 'Analyzed'),
+                value: insights.total,
+              ),
+              _InsightCard(
+                label: copy.t('决定购买', 'Bought'),
+                value: insights.bought,
+              ),
+              _InsightCard(
+                label: copy.t('选择等待', 'Waited'),
+                value: insights.waited,
+              ),
+              _InsightCard(
+                label: copy.t('主动放弃', 'Skipped'),
+                value: insights.skipped,
+              ),
+              _InsightCard(
+                label: copy.t('买后后悔', 'Regretted'),
+                value: insights.regretted,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+}
+
+class _InsightCard extends StatelessWidget {
+  const _InsightCard({required this.label, required this.value});
+  final String label;
+  final int value;
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 180,
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('$value', style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 6),
+        Text(label),
+      ],
+    ),
+  );
 }
 
 class SettingsPage extends StatelessWidget {
