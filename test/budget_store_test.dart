@@ -35,4 +35,12 @@ void main() {
     expect(snapshot.spent, 323);
     expect(snapshot.left, 1677);
   });
+
+  test('clears monthly budget', () async {
+    SharedPreferences.setMockInitialValues({});
+    const store = BudgetStore();
+    await store.setLimit(1000);
+    await store.clear();
+    expect((await store.snapshot()).limit, 0);
+  });
 }

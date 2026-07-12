@@ -61,4 +61,9 @@ class DecisionStore {
       ...raw,
     ]);
   }
+
+  Future<void> clear() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_key);
+  }
 }

@@ -50,4 +50,21 @@ void main() {
 
     expect((await store.readAll()).single.waitUntil, due);
   });
+
+  test('clears decision history', () async {
+    SharedPreferences.setMockInitialValues({});
+    const store = DecisionStore();
+    await store.add(
+      DecisionRecord(
+        itemName: '商品',
+        total: 1,
+        verdict: 'skip',
+        userChoice: 'skip',
+        summary: '不买',
+        createdAt: DateTime(2026),
+      ),
+    );
+    await store.clear();
+    expect(await store.readAll(), isEmpty);
+  });
 }

@@ -33,4 +33,9 @@ class BudgetStore {
         .fold<double>(0, (sum, record) => sum + record.total);
     return BudgetSnapshot(limit: limit, spent: spent);
   }
+
+  Future<void> clear() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_limitKey);
+  }
 }

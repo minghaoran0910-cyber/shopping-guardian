@@ -1315,11 +1315,73 @@ class SettingsPage extends StatelessWidget {
                   },
                 ),
               ),
+              const Divider(),
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.delete_sweep_outlined),
+                  title: Text(copy.t('清除决策和预算', 'Clear decisions and budget')),
+                  onTap: () => _confirmClear(context, copy, clearConfig: false),
+                ),
+              ),
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.key_off_outlined),
+                  title: Text(copy.t('清除 API 配置', 'Clear API configuration')),
+                  onTap: () => _confirmClear(context, copy, clearConfig: true),
+                ),
+              ),
             ],
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmClear(
+    BuildContext context,
+    GuardianCopy copy, {
+    required bool clearConfig,
+  }) async {
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(
+              clearConfig
+                  ? copy.t('清除 API 配置？', 'Clear API configuration?')
+                  : copy.t('清除决策和预算？', 'Clear decisions and budget?'),
+            ),
+            content: Text(copy.t('这个操作不能撤销。', 'This cannot be undone.')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(copy.t('取消', 'Cancel')),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(copy.t('确认清除', 'Clear')),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed) return;
+    if (clearConfig) {
+      await const ModelConfigStore().clear();
+      await onJustOneApiTokenChanged('');
+    } else {
+      await const DecisionStore().clear();
+      await const BudgetStore().clear();
+    }
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(copy.t('已经清除。', 'Cleared.'))));
+    }
   }
 }
 

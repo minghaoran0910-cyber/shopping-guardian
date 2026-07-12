@@ -34,4 +34,11 @@ class ModelConfigStore {
     await preferences.setString('model_name', config.model.trim());
     await keyStore.writeModelApiKey(config.apiKey);
   }
+
+  Future<void> clear() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove('model_base_url');
+    await preferences.remove('model_name');
+    await keyStore.writeModelApiKey('');
+  }
 }
