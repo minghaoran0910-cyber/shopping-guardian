@@ -87,4 +87,34 @@ void main() {
     expect(record.id, 'one');
     expect(record.feedback, 'regretted');
   });
+
+  test('deletes one decision without affecting others', () async {
+    SharedPreferences.setMockInitialValues({});
+    const store = DecisionStore();
+    await store.add(
+      DecisionRecord(
+        id: 'one',
+        itemName: '一',
+        total: 1,
+        verdict: 'skip',
+        userChoice: 'skip',
+        summary: '',
+        createdAt: DateTime(2026),
+      ),
+    );
+    await store.add(
+      DecisionRecord(
+        id: 'two',
+        itemName: '二',
+        total: 2,
+        verdict: 'buy',
+        userChoice: 'buy',
+        summary: '',
+        createdAt: DateTime(2026, 2),
+      ),
+    );
+    await store.delete('one');
+    final records = await store.readAll();
+    expect(records.single.id, 'two');
+  });
 }

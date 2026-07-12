@@ -100,4 +100,13 @@ class DecisionStore {
       updated.map((record) => jsonEncode(record.toJson())).toList(),
     );
   }
+
+  Future<void> delete(String id) async {
+    final records = (await readAll()).where((record) => record.id != id);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setStringList(
+      _key,
+      records.map((record) => jsonEncode(record.toJson())).toList(),
+    );
+  }
 }

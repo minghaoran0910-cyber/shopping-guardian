@@ -1276,6 +1276,16 @@ class HistoryPage extends StatefulWidget {
 
 class _HistoryPageState extends State<HistoryPage> {
   late Future<List<DecisionRecord>> records = const DecisionStore().readAll();
+  final search = TextEditingController();
+  String status = 'all';
+
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
+  }
+
+  void _reload() => setState(() => records = const DecisionStore().readAll());
 
   Future<void> _feedback(DecisionRecord record) async {
     final copy = GuardianCopy.of(context);
@@ -1301,7 +1311,88 @@ class _HistoryPageState extends State<HistoryPage> {
     );
     if (value == null) return;
     await const DecisionStore().setFeedback(record.id, value);
-    if (mounted) setState(() => records = const DecisionStore().readAll());
+    if (mounted) _reload();
+  }
+
+  Future<void> _details(DecisionRecord record) async {
+    final copy = GuardianCopy.of(context);
+    final action = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(record.itemName),
+        content: SizedBox(
+          width: 480,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('¥${record.total.toStringAsFixed(2)}'),
+              const SizedBox(height: 10),
+              Text(
+                copy.t('模型建议：${record.verdict}', 'Model: ${record.verdict}'),
+              ),
+              Text(
+                copy.t(
+                  '你的决定：${record.userChoice}',
+                  'Your choice: ${record.userChoice}',
+                ),
+              ),
+              if (record.feedback != null)
+                Text(
+                  copy.t('后来：${record.feedback}', 'Later: ${record.feedback}'),
+                ),
+              const SizedBox(height: 12),
+              Text(record.summary),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'delete'),
+            child: Text(copy.t('删除', 'Delete')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'feedback'),
+            child: Text(copy.t('补充反馈', 'Add feedback')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(copy.t('关闭', 'Close')),
+          ),
+        ],
+      ),
+    );
+    if (action == 'feedback') await _feedback(record);
+    if (action == 'delete' && mounted) {
+      final confirmed =
+          await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(copy.t('删除这条记录？', 'Delete this record?')),
+              content: Text(
+                copy.t(
+                  '关联的冷静期和预算统计也会更新。',
+                  'Cooldown and budget totals will update.',
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(copy.t('取消', 'Cancel')),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(copy.t('删除', 'Delete')),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+      if (confirmed) {
+        await const DecisionStore().delete(record.id);
+        if (mounted) _reload();
+      }
+    }
   }
 
   @override
@@ -1313,54 +1404,89 @@ class _HistoryPageState extends State<HistoryPage> {
         '看过什么，最后买没买。',
         'What you considered and what you decided.',
       ),
-      child: FutureBuilder<List<DecisionRecord>>(
-        future: records,
-        builder: (context, snapshot) {
-          final items = snapshot.data ?? const [];
-          if (items.isEmpty) {
-            return _EmptyState(
-              icon: Icons.history_rounded,
-              title: copy.t('还没有记录', 'No history yet'),
-              description: copy.t(
-                '分析过的商品会留在这里。',
-                'Analyzed items will appear here.',
+      child: Column(
+        children: [
+          TextField(
+            controller: search,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search),
+              hintText: copy.t('搜索商品', 'Search items'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<String>(
+            segments: [
+              ButtonSegment(value: 'all', label: Text(copy.t('全部', 'All'))),
+              ButtonSegment(value: 'buy', label: Text(copy.t('购买', 'Bought'))),
+              ButtonSegment(value: 'wait', label: Text(copy.t('等待', 'Waited'))),
+              ButtonSegment(
+                value: 'skip',
+                label: Text(copy.t('放弃', 'Skipped')),
               ),
-            );
-          }
-          return Column(
-            children: items
-                .map(
-                  (record) => Card(
-                    child: ListTile(
-                      title: Text(
-                        record.itemName,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        '${record.summary}\n${record.createdAt.toLocal().toString().substring(0, 16)}',
-                      ),
-                      isThreeLine: true,
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text('¥${record.total.toStringAsFixed(2)}'),
-                          Text(record.userChoice),
-                          if (record.feedback != null)
-                            Text(
-                              record.feedback!,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                        ],
-                      ),
-                      onTap: () => _feedback(record),
-                    ),
+            ],
+            selected: {status},
+            onSelectionChanged: (value) => setState(() => status = value.first),
+          ),
+          const SizedBox(height: 16),
+          FutureBuilder<List<DecisionRecord>>(
+            future: records,
+            builder: (context, snapshot) {
+              final query = search.text.trim().toLowerCase();
+              final items = (snapshot.data ?? const [])
+                  .where(
+                    (record) =>
+                        (status == 'all' || record.userChoice == status) &&
+                        (query.isEmpty ||
+                            record.itemName.toLowerCase().contains(query)),
+                  )
+                  .toList();
+              if (items.isEmpty) {
+                return _EmptyState(
+                  icon: Icons.history_rounded,
+                  title: copy.t('还没有记录', 'No history yet'),
+                  description: copy.t(
+                    '分析过的商品会留在这里。',
+                    'Analyzed items will appear here.',
                   ),
-                )
-                .toList(),
-          );
-        },
+                );
+              }
+              return Column(
+                children: items
+                    .map(
+                      (record) => Card(
+                        child: ListTile(
+                          title: Text(
+                            record.itemName,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            '${record.summary}\n${record.createdAt.toLocal().toString().substring(0, 16)}',
+                          ),
+                          isThreeLine: true,
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text('¥${record.total.toStringAsFixed(2)}'),
+                              Text(record.userChoice),
+                              if (record.feedback != null)
+                                Text(
+                                  record.feedback!,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                            ],
+                          ),
+                          onTap: () => _details(record),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
