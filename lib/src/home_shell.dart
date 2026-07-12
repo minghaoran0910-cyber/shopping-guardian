@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'analysis/model_client.dart';
+import 'budget/budget_store.dart';
 import 'history/decision_store.dart';
 import 'copy.dart';
 import 'import/jd_cart_importer.dart';
@@ -545,41 +546,91 @@ class _AnalyzePageState extends State<AnalyzePage> {
   }
 }
 
-class _BudgetStrip extends StatelessWidget {
+class _BudgetStrip extends StatefulWidget {
   const _BudgetStrip();
+
+  @override
+  State<_BudgetStrip> createState() => _BudgetStripState();
+}
+
+class _BudgetStripState extends State<_BudgetStrip> {
+  late Future<BudgetSnapshot> snapshot = const BudgetStore().snapshot();
+
+  Future<void> _edit() async {
+    final controller = TextEditingController();
+    final copy = GuardianCopy.of(context);
+    final value = await showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(copy.t('设置本月预算', 'Set monthly budget')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(prefixText: '¥ '),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(copy.t('取消', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.pop(context, double.tryParse(controller.text)),
+            child: Text(copy.t('保存', 'Save')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null) return;
+    await const BudgetStore().setLimit(value);
+    if (mounted) setState(() => snapshot = const BudgetStore().snapshot());
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final copy = GuardianCopy.of(context);
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Wrap(
-        spacing: 36,
-        runSpacing: 16,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          _BudgetValue(
-            label: copy.t('本月预算', 'Monthly budget'),
-            value: '¥ 2,000',
+    return FutureBuilder<BudgetSnapshot>(
+      future: snapshot,
+      builder: (context, state) {
+        final data = state.data ?? const BudgetSnapshot(limit: 0, spent: 0);
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(14),
           ),
-          _BudgetValue(label: copy.t('已经花掉', 'Spent'), value: '¥ 680'),
-          _BudgetValue(
-            label: copy.t('还剩', 'Left'),
-            value: '¥ 1,320',
-            emphasized: true,
+          child: Wrap(
+            spacing: 36,
+            runSpacing: 16,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _BudgetValue(
+                label: copy.t('本月预算', 'Monthly budget'),
+                value: data.limit == 0
+                    ? copy.t('未设置', 'Not set')
+                    : '¥ ${data.limit.toStringAsFixed(0)}',
+              ),
+              _BudgetValue(
+                label: copy.t('已经花掉', 'Spent'),
+                value: '¥ ${data.spent.toStringAsFixed(0)}',
+              ),
+              _BudgetValue(
+                label: copy.t('还剩', 'Left'),
+                value: '¥ ${data.left.toStringAsFixed(0)}',
+                emphasized: true,
+              ),
+              TextButton.icon(
+                onPressed: _edit,
+                icon: const Icon(Icons.tune_rounded),
+                label: Text(copy.t('改预算', 'Edit budget')),
+              ),
+            ],
           ),
-          TextButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.tune_rounded),
-            label: Text(copy.t('改预算', 'Edit budget')),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
