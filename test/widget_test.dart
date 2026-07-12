@@ -85,4 +85,29 @@ void main() {
     expect(find.text('购买理由'), findsOneWidget);
     expect(find.text('本月剩余预算（选填）'), findsOneWidget);
   });
+
+  testWidgets('previews a manually entered product', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.tap(find.text('手动填写'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, '商品名称 *'), '手动商品');
+    await tester.enterText(find.widgetWithText(TextField, '价格 *'), '88');
+    await tester.enterText(find.widgetWithText(TextField, '平台（选填）'), '淘宝');
+    await tester.tap(find.text('下一步'));
+    await tester.pumpAndSettle();
+    expect(find.text('认出了 1 项'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('手动商品'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('淘宝 · 单品 · ¥88'), findsOneWidget);
+  });
 }

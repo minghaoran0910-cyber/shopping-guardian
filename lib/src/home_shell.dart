@@ -251,12 +251,18 @@ class AnalyzePage extends StatefulWidget {
 
 class _AnalyzePageState extends State<AnalyzePage> {
   final inputController = TextEditingController();
+  final manualName = TextEditingController();
+  final manualPrice = TextEditingController();
+  final manualStore = TextEditingController();
   bool showManual = false;
   bool isImporting = false;
 
   @override
   void dispose() {
     inputController.dispose();
+    manualName.dispose();
+    manualPrice.dispose();
+    manualStore.dispose();
     super.dispose();
   }
 
@@ -356,9 +362,13 @@ class _AnalyzePageState extends State<AnalyzePage> {
                 ? CrossFadeState.showSecond
                 : CrossFadeState.showFirst,
             firstChild: const SizedBox.shrink(),
-            secondChild: const Padding(
-              padding: EdgeInsets.only(top: 20),
-              child: _ManualFields(),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(top: 20),
+              child: _ManualFields(
+                name: manualName,
+                price: manualPrice,
+                store: manualStore,
+              ),
             ),
           ),
           const SizedBox(height: 28),
@@ -381,22 +391,37 @@ class _AnalyzePageState extends State<AnalyzePage> {
                         );
                         return;
                       }
-                      final parsed = ShoppingShareParser.parse(
+                      var parsed = ShoppingShareParser.parse(
                         inputController.text,
                       );
                       if (parsed.isEmpty) {
-                        setState(() => showManual = true);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              copy.t(
-                                '没认出链接，手动补一下名称和价格。',
-                                'Link not recognized. Add the name and price manually.',
+                        final price = double.tryParse(manualPrice.text.trim());
+                        if (showManual &&
+                            manualName.text.trim().isNotEmpty &&
+                            price != null) {
+                          parsed = [
+                            SharedShoppingItem(
+                              platform: _manualPlatform(manualStore.text),
+                              kind: ShareKind.product,
+                              url: Uri.parse('local://manual/item'),
+                              title: manualName.text.trim(),
+                              price: price,
+                            ),
+                          ];
+                        } else {
+                          setState(() => showManual = true);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                copy.t(
+                                  '没认出链接，手动补一下名称和价格。',
+                                  'Link not recognized. Add the name and price manually.',
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                        return;
+                          );
+                          return;
+                        }
                       }
                       var previewItems = parsed;
                       final details = widget.justOneApiToken.isEmpty
@@ -546,6 +571,17 @@ class _AnalyzePageState extends State<AnalyzePage> {
       ),
     );
   }
+
+  ShoppingPlatform _manualPlatform(String value) {
+    final text = value.toLowerCase();
+    if (text.contains('京东') || text.contains('jd')) {
+      return ShoppingPlatform.jd;
+    }
+    if (text.contains('淘宝') || text.contains('天猫') || text.contains('taobao')) {
+      return ShoppingPlatform.taobao;
+    }
+    return ShoppingPlatform.unknown;
+  }
 }
 
 class _BudgetStrip extends StatefulWidget {
@@ -673,7 +709,14 @@ class _BudgetValue extends StatelessWidget {
 }
 
 class _ManualFields extends StatelessWidget {
-  const _ManualFields();
+  const _ManualFields({
+    required this.name,
+    required this.price,
+    required this.store,
+  });
+  final TextEditingController name;
+  final TextEditingController price;
+  final TextEditingController store;
 
   @override
   Widget build(BuildContext context) {
@@ -682,11 +725,13 @@ class _ManualFields extends StatelessWidget {
       builder: (context, constraints) {
         final fields = [
           TextField(
+            controller: name,
             decoration: InputDecoration(
               labelText: copy.t('商品名称 *', 'Item name *'),
             ),
           ),
           TextField(
+            controller: price,
             keyboardType: TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
               labelText: copy.t('价格 *', 'Price *'),
@@ -694,6 +739,7 @@ class _ManualFields extends StatelessWidget {
             ),
           ),
           TextField(
+            controller: store,
             decoration: InputDecoration(
               labelText: copy.t('平台（选填）', 'Store (optional)'),
             ),
