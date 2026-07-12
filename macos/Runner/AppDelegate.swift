@@ -1,6 +1,7 @@
 import Cocoa
 import FlutterMacOS
 import Vision
+import UserNotifications
 
 @main
 class AppDelegate: FlutterAppDelegate {
@@ -43,6 +44,33 @@ class AppDelegate: FlutterAppDelegate {
         result(true)
       } catch {
         result(FlutterError(code: "export_failed", message: error.localizedDescription, details: nil))
+      }
+    }
+    let notificationChannel = FlutterMethodChannel(name: "shopping_guardian/notifications", binaryMessenger: controller.engine.binaryMessenger)
+    notificationChannel.setMethodCallHandler { call, result in
+      guard let arguments = call.arguments as? [String: Any], let id = arguments["id"] as? String else {
+        result(FlutterMethodNotImplemented); return
+      }
+      if call.method == "cancel" {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+        result(nil); return
+      }
+      guard call.method == "schedule", let title = arguments["title"] as? String, let timestamp = arguments["timestamp"] as? Int64 else {
+        result(FlutterMethodNotImplemented); return
+      }
+      let center = UNUserNotificationCenter.current()
+      center.requestAuthorization(options: [.alert, .sound]) { granted, error in
+        if let error { result(FlutterError(code: "notification_failed", message: error.localizedDescription, details: nil)); return }
+        guard granted else { result(false); return }
+        let content = UNMutableNotificationContent()
+        content.title = "购物守护者"
+        content.body = "冷静期结束了，再看看「\(title)」还想不想买。"
+        content.sound = .default
+        let date = Date(timeIntervalSince1970: Double(timestamp) / 1000)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date), repeats: false)
+        center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger)) { error in
+          if let error { result(FlutterError(code: "notification_failed", message: error.localizedDescription, details: nil)) } else { result(true) }
+        }
       }
     }
   }

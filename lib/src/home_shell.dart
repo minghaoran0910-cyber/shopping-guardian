@@ -6,6 +6,7 @@ import 'budget/budget_store.dart';
 import 'export/data_exporter.dart';
 import 'history/decision_store.dart';
 import 'insights/decision_insights.dart';
+import 'notifications/local_notification_service.dart';
 import 'rules/consumption_rule_store.dart';
 import 'copy.dart';
 import 'import/jd_cart_importer.dart';
@@ -1122,20 +1123,29 @@ class _DecisionDialog extends StatelessWidget {
 
   Future<void> _choose(BuildContext context, String choice) async {
     final now = DateTime.now();
+    final id = now.microsecondsSinceEpoch.toString();
+    final waitUntil = choice == 'wait'
+        ? now.add(Duration(days: advice.waitDays ?? 7))
+        : null;
     await const DecisionStore().add(
       DecisionRecord(
-        id: now.microsecondsSinceEpoch.toString(),
+        id: id,
         itemName: itemName,
         total: total,
         verdict: advice.verdict.name,
         userChoice: choice,
         summary: advice.summary,
         createdAt: now,
-        waitUntil: choice == 'wait'
-            ? now.add(Duration(days: advice.waitDays ?? 7))
-            : null,
+        waitUntil: waitUntil,
       ),
     );
+    if (waitUntil != null) {
+      await const LocalNotificationService().schedule(
+        id: id,
+        title: itemName,
+        at: waitUntil,
+      );
+    }
     if (context.mounted) Navigator.pop(context);
   }
 
@@ -1390,6 +1400,7 @@ class _HistoryPageState extends State<HistoryPage> {
           false;
       if (confirmed) {
         await const DecisionStore().delete(record.id);
+        await const LocalNotificationService().cancel(record.id);
         if (mounted) _reload();
       }
     }
