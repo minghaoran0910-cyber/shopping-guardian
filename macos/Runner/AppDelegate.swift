@@ -20,6 +20,31 @@ class AppDelegate: FlutterAppDelegate {
       }
       self?.pickAndRecognize(result: result)
     }
+    let exportChannel = FlutterMethodChannel(
+      name: "shopping_guardian/file_export",
+      binaryMessenger: controller.engine.binaryMessenger
+    )
+    exportChannel.setMethodCallHandler { call, result in
+      guard call.method == "saveJson",
+            let arguments = call.arguments as? [String: Any],
+            let content = arguments["content"] as? String else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      let panel = NSSavePanel()
+      panel.nameFieldStringValue = "shopping-guardian-export.json"
+      panel.allowedFileTypes = ["json"]
+      guard panel.runModal() == .OK, let url = panel.url else {
+        result(false)
+        return
+      }
+      do {
+        try content.write(to: url, atomically: true, encoding: .utf8)
+        result(true)
+      } catch {
+        result(FlutterError(code: "export_failed", message: error.localizedDescription, details: nil))
+      }
+    }
   }
 
   private func pickAndRecognize(result: @escaping FlutterResult) {

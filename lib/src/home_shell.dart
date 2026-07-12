@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'analysis/model_client.dart';
 import 'budget/budget_store.dart';
+import 'export/data_exporter.dart';
 import 'history/decision_store.dart';
 import 'copy.dart';
 import 'import/jd_cart_importer.dart';
@@ -1287,15 +1288,31 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ),
               ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.file_download_outlined),
-                title: Text(copy.t('导出数据', 'Export data')),
-                subtitle: Text(
-                  copy.t(
-                    'API Key 不会放进导出文件。',
-                    'Your API key is never included.',
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.file_download_outlined),
+                  title: Text(copy.t('导出数据', 'Export data')),
+                  subtitle: Text(
+                    copy.t(
+                      'API Key 不会放进导出文件。',
+                      'Your API key is never included.',
+                    ),
                   ),
+                  onTap: () async {
+                    final saved = await const DataExporter().export();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          saved
+                              ? copy.t('数据已导出。', 'Data exported.')
+                              : copy.t('已取消导出。', 'Export cancelled.'),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
