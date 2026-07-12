@@ -67,4 +67,24 @@ void main() {
     await store.clear();
     expect(await store.readAll(), isEmpty);
   });
+
+  test('updates post-purchase feedback', () async {
+    SharedPreferences.setMockInitialValues({});
+    const store = DecisionStore();
+    await store.add(
+      DecisionRecord(
+        id: 'one',
+        itemName: '商品',
+        total: 10,
+        verdict: 'buy',
+        userChoice: 'buy',
+        summary: '可以买',
+        createdAt: DateTime(2026),
+      ),
+    );
+    await store.setFeedback('one', 'regretted');
+    final record = (await store.readAll()).single;
+    expect(record.id, 'one');
+    expect(record.feedback, 'regretted');
+  });
 }

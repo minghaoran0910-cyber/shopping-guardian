@@ -970,6 +970,7 @@ class _DecisionDialog extends StatelessWidget {
     final now = DateTime.now();
     await const DecisionStore().add(
       DecisionRecord(
+        id: now.microsecondsSinceEpoch.toString(),
         itemName: itemName,
         total: total,
         verdict: advice.verdict.name,
@@ -1120,8 +1121,34 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  late final Future<List<DecisionRecord>> records = const DecisionStore()
-      .readAll();
+  late Future<List<DecisionRecord>> records = const DecisionStore().readAll();
+
+  Future<void> _feedback(DecisionRecord record) async {
+    final copy = GuardianCopy.of(context);
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(copy.t('后来怎么样？', 'What happened later?')),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'satisfied'),
+            child: Text(copy.t('买了，很满意', 'Bought it, satisfied')),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'regretted'),
+            child: Text(copy.t('买了，有点后悔', 'Bought it, regretted')),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'not_bought'),
+            child: Text(copy.t('最后没有买', 'Did not buy')),
+          ),
+        ],
+      ),
+    );
+    if (value == null) return;
+    await const DecisionStore().setFeedback(record.id, value);
+    if (mounted) setState(() => records = const DecisionStore().readAll());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1166,8 +1193,14 @@ class _HistoryPageState extends State<HistoryPage> {
                         children: [
                           Text('¥${record.total.toStringAsFixed(2)}'),
                           Text(record.userChoice),
+                          if (record.feedback != null)
+                            Text(
+                              record.feedback!,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
                         ],
                       ),
+                      onTap: () => _feedback(record),
                     ),
                   ),
                 )
