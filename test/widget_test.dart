@@ -120,5 +120,14 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('淘宝 · 单品 · ¥88'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('修改商品'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, '商品名称'), '改过的商品');
+    await tester.enterText(find.widgetWithText(TextField, '价格'), '99');
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+    expect(find.text('改过的商品'), findsOneWidget);
+    expect(find.text('淘宝 · 单品 · ¥99'), findsOneWidget);
   });
 }

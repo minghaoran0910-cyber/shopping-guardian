@@ -770,10 +770,93 @@ class _ManualFields extends StatelessWidget {
   }
 }
 
-class _ImportPreviewDialog extends StatelessWidget {
+class _ImportPreviewDialog extends StatefulWidget {
   const _ImportPreviewDialog({required this.items});
 
   final List<SharedShoppingItem> items;
+
+  @override
+  State<_ImportPreviewDialog> createState() => _ImportPreviewDialogState();
+}
+
+class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
+  late final List<SharedShoppingItem> items = [...widget.items];
+
+  Future<void> _edit(int index) async {
+    final item = items[index];
+    final name = TextEditingController(text: item.title);
+    final price = TextEditingController(text: item.price?.toString());
+    final quantity = TextEditingController(text: item.quantity.toString());
+    final updated = await showDialog<SharedShoppingItem>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(GuardianCopy.of(context).t('修改商品', 'Edit item')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: name,
+              decoration: InputDecoration(
+                labelText: GuardianCopy.of(context).t('商品名称', 'Item name'),
+              ),
+            ),
+            TextField(
+              controller: price,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: GuardianCopy.of(context).t('价格', 'Price'),
+                prefixText: '¥ ',
+              ),
+            ),
+            TextField(
+              controller: quantity,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: GuardianCopy.of(context).t('数量', 'Quantity'),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(GuardianCopy.of(context).t('取消', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () {
+              final parsedPrice = double.tryParse(price.text.trim());
+              final parsedQuantity = int.tryParse(quantity.text.trim());
+              if (name.text.trim().isEmpty ||
+                  parsedPrice == null ||
+                  parsedQuantity == null ||
+                  parsedQuantity < 1) {
+                return;
+              }
+              Navigator.pop(
+                context,
+                SharedShoppingItem(
+                  platform: item.platform,
+                  kind: item.kind,
+                  url: item.url,
+                  title: name.text.trim(),
+                  shareCode: item.shareCode,
+                  price: parsedPrice,
+                  imageUrl: item.imageUrl,
+                  quantity: parsedQuantity,
+                ),
+              );
+            },
+            child: Text(GuardianCopy.of(context).t('保存', 'Save')),
+          ),
+        ],
+      ),
+    );
+    if (updated != null && mounted) setState(() => items[index] = updated);
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    name.dispose();
+    price.dispose();
+    quantity.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -854,7 +937,7 @@ class _ImportPreviewDialog extends StatelessWidget {
                     ),
                     IconButton(
                       tooltip: copy.t('编辑', 'Edit'),
-                      onPressed: () {},
+                      onPressed: () => _edit(index),
                       icon: const Icon(Icons.edit_outlined),
                     ),
                   ],
