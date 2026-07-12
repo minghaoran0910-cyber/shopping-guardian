@@ -6,6 +6,7 @@ import 'budget/budget_store.dart';
 import 'export/data_exporter.dart';
 import 'history/decision_store.dart';
 import 'insights/decision_insights.dart';
+import 'rules/consumption_rule_store.dart';
 import 'copy.dart';
 import 'import/jd_cart_importer.dart';
 import 'import/cart_screenshot_importer.dart';
@@ -978,6 +979,10 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
   final reason = TextEditingController();
   final budget = TextEditingController();
   bool analyzing = false;
+  double get total => widget.items.fold<double>(
+    0,
+    (sum, item) => sum + (item.price ?? 0) * item.quantity,
+  );
 
   @override
   void dispose() {
@@ -1000,10 +1005,7 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
     try {
       final config = await const ModelConfigStore().read();
       if (!config.isComplete) throw const ModelClientException('请先在设置里配置并测试模型');
-      final total = widget.items.fold<double>(
-        0,
-        (sum, item) => sum + (item.price ?? 0) * item.quantity,
-      );
+      final matchedRules = await const ConsumptionRuleStore().matching(total);
       final advice =
           await ModelClient(
             baseUrl: config.baseUrl,
@@ -1016,6 +1018,9 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
             price: total,
             reason: reason.text.trim(),
             monthlyBudget: double.tryParse(budget.text.trim()),
+            matchedRules: matchedRules
+                .map((rule) => '${rule.name}：${rule.description}')
+                .toList(),
           );
       if (!mounted) return;
       Navigator.pop(context);
@@ -1064,6 +1069,25 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
                 labelText: copy.t('本月剩余预算（选填）', 'Budget left (optional)'),
                 prefixText: '¥ ',
               ),
+            ),
+            FutureBuilder<List<ConsumptionRule>>(
+              future: const ConsumptionRuleStore().matching(total),
+              builder: (context, snapshot) {
+                final rules = snapshot.data ?? const [];
+                if (rules.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      copy.t(
+                        '本次命中：${rules.map((rule) => rule.name).join('、')}',
+                        'Matched: ${rules.map((rule) => rule.name).join(', ')}',
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -1501,6 +1525,8 @@ class SettingsPage extends StatelessWidget {
           const SizedBox(height: 16),
           const _ModelSettings(),
           const SizedBox(height: 16),
+          const _RuleSettings(),
+          const SizedBox(height: 16),
           _SettingsSection(
             title: copy.t('数据', 'Data'),
             icon: Icons.lock_outline_rounded,
@@ -1610,6 +1636,165 @@ class SettingsPage extends StatelessWidget {
         context,
       ).showSnackBar(SnackBar(content: Text(copy.t('已经清除。', 'Cleared.'))));
     }
+  }
+}
+
+class _RuleSettings extends StatefulWidget {
+  const _RuleSettings();
+  @override
+  State<_RuleSettings> createState() => _RuleSettingsState();
+}
+
+class _RuleSettingsState extends State<_RuleSettings> {
+  List<ConsumptionRule> rules = const [];
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final value = await const ConsumptionRuleStore().readAll();
+    if (mounted) setState(() => rules = value);
+  }
+
+  Future<void> _save(List<ConsumptionRule> value) async {
+    await const ConsumptionRuleStore().saveAll(value);
+    if (mounted) setState(() => rules = value);
+  }
+
+  Future<void> _add() async {
+    final name = TextEditingController();
+    final description = TextEditingController();
+    final amount = TextEditingController();
+    final days = TextEditingController();
+    final rule = await showDialog<ConsumptionRule>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(GuardianCopy.of(context).t('新增消费规则', 'Add rule')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: name,
+                decoration: InputDecoration(
+                  labelText: GuardianCopy.of(context).t('规则名称', 'Name'),
+                ),
+              ),
+              TextField(
+                controller: description,
+                decoration: InputDecoration(
+                  labelText: GuardianCopy.of(context).t('规则描述', 'Description'),
+                ),
+              ),
+              TextField(
+                controller: amount,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: GuardianCopy.of(
+                    context,
+                  ).t('最低金额（选填）', 'Minimum amount (optional)'),
+                  prefixText: '¥ ',
+                ),
+              ),
+              TextField(
+                controller: days,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: GuardianCopy.of(
+                    context,
+                  ).t('建议等待天数（选填）', 'Wait days (optional)'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(GuardianCopy.of(context).t('取消', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (name.text.trim().isEmpty || description.text.trim().isEmpty) {
+                return;
+              }
+              Navigator.pop(
+                context,
+                ConsumptionRule(
+                  id: DateTime.now().microsecondsSinceEpoch.toString(),
+                  name: name.text.trim(),
+                  description: description.text.trim(),
+                  minimumAmount: double.tryParse(amount.text.trim()),
+                  waitDays: int.tryParse(days.text.trim()),
+                ),
+              );
+            },
+            child: Text(GuardianCopy.of(context).t('保存', 'Save')),
+          ),
+        ],
+      ),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    name.dispose();
+    description.dispose();
+    amount.dispose();
+    days.dispose();
+    if (rule != null) await _save([...rules, rule]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = GuardianCopy.of(context);
+    return _SettingsSection(
+      title: copy.t('消费规则', 'Purchase rules'),
+      icon: Icons.rule_outlined,
+      children: [
+        if (rules.isEmpty)
+          Text(
+            copy.t(
+              '还没有规则。可以先加一条“大额商品至少等两天”。',
+              'No rules yet. Add one for large purchases.',
+            ),
+          ),
+        ...rules.map(
+          (rule) => Material(
+            color: Colors.transparent,
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(rule.name),
+              subtitle: Text(rule.description),
+              leading: Switch(
+                value: rule.enabled,
+                onChanged: (value) => _save(
+                  rules
+                      .map(
+                        (item) => item.id == rule.id
+                            ? item.copyWith(enabled: value)
+                            : item,
+                      )
+                      .toList(),
+                ),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () =>
+                    _save(rules.where((item) => item.id != rule.id).toList()),
+              ),
+            ),
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.tonalIcon(
+            onPressed: _add,
+            icon: const Icon(Icons.add),
+            label: Text(copy.t('新增规则', 'Add rule')),
+          ),
+        ),
+      ],
+    );
   }
 }
 

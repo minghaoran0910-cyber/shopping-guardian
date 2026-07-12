@@ -38,6 +38,7 @@ class ModelClient {
     required double price,
     String? reason,
     double? monthlyBudget,
+    List<String> matchedRules = const [],
   }) async {
     final requestClient = client ?? http.Client();
     try {
@@ -66,6 +67,7 @@ class ModelClient {
                     'price': price,
                     'purchase_reason': reason,
                     'monthly_budget': monthlyBudget,
+                    'matched_rules': matchedRules,
                   }),
                 },
               ],
