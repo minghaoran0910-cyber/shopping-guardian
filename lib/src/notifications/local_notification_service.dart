@@ -30,4 +30,13 @@ class LocalNotificationService {
       return;
     }
   }
+
+  Future<bool> isDelivered(String id) async {
+    try {
+      return await channel.invokeMethod<bool>('isDelivered', {'id': id}) ??
+          false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
 }

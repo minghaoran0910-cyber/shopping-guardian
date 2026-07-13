@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:shopping_guardian/main.dart';
+import 'package:shopping_guardian/src/import/shared_text_receiver.dart';
 
 void main() {
   testWidgets('shows privacy notice on first launch', (tester) async {
@@ -129,5 +131,31 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('改过的商品'), findsOneWidget);
     expect(find.text('淘宝 · 单品 · ¥99'), findsOneWidget);
+  });
+
+  testWidgets('puts Android shared text into the import field', (tester) async {
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
+    const channel = MethodChannel('test/widget_shared_text');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          if (call.method == 'getInitialText') {
+            return '【京东】https://3.cn/shared 「分享商品」';
+          }
+          return null;
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    await tester.pumpWidget(
+      ShoppingGuardianApp(
+        sharedTextReceiver: SharedTextReceiver(channel: channel),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(find.byType(TextField).first);
+    expect(field.controller?.text, contains('https://3.cn/shared'));
   });
 }

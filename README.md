@@ -4,7 +4,7 @@
 
 项目不提供在线账号和中转服务器。商品、设置和记录都留在本机，模型与商品接口的费用由用户自己的 API Key 承担。
 
-> 1.0 先支持 macOS。Android 和 iOS 会沿用同一套 Flutter 代码继续适配。
+> 现在支持 macOS 和 Android。iOS 会沿用同一套 Flutter 代码继续适配。
 
 ![购物守护者首页](docs/images/home.png)
 
@@ -14,13 +14,14 @@
 - 解析京东单商品短链和商品链接
 - 解析淘宝、天猫单商品分享链接
 - 从淘宝、天猫、京东购物车截图中识别商品
+- 在 Android 分享面板中直接把商品文字或链接发给购物守护者
 - 使用 JustOneAPI 补充商品标题、价格和图片
 - 在导入前预览并核对识别结果
 - 配置自己的 OpenAI-compatible 模型并生成结构化购买建议
 - 设置月度预算和个人消费规则
 - 选择购买、等待、放弃或寻找替代
 - 保存本地决策历史、冷静期和购买后反馈
-- 到期时发送 macOS 本地通知
+- 到期时发送本地通知
 - 查看基于真实记录的消费习惯统计
 - 导出或清除本地数据，导出内容不含 API Key
 - 切换浅色、深色、跟随系统主题
@@ -37,6 +38,15 @@
 
 当前安装包还没有 Apple Developer ID 签名和公证。如果 macOS 拦截启动，可以在 Finder 中右键应用，选择“打开”，再确认一次。也可以前往“系统设置 → 隐私与安全性”，在底部允许打开。
 
+## 安装 Android 版
+
+1. 打开仓库右侧的 **Releases**。
+2. 下载 `shopping-guardian-android-v1.1.0.apk`。
+3. 用系统文件管理器打开 APK。
+4. 如果系统拦截，只为当前文件管理器允许“安装未知应用”，安装完可以再关闭。
+
+Android 版支持 Android 7.0（API 24）及以上系统。安装包使用项目专用证书签名，GitHub Release 页会附上 SHA-256，可以用来核对下载文件。
+
 ## 第一次使用
 
 ### 1. 配置 JustOneAPI
@@ -47,7 +57,7 @@
 
 JustOneAPI 用来查询淘宝和京东的商品详情。没有配置 Key 时，京东购物清单仍可以读取页面上已有的标题和价格，但淘宝单商品、京东单商品的详情补全会受到限制。
 
-macOS 版把 Key 保存到当前用户的应用数据目录，并设置为仅当前用户可读。Android 和 iOS 版本将使用系统安全存储。Key 不会写入项目源码，也不会进入数据导出文件。
+macOS 版把 Key 保存到当前用户的应用数据目录，并设置为仅当前用户可读。Android 使用 Android Keystore 支持的安全存储，iOS 版本将使用系统安全存储。Key 不会写入项目源码，也不会进入数据导出文件。
 
 ### 2. 配置分析模型
 
@@ -75,6 +85,15 @@ macOS 版把 Key 保存到当前用户的应用数据目录，并设置为仅当
 
 macOS 使用系统自带的 Vision OCR，识别过程在本机完成，不要求模型支持图片。长购物车可以分成多张截图导入。截图中如果有失效商品、广告或复杂促销，最好在预览页手动核对。
 
+Android 使用随安装包提供的 ML Kit 中文 OCR 模型，图片通过系统文件选择器按次授权，不申请读取整个相册。识别同样在设备上完成。
+
+### 5. 从 Android 购物 App 分享
+
+1. 在淘宝、天猫或京东里点击“分享”。
+2. 在系统分享面板选择“购物守护者”。
+3. 应用会打开“添加商品”，并把分享文字放入输入框。
+4. 点击“下一步”，核对商品名称和价格。
+
 ## 支持情况
 
 | 输入方式 | 淘宝 / 天猫 | 京东 |
@@ -90,15 +109,18 @@ macOS 使用系统自带的 Vision OCR，识别过程在本机完成，不要求
 - 截图 OCR 会受字体、图片清晰度和商品排版影响，识别后需要人工确认。
 - 部分 OpenAI-compatible 服务不支持 `response_format`，连接测试或分析时可能失败。
 - macOS 安装包尚未签名和公证。
-- Android 和 iOS 还没有可安装包。
+- iOS 还没有可安装包。
+- Android 暂时只接收文字和链接分享；购物车截图请在应用内点击“选截图”。
 
 ## 从源码运行
 
-需要 Flutter 3.44 或更新版本，以及完整安装的 Xcode。
+需要 Flutter 3.44 或更新版本。macOS 构建需要 Xcode；Android 构建需要 JDK 17 和 Android SDK 36。
 
 ```bash
 flutter pub get
 flutter run -d macos
+# 或
+flutter run -d <android-device-id>
 ```
 
 运行检查：
@@ -107,7 +129,10 @@ flutter run -d macos
 dart analyze lib test integration_test tool
 flutter test
 flutter build macos --release
+flutter build apk --release
 ```
+
+Android Debug 包不需要额外配置。构建自己的正式签名包时，复制 `android/key.properties.example` 为 `android/key.properties`，填写自己的 keystore 信息。证书和密码文件已被 Git 忽略，请另行安全备份。
 
 macOS Release 产物位于：
 

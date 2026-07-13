@@ -3,11 +3,14 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'home_shell.dart';
+import 'import/shared_text_receiver.dart';
 import 'settings/api_key_store.dart';
 import 'theme.dart';
 
 class ShoppingGuardianApp extends StatefulWidget {
-  const ShoppingGuardianApp({super.key});
+  const ShoppingGuardianApp({super.key, this.sharedTextReceiver});
+
+  final SharedTextReceiver? sharedTextReceiver;
 
   @override
   State<ShoppingGuardianApp> createState() => _ShoppingGuardianAppState();
@@ -18,12 +21,30 @@ class _ShoppingGuardianAppState extends State<ShoppingGuardianApp> {
   ThemeMode themeMode = ThemeMode.system;
   Locale locale = const Locale('zh');
   String justOneApiToken = const String.fromEnvironment('JUSTONEAPI_TOKEN');
+  late final SharedTextReceiver sharedTextReceiver;
+  String? sharedText;
 
   @override
   void initState() {
     super.initState();
+    sharedTextReceiver = widget.sharedTextReceiver ?? SharedTextReceiver();
+    sharedTextReceiver.start(_receiveSharedText);
     _loadPreferences();
     _loadApiKey();
+  }
+
+  void _receiveSharedText(String value) {
+    if (mounted) setState(() => sharedText = value);
+  }
+
+  void _consumeSharedText() {
+    if (mounted) setState(() => sharedText = null);
+  }
+
+  @override
+  void dispose() {
+    sharedTextReceiver.stop();
+    super.dispose();
   }
 
   Future<void> _loadApiKey() async {
@@ -118,6 +139,8 @@ class _ShoppingGuardianAppState extends State<ShoppingGuardianApp> {
         onLocaleChanged: _setLocale,
         justOneApiToken: justOneApiToken,
         onJustOneApiTokenChanged: _setJustOneApiToken,
+        sharedText: sharedText,
+        onSharedTextConsumed: _consumeSharedText,
       ),
     );
   }

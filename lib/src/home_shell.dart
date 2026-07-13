@@ -57,6 +57,8 @@ class HomeShell extends StatefulWidget {
     required this.onLocaleChanged,
     required this.justOneApiToken,
     required this.onJustOneApiTokenChanged,
+    this.sharedText,
+    required this.onSharedTextConsumed,
   });
 
   final ThemeMode themeMode;
@@ -65,6 +67,8 @@ class HomeShell extends StatefulWidget {
   final ValueChanged<Locale> onLocaleChanged;
   final String justOneApiToken;
   final Future<void> Function(String) onJustOneApiTokenChanged;
+  final String? sharedText;
+  final VoidCallback onSharedTextConsumed;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -74,6 +78,15 @@ class _HomeShellState extends State<HomeShell> {
   GuardianDestination selected = GuardianDestination.analyze;
 
   @override
+  void didUpdateWidget(HomeShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.sharedText != null &&
+        widget.sharedText != oldWidget.sharedText) {
+      selected = GuardianDestination.analyze;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final copy = GuardianCopy.of(context);
     final width = MediaQuery.sizeOf(context).width;
@@ -81,6 +94,8 @@ class _HomeShellState extends State<HomeShell> {
     final body = switch (selected) {
       GuardianDestination.analyze => AnalyzePage(
         justOneApiToken: widget.justOneApiToken,
+        sharedText: widget.sharedText,
+        onSharedTextConsumed: widget.onSharedTextConsumed,
       ),
       GuardianDestination.cooldown => const CooldownPage(),
       GuardianDestination.history => const HistoryPage(),
@@ -243,9 +258,16 @@ class _PageFrame extends StatelessWidget {
 }
 
 class AnalyzePage extends StatefulWidget {
-  const AnalyzePage({super.key, required this.justOneApiToken});
+  const AnalyzePage({
+    super.key,
+    required this.justOneApiToken,
+    this.sharedText,
+    required this.onSharedTextConsumed,
+  });
 
   final String justOneApiToken;
+  final String? sharedText;
+  final VoidCallback onSharedTextConsumed;
 
   @override
   State<AnalyzePage> createState() => _AnalyzePageState();
@@ -258,6 +280,28 @@ class _AnalyzePageState extends State<AnalyzePage> {
   final manualStore = TextEditingController();
   bool showManual = false;
   bool isImporting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _applySharedText();
+  }
+
+  @override
+  void didUpdateWidget(AnalyzePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.sharedText != oldWidget.sharedText) _applySharedText();
+  }
+
+  void _applySharedText() {
+    final value = widget.sharedText;
+    if (value == null || value.isEmpty) return;
+    inputController.text = value;
+    inputController.selection = TextSelection.collapsed(offset: value.length);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onSharedTextConsumed();
+    });
+  }
 
   @override
   void dispose() {
@@ -320,7 +364,20 @@ class _AnalyzePageState extends State<AnalyzePage> {
                         try {
                           final items = await const CartScreenshotImporter()
                               .pickAndRecognize();
-                          if (!context.mounted || items.isEmpty) return;
+                          if (!context.mounted) return;
+                          if (items.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  copy.t(
+                                    '这张图里没认出商品。可以换张更清楚的截图，或手动填写。',
+                                    'No items were found in this image. Try a clearer screenshot or enter the item manually.',
+                                  ),
+                                ),
+                              ),
+                            );
+                            return;
+                          }
                           showDialog<void>(
                             context: context,
                             builder: (context) =>
@@ -1139,11 +1196,29 @@ class _DecisionDialog extends StatelessWidget {
         waitUntil: waitUntil,
       ),
     );
+    var notificationScheduled = true;
     if (waitUntil != null) {
-      await const LocalNotificationService().schedule(
-        id: id,
-        title: itemName,
-        at: waitUntil,
+      try {
+        notificationScheduled = await const LocalNotificationService().schedule(
+          id: id,
+          title: itemName,
+          at: waitUntil,
+        );
+      } on PlatformException {
+        notificationScheduled = false;
+      }
+    }
+    if (context.mounted && waitUntil != null && !notificationScheduled) {
+      final copy = GuardianCopy.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            copy.t(
+              '已加入稍后再看，但没能创建系统提醒。可以在系统设置中开启通知。',
+              'Saved for later, but the system reminder could not be created. Enable notifications in system settings.',
+            ),
+          ),
+        ),
       );
     }
     if (context.mounted) Navigator.pop(context);

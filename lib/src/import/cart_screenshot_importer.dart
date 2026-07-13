@@ -16,7 +16,7 @@ class CartScreenshotImporter {
 }
 
 abstract final class CartScreenshotParser {
-  static final _pricePattern = RegExp(r'[¥￥]\s*(\d+(?:\.\d{1,2})?)');
+  static final _pricePattern = RegExp(r'[¥￥Yy]\s*(\d+(?:\.\d{1,2})?)');
   static final _quantityPattern = RegExp(r'[xX×]\s*(\d+)');
 
   static List<SharedShoppingItem> parse(List<String> lines) {

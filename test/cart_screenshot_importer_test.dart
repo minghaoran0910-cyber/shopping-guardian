@@ -42,4 +42,20 @@ void main() {
     expect(items.single.quantity, 2);
     expect(items.single.price, 3999);
   });
+
+  test('accepts a yuan sign recognized as Y on Android', () {
+    final items = CartScreenshotParser.parse([
+      '淘宝 购物车',
+      '天猫 天风音像专营店',
+      '原装正版 山下达郎专辑 BIG WAVE LP黑胶唱片',
+      'Y323 x1',
+      '天猫 akko旗舰店',
+      'AKKO 灵犀 Linx68 三模机械键盘',
+      'Y699 x1',
+    ]);
+
+    expect(items, hasLength(2));
+    expect(items.first.price, 323);
+    expect(items.last.price, 699);
+  });
 }
