@@ -11,8 +11,20 @@ shared_group = project.main_group.find_subpath("Shared", true)
 shared_group.set_source_tree("<group>")
 shared_file = shared_group.files.find { |file| file.path == "Shared/SharedTextStore.swift" }
 shared_file ||= shared_group.new_file("Shared/SharedTextStore.swift")
+privacy_file = shared_group.files.find { |file| file.path == "Shared/PrivacyInfo.xcprivacy" }
+privacy_file ||= shared_group.new_file("Shared/PrivacyInfo.xcprivacy")
 unless runner.source_build_phase.files_references.include?(shared_file)
   runner.add_file_references([shared_file])
+end
+unless runner.resources_build_phase.files_references.include?(privacy_file)
+  runner.resources_build_phase.add_file_reference(privacy_file)
+end
+runner_group = project.groups.find { |group| group.path == "Runner" }
+abort "Runner group not found" unless runner_group
+ocr_file = runner_group.files.find { |file| file.path == "CartOCR.swift" }
+ocr_file ||= runner_group.new_file("CartOCR.swift")
+unless runner.source_build_phase.files_references.include?(ocr_file)
+  runner.add_file_references([ocr_file])
 end
 
 runner.build_configurations.each do |configuration|
@@ -65,6 +77,9 @@ extension.build_configurations.each do |configuration|
 end
 unless extension.source_build_phase.files_references.include?(shared_file)
   extension.add_file_references([shared_file])
+end
+unless extension.resources_build_phase.files_references.include?(privacy_file)
+  extension.resources_build_phase.add_file_reference(privacy_file)
 end
 
 # Swift links Foundation automatically. xcodeproj otherwise adds an SDK-versioned

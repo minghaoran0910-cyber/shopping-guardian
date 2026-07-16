@@ -5,6 +5,7 @@ import UIKit
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var sharedTextChannel: FlutterMethodChannel?
   private let sharedTextStore = SharedTextStore()
+  private var cartOCRPicker: CartOCRPicker?
 
   override func application(
     _ application: UIApplication,
@@ -27,6 +28,21 @@ import UIKit
       result(self?.sharedTextStore.consume())
     }
     sharedTextChannel = channel
+    let ocrChannel = FlutterMethodChannel(
+      name: "shopping_guardian/cart_ocr",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    ocrChannel.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "pickAndRecognize",
+            let presenter = self?.window?.rootViewController else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      if self?.cartOCRPicker == nil {
+        self?.cartOCRPicker = CartOCRPicker(presenter: presenter)
+      }
+      self?.cartOCRPicker?.pick(result: result)
+    }
   }
 
   override func applicationDidBecomeActive(_ application: UIApplication) {
