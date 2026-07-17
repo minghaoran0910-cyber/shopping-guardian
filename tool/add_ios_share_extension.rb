@@ -26,6 +26,11 @@ ocr_file ||= runner_group.new_file("CartOCR.swift")
 unless runner.source_build_phase.files_references.include?(ocr_file)
   runner.add_file_references([ocr_file])
 end
+notification_file = runner_group.files.find { |file| file.path == "LocalNotificationBridge.swift" }
+notification_file ||= runner_group.new_file("LocalNotificationBridge.swift")
+unless runner.source_build_phase.files_references.include?(notification_file)
+  runner.add_file_references([notification_file])
+end
 
 runner.build_configurations.each do |configuration|
   configuration.build_settings["CODE_SIGN_ENTITLEMENTS"] = "Runner/Runner.entitlements"

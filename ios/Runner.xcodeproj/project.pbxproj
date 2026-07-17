@@ -21,6 +21,7 @@
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		AD2CCC952E3D455F5C401940 /* CartOCR.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98561BEC11F4E80BA2D15CC8 /* CartOCR.swift */; };
 		BC81FD14F020BCB643797CA2 /* SharedTextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC61693106DB07E6BC2DD156 /* SharedTextStore.swift */; };
+		C210C6229FD0F8323DB8A4A9 /* LocalNotificationBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B15E5D175C89BFEC0FBDE83E /* LocalNotificationBridge.swift */; };
 		C473F17AE7EC51CFEA302855 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 807438995BC066941D42697D /* PrivacyInfo.xcprivacy */; };
 		F0FDB1821179D118042243AA /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D7D06ABA4074A760F0B4FE76 /* ShareExtension.appex */; };
 /* End PBXBuildFile section */
@@ -88,6 +89,7 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		98561BEC11F4E80BA2D15CC8 /* CartOCR.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CartOCR.swift; sourceTree = "<group>"; };
+		B15E5D175C89BFEC0FBDE83E /* LocalNotificationBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalNotificationBridge.swift; sourceTree = "<group>"; };
 		D7D06ABA4074A760F0B4FE76 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA1686003FC3B264A44B3089 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = Info.plist; path = ShareExtension/Info.plist; sourceTree = "<group>"; };
 		DC61693106DB07E6BC2DD156 /* SharedTextStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SharedTextStore.swift; path = Shared/SharedTextStore.swift; sourceTree = "<group>"; };
@@ -202,6 +204,7 @@
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				98561BEC11F4E80BA2D15CC8 /* CartOCR.swift */,
+				B15E5D175C89BFEC0FBDE83E /* LocalNotificationBridge.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -393,6 +396,7 @@
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 				032C0C7AB10691DF0A1B892F /* SharedTextStore.swift in Sources */,
 				AD2CCC952E3D455F5C401940 /* CartOCR.swift in Sources */,
+				C210C6229FD0F8323DB8A4A9 /* LocalNotificationBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
