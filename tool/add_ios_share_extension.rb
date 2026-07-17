@@ -3,6 +3,12 @@
 require "xcodeproj"
 
 project_path = File.expand_path("../ios/Runner.xcodeproj", __dir__)
+pubspec_path = File.expand_path("../pubspec.yaml", __dir__)
+version = File.readlines(pubspec_path).find { |line| line.start_with?("version:") }
+  &.split(":", 2)&.last&.strip
+abort "Version not found in pubspec.yaml" unless version
+marketing_version, build_number = version.split("+", 2)
+abort "Invalid pubspec version: #{version}" unless marketing_version && build_number
 project = Xcodeproj::Project.open(project_path)
 runner = project.targets.find { |target| target.name == "Runner" }
 abort "Runner target not found" unless runner
@@ -69,10 +75,10 @@ end
 extension.build_configurations.each do |configuration|
   settings = configuration.build_settings
   settings["CODE_SIGN_ENTITLEMENTS"] = "ShareExtension/ShareExtension.entitlements"
-  settings["CURRENT_PROJECT_VERSION"] = "2"
+  settings["CURRENT_PROJECT_VERSION"] = build_number
   settings["GENERATE_INFOPLIST_FILE"] = "NO"
   settings["INFOPLIST_FILE"] = "ShareExtension/Info.plist"
-  settings["MARKETING_VERSION"] = "1.1.0"
+  settings["MARKETING_VERSION"] = marketing_version
   settings["PRODUCT_BUNDLE_IDENTIFIER"] =
     "com.shoppingguardian.shoppingGuardian.ShareExtension"
   settings["PRODUCT_NAME"] = "$(TARGET_NAME)"
