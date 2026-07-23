@@ -53,15 +53,25 @@ class TaobaoProductImporter {
   }
 
   static String? _findItemId(String value) {
-    final decoded = Uri.decodeFull(value.replaceAll('&amp;', '&'));
+    final normalized = value.replaceAll('&amp;', '&');
     final patterns = [
       RegExp(r'(?:[?&](?:id|itemId)=)(\d{6,})', caseSensitive: false),
       RegExp(r'/i(\d{6,})\.htm', caseSensitive: false),
       RegExp(r'itemId["\\:=]+(\d{6,})', caseSensitive: false),
     ];
-    for (final pattern in patterns) {
-      final match = pattern.firstMatch(decoded);
-      if (match != null) return match.group(1);
+    final candidates = <String>[normalized];
+    try {
+      final decoded = Uri.decodeFull(normalized);
+      if (decoded != normalized) candidates.add(decoded);
+    } on ArgumentError {
+      // Shopping pages often contain CSS percentages or partial percent escapes.
+      // The raw HTML is still safe to search for a numeric item id.
+    }
+    for (final candidate in candidates) {
+      for (final pattern in patterns) {
+        final match = pattern.firstMatch(candidate);
+        if (match != null) return match.group(1);
+      }
     }
     return null;
   }

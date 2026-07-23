@@ -42,4 +42,22 @@ void main() {
       '10029035241515',
     );
   });
+
+  test('tolerates invalid percent escapes in a JD share page', () async {
+    final importer = JdProductImporter(
+      client: MockClient(
+        (_) async => http.Response(
+          '<style>.cover{width:100%}</style>'
+          '<a href="https://item.jd.com/57764460866.html">item</a>',
+          200,
+        ),
+      ),
+      productDetails: JustOneApiClient(token: 'test'),
+    );
+
+    expect(
+      await importer.resolveItemId(Uri.parse('https://3.cn/example')),
+      '57764460866',
+    );
+  });
 }

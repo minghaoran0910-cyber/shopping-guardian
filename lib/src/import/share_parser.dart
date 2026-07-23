@@ -25,14 +25,21 @@ class SharedShoppingItem {
 }
 
 abstract final class ShoppingShareParser {
-  static final RegExp _urlPattern = RegExp(r'https?://[^\s]+');
+  static final RegExp _markdownLinkPattern = RegExp(
+    r'\[[^\]\r\n]*\]\((https?://[^)\s]+)\)',
+  );
+  static final RegExp _urlPattern = RegExp(r'https?://[^\s\[\]()<>]+');
   static final RegExp _quotedTitlePattern = RegExp(r'[「『“](.*?)[」』”]');
   static final RegExp _shareCodePattern = RegExp(
     r'(?<![A-Za-z0-9])([A-Z]{2}\d{3,6})(?![A-Za-z0-9])',
   );
 
   static List<SharedShoppingItem> parse(String input) {
-    final matches = _urlPattern.allMatches(input).toList();
+    final normalizedInput = input.replaceAllMapped(
+      _markdownLinkPattern,
+      (match) => '${match.group(1)!} ',
+    );
+    final matches = _urlPattern.allMatches(normalizedInput).toList();
     final items = <SharedShoppingItem>[];
 
     for (var index = 0; index < matches.length; index++) {
@@ -41,12 +48,12 @@ abstract final class ShoppingShareParser {
       final uri = Uri.tryParse(rawUrl);
       if (uri == null) continue;
 
-      final previousLineBreak = input.lastIndexOf('\n', match.start);
+      final previousLineBreak = normalizedInput.lastIndexOf('\n', match.start);
       final contextStart = previousLineBreak < 0 ? 0 : previousLineBreak + 1;
       final contextEnd = index + 1 < matches.length
           ? matches[index + 1].start
-          : input.length;
-      final context = input.substring(contextStart, contextEnd);
+          : normalizedInput.length;
+      final context = normalizedInput.substring(contextStart, contextEnd);
       final platform = _platformFor(uri);
 
       if (platform == ShoppingPlatform.unknown) continue;

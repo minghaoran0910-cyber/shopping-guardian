@@ -199,10 +199,16 @@ class MainActivity : FlutterActivity() {
     )
 
     private fun sharedText(intent: Intent?): String? {
-        if (intent?.action != Intent.ACTION_SEND || intent.type != "text/plain") {
+        if (
+            intent?.action != Intent.ACTION_SEND ||
+            intent.type?.startsWith("text/") != true
+        ) {
             return null
         }
-        return intent.getStringExtra(Intent.EXTRA_TEXT)?.trim()?.takeIf { it.isNotEmpty() }
+        return intent.getCharSequenceExtra(Intent.EXTRA_TEXT)
+            ?.toString()
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
     }
 
     companion object {

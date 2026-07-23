@@ -6,7 +6,7 @@
 
 > 现在支持 macOS、Android 和 iOS。macOS、Android 提供现成安装包；iOS 目前提供源码自签安装。
 
-![购物守护者首页](docs/images/home.png)
+<img src="docs/images/home.png" alt="Android 版首页接收淘宝和京东分享" width="360">
 
 ## 已经能做什么
 
@@ -32,7 +32,7 @@
 ## 安装 macOS 版
 
 1. 打开仓库右侧的 **Releases**。
-2. 下载 `shopping-guardian-macos-v1.0.0.zip`。
+2. 下载最新的 `shopping-guardian-macos-v*.zip`。
 3. 解压后，把“购物守护者”拖到“应用程序”文件夹。
 4. 双击打开。
 
@@ -41,7 +41,7 @@
 ## 安装 Android 版
 
 1. 打开仓库右侧的 **Releases**。
-2. 下载 `shopping-guardian-android-v1.1.0.apk`。
+2. 下载最新的 `shopping-guardian-android-v*.apk`。
 3. 用系统文件管理器打开 APK。
 4. 如果系统拦截，只为当前文件管理器允许“安装未知应用”，安装完可以再关闭。
 
@@ -78,7 +78,7 @@ iOS 版已经支持系统分享、购物车截图 OCR、Keychain 和冷静期通
 
 进入“设置”，在 JustOneAPI 区域填写自己的 API Key，然后点击“测试并保存”。测试成功后，Key 才会写入本机。
 
-![JustOneAPI 设置](docs/images/settings.png)
+<img src="docs/images/settings.png" alt="Android 版 JustOneAPI、主题和语言设置" width="360">
 
 JustOneAPI 用来查询淘宝和京东的商品详情。没有配置 Key 时，京东购物清单仍可以读取页面上已有的标题和价格，但淘宝单商品、京东单商品的详情补全会受到限制。
 
@@ -98,7 +98,7 @@ macOS 版把 Key 保存到当前用户的应用数据目录，并设置为仅当
 
 支持一次粘贴多条分享文字。京东购物清单会自动展开成多件商品。
 
-![商品导入预览](docs/images/import-preview.png)
+<img src="docs/images/import-preview.png" alt="Android 版识别淘宝和京东商品后的导入预览" width="360">
 
 ### 4. 用购物车截图导入
 

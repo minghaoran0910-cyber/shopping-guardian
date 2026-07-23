@@ -133,13 +133,25 @@ void main() {
     expect(find.text('淘宝 · 单品 · ¥99'), findsOneWidget);
   });
 
-  testWidgets('puts Android shared text into the import field', (tester) async {
+  testWidgets('previews Taobao and JD items received from Android sharing', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({'onboarding_seen': true});
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     const channel = MethodChannel('test/widget_shared_text');
+    const sharedText = '''
+【淘宝】7天无理由退货 [https://e.tb.cn/h.826Ec69frH3tGlL?tk=4OaXgGvWPKX](https://e.tb.cn/h.826Ec69frH3tGlL?tk=4OaXgGvWPKX) MF278 「IZ乐队 - 路过旧天堂书店 12寸2LP半透明棕色胶+画册套盒现货包邮」
+点击链接直接打开 或者 淘宝搜索直接打开
+【京东】[https://3.cn/-2WCEI8M?jkl=@YCMEy7nNyRx](https://3.cn/-2WCEI8M?jkl=@YCMEy7nNyRx)@ CA1507 「宁芝静电容轴三模可编程键盘」
+点击链接直接打开 或者复制文案打开京东
+''';
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
           if (call.method == 'getInitialText') {
-            return '【京东】https://3.cn/shared 「分享商品」';
+            return sharedText;
           }
           return null;
         });
@@ -156,6 +168,14 @@ void main() {
     await tester.pumpAndSettle();
 
     final field = tester.widget<TextField>(find.byType(TextField).first);
-    expect(field.controller?.text, contains('https://3.cn/shared'));
+    expect(field.controller?.text, contains('https://e.tb.cn/'));
+    expect(field.controller?.text, contains('https://3.cn/'));
+
+    await tester.tap(find.text('下一步'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('认出了 2 项'), findsOneWidget);
+    expect(find.text('IZ乐队 - 路过旧天堂书店 12寸2LP半透明棕色胶+画册套盒现货包邮'), findsOneWidget);
+    expect(find.text('宁芝静电容轴三模可编程键盘'), findsOneWidget);
   });
 }

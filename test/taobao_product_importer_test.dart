@@ -42,4 +42,22 @@ void main() {
       '812345678901',
     );
   });
+
+  test('tolerates invalid percent escapes in a Taobao share page', () async {
+    final importer = TaobaoProductImporter(
+      client: MockClient(
+        (_) async => http.Response(
+          '<style>.cover{width:100%}</style>'
+          '<script>window.itemId="692813957349"</script>',
+          200,
+        ),
+      ),
+      productDetails: JustOneApiClient(token: 'test'),
+    );
+
+    expect(
+      await importer.resolveItemId(Uri.parse('https://e.tb.cn/h/example')),
+      '692813957349',
+    );
+  });
 }
