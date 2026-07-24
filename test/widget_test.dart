@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:shopping_guardian/main.dart';
+import 'package:shopping_guardian/src/history/decision_store.dart';
 import 'package:shopping_guardian/src/import/shared_text_receiver.dart';
 
 void main() {
@@ -177,5 +180,73 @@ void main() {
     expect(find.text('认出了 2 项'), findsOneWidget);
     expect(find.text('IZ乐队 - 路过旧天堂书店 12寸2LP半透明棕色胶+画册套盒现货包邮'), findsOneWidget);
     expect(find.text('宁芝静电容轴三模可编程键盘'), findsOneWidget);
+  });
+
+  testWidgets('changes a decision status and shows its timeline', (
+    tester,
+  ) async {
+    const notificationChannel = MethodChannel(
+      'shopping_guardian/notifications',
+    );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(notificationChannel, (_) async => null);
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(notificationChannel, null),
+    );
+    final createdAt = DateTime(2026, 7, 24, 10);
+    SharedPreferences.setMockInitialValues({
+      'onboarding_seen': true,
+      'decision_history_v1': [
+        jsonEncode({
+          'id': 'one',
+          'itemName': '宁芝静电容键盘',
+          'total': 699,
+          'verdict': 'wait',
+          'userChoice': 'wait',
+          'summary': '先冷静两天',
+          'createdAt': createdAt.toIso8601String(),
+          'events': [
+            {'status': 'analyzed', 'occurredAt': createdAt.toIso8601String()},
+            {'status': 'waiting', 'occurredAt': createdAt.toIso8601String()},
+          ],
+        }),
+      ],
+    });
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.tap(find.text('记录'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('宁芝静电容键盘'), findsOneWidget);
+    expect(find.text('冷静中'), findsWidgets);
+    await tester.tap(find.text('宁芝静电容键盘'));
+    await tester.pumpAndSettle();
+    expect(find.text('状态时间线'), findsOneWidget);
+    expect(find.textContaining('冷静中 ·'), findsOneWidget);
+
+    await tester.tap(find.text('修改状态'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(SimpleDialog),
+        matching: find.text('已购买'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SimpleDialog), findsNothing);
+    expect(
+      (await const DecisionStore().readAll()).single.currentStatus,
+      'purchased',
+    );
+    expect(
+      find.descendant(of: find.byType(Card), matching: find.text('已购买')),
+      findsOneWidget,
+    );
   });
 }

@@ -26,7 +26,7 @@ class BudgetStore {
     final spent = records
         .where(
           (record) =>
-              record.userChoice == 'buy' &&
+              record.countsAsPurchased &&
               record.createdAt.year == now.year &&
               record.createdAt.month == now.month,
         )

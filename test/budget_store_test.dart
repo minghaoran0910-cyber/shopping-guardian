@@ -43,4 +43,30 @@ void main() {
     await store.clear();
     expect((await store.snapshot()).limit, 0);
   });
+
+  test('does not count purchase intent until purchase is confirmed', () async {
+    SharedPreferences.setMockInitialValues({'monthly_budget_limit': 2000.0});
+    final now = DateTime.now();
+    const decisions = DecisionStore();
+    await decisions.add(
+      DecisionRecord(
+        id: 'intent',
+        itemName: '键盘',
+        total: 699,
+        verdict: 'buy',
+        userChoice: 'buy',
+        summary: '',
+        createdAt: now,
+        events: [
+          DecisionEvent(status: 'analyzed', occurredAt: now),
+          DecisionEvent(status: 'intend_to_buy', occurredAt: now),
+        ],
+      ),
+    );
+
+    expect((await const BudgetStore().snapshot()).spent, 0);
+
+    await decisions.setStatus('intent', 'purchased', occurredAt: now);
+    expect((await const BudgetStore().snapshot()).spent, 699);
+  });
 }

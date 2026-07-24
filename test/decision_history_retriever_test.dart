@@ -25,7 +25,8 @@ void main() {
     expect(matches, hasLength(5));
     expect(matches.first.record.id, 'same');
     expect(matches.map((item) => item.record.id), isNot(contains('unrelated')));
-    expect(matches.first.summary, contains('用户决定：wait'));
+    expect(matches.first.summary, contains('用户最初决定：wait'));
+    expect(matches.first.summary, contains('当前状态：waiting'));
   });
 
   test('returns no history when neither name nor price is related', () {

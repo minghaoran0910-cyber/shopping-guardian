@@ -24,4 +24,21 @@ void main() {
     expect(insights.waited, 1);
     expect(insights.skipped, 1);
   });
+
+  test('does not treat purchase intent as a completed purchase', () {
+    final now = DateTime(2026);
+    final insights = DecisionInsights.from([
+      DecisionRecord(
+        itemName: '键盘',
+        total: 699,
+        verdict: 'buy',
+        userChoice: 'buy',
+        summary: '',
+        createdAt: now,
+        events: [DecisionEvent(status: 'intend_to_buy', occurredAt: now)],
+      ),
+    ]);
+
+    expect(insights.bought, 0);
+  });
 }

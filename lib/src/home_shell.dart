@@ -1209,6 +1209,19 @@ class _DecisionDialog extends StatelessWidget {
         confidence: advice.confidence.name,
         budgetImpact: advice.budgetImpact,
         alternatives: advice.alternatives,
+        events: [
+          DecisionEvent(status: 'analyzed', occurredAt: now),
+          DecisionEvent(
+            status: switch (choice) {
+              'buy' => 'intend_to_buy',
+              'wait' => 'waiting',
+              'skip' => 'skipped',
+              'alternative' => 'seeking_alternative',
+              _ => 'analyzed',
+            },
+            occurredAt: now,
+          ),
+        ],
       ),
     );
     var notificationScheduled = true;
@@ -1402,7 +1415,11 @@ class _CooldownPageState extends State<CooldownPage> {
         future: records,
         builder: (context, snapshot) {
           final items = (snapshot.data ?? const [])
-              .where((record) => record.waitUntil != null)
+              .where(
+                (record) =>
+                    record.waitUntil != null &&
+                    record.currentStatus == 'waiting',
+              )
               .toList();
           if (items.isEmpty) {
             return _EmptyState(
@@ -1454,7 +1471,43 @@ class _HistoryPageState extends State<HistoryPage> {
     super.dispose();
   }
 
-  void _reload() => setState(() => records = const DecisionStore().readAll());
+  Future<void> _reload() async {
+    final updated = await const DecisionStore().readAll();
+    if (mounted) {
+      setState(() {
+        records = Future.value(updated);
+      });
+    }
+  }
+
+  Future<void> _changeStatus(DecisionRecord record) async {
+    final copy = GuardianCopy.of(context);
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(copy.t('现在是什么状态？', 'Current status')),
+        children: [
+          for (final status in const [
+            'waiting',
+            'intend_to_buy',
+            'purchased',
+            'skipped',
+            'seeking_alternative',
+          ])
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, status),
+              child: Text(_statusLabel(copy, status)),
+            ),
+        ],
+      ),
+    );
+    if (selected == null || selected == record.currentStatus) return;
+    await const DecisionStore().setStatus(record.id, selected);
+    if (selected != 'waiting') {
+      await const LocalNotificationService().cancel(record.id);
+    }
+    await _reload();
+  }
 
   Future<void> _feedback(DecisionRecord record) async {
     final copy = GuardianCopy.of(context);
@@ -1480,7 +1533,7 @@ class _HistoryPageState extends State<HistoryPage> {
     );
     if (value == null) return;
     await const DecisionStore().setFeedback(record.id, value);
-    if (mounted) _reload();
+    await _reload();
   }
 
   Future<void> _details(DecisionRecord record) async {
@@ -1514,6 +1567,20 @@ class _HistoryPageState extends State<HistoryPage> {
                       'Later: ${record.feedback}',
                     ),
                   ),
+                const SizedBox(height: 14),
+                Text(
+                  copy.t('状态时间线', 'Status timeline'),
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                ...record.effectiveEvents.map(
+                  (event) => Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      '• ${_statusLabel(copy, event.status)} · '
+                      '${event.occurredAt.toLocal().toString().substring(0, 16)}',
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 12),
                 Text(record.summary),
                 if (record.risk != null || record.confidence != null)
@@ -1575,6 +1642,10 @@ class _HistoryPageState extends State<HistoryPage> {
             child: Text(copy.t('删除', 'Delete')),
           ),
           TextButton(
+            onPressed: () => Navigator.pop(context, 'status'),
+            child: Text(copy.t('修改状态', 'Change status')),
+          ),
+          TextButton(
             onPressed: () => Navigator.pop(context, 'feedback'),
             child: Text(copy.t('补充反馈', 'Add feedback')),
           ),
@@ -1585,6 +1656,7 @@ class _HistoryPageState extends State<HistoryPage> {
         ],
       ),
     );
+    if (action == 'status') await _changeStatus(record);
     if (action == 'feedback') await _feedback(record);
     if (action == 'delete' && mounted) {
       final confirmed =
@@ -1614,7 +1686,7 @@ class _HistoryPageState extends State<HistoryPage> {
       if (confirmed) {
         await const DecisionStore().delete(record.id);
         await const LocalNotificationService().cancel(record.id);
-        if (mounted) _reload();
+        await _reload();
       }
     }
   }
@@ -1639,18 +1711,28 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
           ),
           const SizedBox(height: 12),
-          SegmentedButton<String>(
-            segments: [
-              ButtonSegment(value: 'all', label: Text(copy.t('全部', 'All'))),
-              ButtonSegment(value: 'buy', label: Text(copy.t('购买', 'Bought'))),
-              ButtonSegment(value: 'wait', label: Text(copy.t('等待', 'Waited'))),
-              ButtonSegment(
-                value: 'skip',
-                label: Text(copy.t('放弃', 'Skipped')),
-              ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final value in const [
+                'all',
+                'waiting',
+                'intend_to_buy',
+                'purchased',
+                'skipped',
+                'seeking_alternative',
+              ])
+                FilterChip(
+                  label: Text(
+                    value == 'all'
+                        ? copy.t('全部', 'All')
+                        : _statusLabel(copy, value),
+                  ),
+                  selected: status == value,
+                  onSelected: (_) => setState(() => status = value),
+                ),
             ],
-            selected: {status},
-            onSelectionChanged: (value) => setState(() => status = value.first),
           ),
           const SizedBox(height: 16),
           FutureBuilder<List<DecisionRecord>>(
@@ -1660,7 +1742,7 @@ class _HistoryPageState extends State<HistoryPage> {
               final items = (snapshot.data ?? const [])
                   .where(
                     (record) =>
-                        (status == 'all' || record.userChoice == status) &&
+                        (status == 'all' || _matchesStatus(record, status)) &&
                         (query.isEmpty ||
                             record.itemName.toLowerCase().contains(query)),
                   )
@@ -1694,7 +1776,7 @@ class _HistoryPageState extends State<HistoryPage> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text('¥${record.total.toStringAsFixed(2)}'),
-                              Text(record.userChoice),
+                              Text(_statusLabel(copy, record.currentStatus)),
                               if (record.feedback != null)
                                 Text(
                                   record.feedback!,
@@ -1714,6 +1796,28 @@ class _HistoryPageState extends State<HistoryPage> {
       ),
     );
   }
+
+  static bool _matchesStatus(DecisionRecord record, String status) {
+    if (status == 'purchased') return record.countsAsPurchased;
+    if (status == 'skipped' &&
+        record.currentStatus == 'feedback_completed' &&
+        record.feedback == 'not_bought') {
+      return true;
+    }
+    return record.currentStatus == status;
+  }
+
+  static String _statusLabel(GuardianCopy copy, String status) =>
+      switch (status) {
+        'analyzed' => copy.t('已分析', 'Analyzed'),
+        'waiting' => copy.t('冷静中', 'Waiting'),
+        'intend_to_buy' => copy.t('打算购买', 'Planning to buy'),
+        'purchased' => copy.t('已购买', 'Purchased'),
+        'skipped' => copy.t('已放弃', 'Skipped'),
+        'seeking_alternative' => copy.t('寻找替代', 'Finding alternatives'),
+        'feedback_completed' => copy.t('已反馈', 'Feedback added'),
+        _ => status,
+      };
 }
 
 class InsightsPage extends StatefulWidget {

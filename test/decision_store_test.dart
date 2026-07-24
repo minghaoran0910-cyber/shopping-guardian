@@ -156,4 +156,76 @@ void main() {
     );
     expect(matches.map((item) => item.record.id), isNot(contains('one')));
   });
+
+  test(
+    'appends status events without overwriting the original choice',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      const store = DecisionStore();
+      final analyzedAt = DateTime(2026, 7, 24, 10);
+      final purchasedAt = DateTime(2026, 7, 25, 9);
+      await store.add(
+        DecisionRecord(
+          id: 'one',
+          itemName: '键盘',
+          total: 699,
+          verdict: 'wait',
+          userChoice: 'buy',
+          summary: '可以考虑',
+          createdAt: analyzedAt,
+          events: [
+            DecisionEvent(status: 'analyzed', occurredAt: analyzedAt),
+            DecisionEvent(status: 'intend_to_buy', occurredAt: analyzedAt),
+          ],
+        ),
+      );
+
+      await store.setStatus('one', 'purchased', occurredAt: purchasedAt);
+      final record = (await store.readAll()).single;
+
+      expect(record.userChoice, 'buy');
+      expect(record.verdict, 'wait');
+      expect(record.currentStatus, 'purchased');
+      expect(record.events.map((event) => event.status), [
+        'analyzed',
+        'intend_to_buy',
+        'purchased',
+      ]);
+      expect(record.events.last.occurredAt, purchasedAt);
+    },
+  );
+
+  test('purchase feedback records purchase and feedback events', () async {
+    SharedPreferences.setMockInitialValues({});
+    const store = DecisionStore();
+    await store.add(
+      DecisionRecord(
+        id: 'one',
+        itemName: '唱片',
+        total: 323,
+        verdict: 'wait',
+        userChoice: 'wait',
+        summary: '',
+        createdAt: DateTime(2026, 7, 24),
+        events: [
+          DecisionEvent(status: 'waiting', occurredAt: DateTime(2026, 7, 24)),
+        ],
+      ),
+    );
+
+    await store.setFeedback('one', 'satisfied');
+    final record = (await store.readAll()).single;
+
+    expect(record.countsAsPurchased, isTrue);
+    expect(record.events.map((event) => event.status), contains('purchased'));
+    expect(record.events.last.status, 'feedback_completed');
+  });
+
+  test('rejects unsupported decision statuses', () async {
+    SharedPreferences.setMockInitialValues({});
+    expect(
+      () => const DecisionStore().setStatus('one', 'unknown'),
+      throwsArgumentError,
+    );
+  });
 }

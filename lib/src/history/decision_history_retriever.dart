@@ -92,6 +92,7 @@ class DecisionHistoryRetriever {
       _ => '',
     };
     return '$day，${record.itemName}，¥${record.total.toStringAsFixed(2)}，'
-        '用户决定：${record.userChoice}$feedback。${record.summary}';
+        '用户最初决定：${record.userChoice}，当前状态：${record.currentStatus}'
+        '$feedback。${record.summary}';
   }
 }

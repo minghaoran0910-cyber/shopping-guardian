@@ -18,9 +18,19 @@ class DecisionInsights {
   factory DecisionInsights.from(List<DecisionRecord> records) =>
       DecisionInsights(
         total: records.length,
-        bought: records.where((r) => r.userChoice == 'buy').length,
-        waited: records.where((r) => r.userChoice == 'wait').length,
-        skipped: records.where((r) => r.userChoice == 'skip').length,
+        bought: records.where((r) => r.countsAsPurchased).length,
+        waited: records
+            .where(
+              (r) =>
+                  r.effectiveEvents.any((event) => event.status == 'waiting'),
+            )
+            .length,
+        skipped: records
+            .where(
+              (r) =>
+                  r.effectiveEvents.any((event) => event.status == 'skipped'),
+            )
+            .length,
         regretted: records.where((r) => r.feedback == 'regretted').length,
       );
 }
