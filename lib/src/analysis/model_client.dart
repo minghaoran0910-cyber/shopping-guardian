@@ -3,7 +3,9 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-enum PurchaseVerdict { buy, wait, skip, insufficientData }
+enum PurchaseVerdict { buy, wait, skip, alternative, insufficientData }
+
+enum AdviceLevel { low, medium, high }
 
 class PurchaseAdvice {
   const PurchaseAdvice({
@@ -11,6 +13,10 @@ class PurchaseAdvice {
     required this.summary,
     required this.reasons,
     required this.missingInformation,
+    required this.risk,
+    required this.confidence,
+    required this.budgetImpact,
+    required this.alternatives,
     this.waitDays,
   });
 
@@ -18,6 +24,10 @@ class PurchaseAdvice {
   final String summary;
   final List<String> reasons;
   final List<String> missingInformation;
+  final AdviceLevel risk;
+  final AdviceLevel confidence;
+  final String budgetImpact;
+  final List<String> alternatives;
   final int? waitDays;
 }
 
@@ -56,7 +66,7 @@ class ModelClient {
         {
           'role': 'system',
           'content':
-              '你是站在用户利益一边的消费决策助手。只返回 JSON，字段为 verdict、summary、reasons、missing_information、wait_days。verdict 只能是 buy、wait、skip、insufficient_data。不要替用户购买。',
+              '你是站在用户利益一边的消费决策助手。只返回 JSON，字段为 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high。不要替用户购买。',
         },
         {'role': 'user', 'content': input},
       ]);
@@ -67,7 +77,7 @@ class ModelClient {
           {
             'role': 'system',
             'content':
-                '把下面内容修复成合法 JSON。只返回 JSON，不改变原意。必须包含 verdict、summary、reasons、missing_information、wait_days。',
+                '把下面内容修复成合法 JSON。只返回 JSON，不改变原意。必须包含 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high。',
           },
           {'role': 'user', 'content': content},
         ]);
@@ -126,6 +136,10 @@ class ModelClient {
     if (!data.containsKey('verdict') ||
         !data.containsKey('summary') ||
         !data.containsKey('reasons') ||
+        !data.containsKey('risk') ||
+        !data.containsKey('confidence') ||
+        !data.containsKey('budget_impact') ||
+        !data.containsKey('alternatives') ||
         !data.containsKey('missing_information')) {
       throw const FormatException();
     }
@@ -134,6 +148,10 @@ class ModelClient {
       summary: '${data['summary'] ?? ''}'.trim(),
       reasons: _strings(data['reasons']),
       missingInformation: _strings(data['missing_information']),
+      risk: _level(data['risk']),
+      confidence: _level(data['confidence']),
+      budgetImpact: '${data['budget_impact'] ?? ''}'.trim(),
+      alternatives: _strings(data['alternatives']),
       waitDays: data['wait_days'] is num
           ? (data['wait_days'] as num).toInt()
           : null,
@@ -144,7 +162,16 @@ class ModelClient {
     'buy' => PurchaseVerdict.buy,
     'wait' => PurchaseVerdict.wait,
     'skip' => PurchaseVerdict.skip,
-    _ => PurchaseVerdict.insufficientData,
+    'alternative' => PurchaseVerdict.alternative,
+    'insufficient_data' => PurchaseVerdict.insufficientData,
+    _ => throw const FormatException(),
+  };
+
+  static AdviceLevel _level(Object? value) => switch (value) {
+    'low' => AdviceLevel.low,
+    'medium' => AdviceLevel.medium,
+    'high' => AdviceLevel.high,
+    _ => throw const FormatException(),
   };
 
   static List<String> _strings(Object? value) => value is List

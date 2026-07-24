@@ -14,6 +14,10 @@ class DecisionRecord {
     this.waitUntil,
     this.feedback,
     this.referencedHistory = const [],
+    this.risk,
+    this.confidence,
+    this.budgetImpact,
+    this.alternatives = const [],
   });
   final String id;
   final String itemName;
@@ -25,6 +29,10 @@ class DecisionRecord {
   final DateTime? waitUntil;
   final String? feedback;
   final List<String> referencedHistory;
+  final String? risk;
+  final String? confidence;
+  final String? budgetImpact;
+  final List<String> alternatives;
 
   Map<String, Object?> toJson() => {
     'id': id.isEmpty ? createdAt.microsecondsSinceEpoch.toString() : id,
@@ -37,6 +45,10 @@ class DecisionRecord {
     'waitUntil': waitUntil?.toIso8601String(),
     'feedback': feedback,
     'referencedHistory': referencedHistory,
+    'risk': risk,
+    'confidence': confidence,
+    'budgetImpact': budgetImpact,
+    'alternatives': alternatives,
   };
   factory DecisionRecord.fromJson(Map<String, dynamic> json) => DecisionRecord(
     id: '${json['id'] ?? json['createdAt']}',
@@ -52,6 +64,12 @@ class DecisionRecord {
     feedback: json['feedback']?.toString(),
     referencedHistory:
         (json['referencedHistory'] as List?)?.map((item) => '$item').toList() ??
+        const [],
+    risk: json['risk']?.toString(),
+    confidence: json['confidence']?.toString(),
+    budgetImpact: json['budgetImpact']?.toString(),
+    alternatives:
+        (json['alternatives'] as List?)?.map((item) => '$item').toList() ??
         const [],
   );
 }
@@ -97,6 +115,10 @@ class DecisionStore {
                   waitUntil: record.waitUntil,
                   feedback: feedback,
                   referencedHistory: record.referencedHistory,
+                  risk: record.risk,
+                  confidence: record.confidence,
+                  budgetImpact: record.budgetImpact,
+                  alternatives: record.alternatives,
                 )
               : record,
         )

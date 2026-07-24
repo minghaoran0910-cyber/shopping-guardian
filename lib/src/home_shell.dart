@@ -1205,6 +1205,10 @@ class _DecisionDialog extends StatelessWidget {
         createdAt: now,
         waitUntil: waitUntil,
         referencedHistory: referencedHistory,
+        risk: advice.risk.name,
+        confidence: advice.confidence.name,
+        budgetImpact: advice.budgetImpact,
+        alternatives: advice.alternatives,
       ),
     );
     var notificationScheduled = true;
@@ -1242,6 +1246,7 @@ class _DecisionDialog extends StatelessWidget {
       PurchaseVerdict.buy => copy.t('可以买', 'Buy'),
       PurchaseVerdict.wait => copy.t('先等等', 'Wait'),
       PurchaseVerdict.skip => copy.t('这次先不买', 'Skip'),
+      PurchaseVerdict.alternative => copy.t('先看看替代方案', 'Find an alternative'),
       PurchaseVerdict.insufficientData => copy.t(
         '信息还不够',
         'Not enough information',
@@ -1262,6 +1267,23 @@ class _DecisionDialog extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(advice.summary),
+              const SizedBox(height: 8),
+              Text(
+                copy.t(
+                  '风险：${_levelLabel(copy, advice.risk)} · 信心：${_levelLabel(copy, advice.confidence)}',
+                  'Risk: ${_levelLabel(copy, advice.risk)} · Confidence: ${_levelLabel(copy, advice.confidence)}',
+                ),
+              ),
+              if (advice.budgetImpact.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    copy.t(
+                      '预算影响：${advice.budgetImpact}',
+                      'Budget impact: ${advice.budgetImpact}',
+                    ),
+                  ),
+                ),
               if (advice.waitDays != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -1284,6 +1306,19 @@ class _DecisionDialog extends StatelessWidget {
                   child: Text('• $item'),
                 ),
               ),
+              if (advice.alternatives.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(
+                  copy.t('可以考虑', 'Alternatives'),
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                ...advice.alternatives.map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text('• $item'),
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
               if (referencedHistory.isEmpty)
                 Text(
@@ -1337,6 +1372,13 @@ class _DecisionDialog extends StatelessWidget {
       ],
     );
   }
+
+  static String _levelLabel(GuardianCopy copy, AdviceLevel level) =>
+      switch (level) {
+        AdviceLevel.low => copy.t('低', 'Low'),
+        AdviceLevel.medium => copy.t('中', 'Medium'),
+        AdviceLevel.high => copy.t('高', 'High'),
+      };
 }
 
 class CooldownPage extends StatefulWidget {
@@ -1474,6 +1516,39 @@ class _HistoryPageState extends State<HistoryPage> {
                   ),
                 const SizedBox(height: 12),
                 Text(record.summary),
+                if (record.risk != null || record.confidence != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      copy.t(
+                        '风险：${record.risk ?? '—'} · 信心：${record.confidence ?? '—'}',
+                        'Risk: ${record.risk ?? '—'} · Confidence: ${record.confidence ?? '—'}',
+                      ),
+                    ),
+                  ),
+                if (record.budgetImpact?.isNotEmpty == true)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      copy.t(
+                        '预算影响：${record.budgetImpact}',
+                        'Budget impact: ${record.budgetImpact}',
+                      ),
+                    ),
+                  ),
+                if (record.alternatives.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    copy.t('当时给出的替代方案', 'Alternatives given'),
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  ...record.alternatives.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text('• $item'),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
                 Text(
                   record.referencedHistory.isEmpty
