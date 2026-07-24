@@ -5,6 +5,7 @@ import 'analysis/model_client.dart';
 import 'budget/budget_store.dart';
 import 'export/data_exporter.dart';
 import 'history/decision_store.dart';
+import 'history/decision_history_retriever.dart';
 import 'insights/decision_insights.dart';
 import 'notifications/local_notification_service.dart';
 import 'rules/consumption_rule_store.dart';
@@ -1064,6 +1065,11 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
       final config = await const ModelConfigStore().read();
       if (!config.isComplete) throw const ModelClientException('请先在设置里配置并测试模型');
       final matchedRules = await const ConsumptionRuleStore().matching(total);
+      final history = const DecisionHistoryRetriever().findRelevant(
+        itemName: widget.items.map((item) => item.title ?? '未命名商品').join('、'),
+        price: total,
+        records: await const DecisionStore().readAll(),
+      );
       final advice =
           await ModelClient(
             baseUrl: config.baseUrl,
@@ -1079,6 +1085,7 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
             matchedRules: matchedRules
                 .map((rule) => '${rule.name}：${rule.description}')
                 .toList(),
+            relatedHistory: history.map((item) => item.summary).toList(),
           );
       if (!mounted) return;
       Navigator.pop(context);
@@ -1088,6 +1095,7 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
           advice: advice,
           total: total,
           itemName: widget.items.map((item) => item.title ?? '未命名商品').join('、'),
+          referencedHistory: history.map((item) => item.summary).toList(),
         ),
       );
     } on Object catch (error) {
@@ -1173,10 +1181,12 @@ class _DecisionDialog extends StatelessWidget {
     required this.advice,
     required this.total,
     required this.itemName,
+    required this.referencedHistory,
   });
   final PurchaseAdvice advice;
   final double total;
   final String itemName;
+  final List<String> referencedHistory;
 
   Future<void> _choose(BuildContext context, String choice) async {
     final now = DateTime.now();
@@ -1194,6 +1204,7 @@ class _DecisionDialog extends StatelessWidget {
         summary: advice.summary,
         createdAt: now,
         waitUntil: waitUntil,
+        referencedHistory: referencedHistory,
       ),
     );
     var notificationScheduled = true;
@@ -1240,39 +1251,70 @@ class _DecisionDialog extends StatelessWidget {
       title: Text(title),
       content: SizedBox(
         width: 540,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '¥${total.toStringAsFixed(2)}',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 10),
-            Text(advice.summary),
-            if (advice.waitDays != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  copy.t(
-                    '建议等 ${advice.waitDays} 天再看。',
-                    'Check again in ${advice.waitDays} days.',
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '¥${total.toStringAsFixed(2)}',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 10),
+              Text(advice.summary),
+              if (advice.waitDays != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    copy.t(
+                      '建议等 ${advice.waitDays} 天再看。',
+                      'Check again in ${advice.waitDays} days.',
+                    ),
                   ),
                 ),
+              ...advice.reasons.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text('• $item'),
+                ),
               ),
-            ...advice.reasons.map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text('• $item'),
+              ...advice.missingInformation.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text('• $item'),
+                ),
               ),
-            ),
-            ...advice.missingInformation.map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text('• $item'),
-              ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              if (referencedHistory.isEmpty)
+                Text(
+                  copy.t(
+                    '本次为通用分析，没有引用个人历史。',
+                    'General analysis; no personal history was used.',
+                  ),
+                  style: Theme.of(context).textTheme.bodySmall,
+                )
+              else
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: EdgeInsets.zero,
+                  title: Text(
+                    copy.t(
+                      '引用了 ${referencedHistory.length} 条个人历史',
+                      '${referencedHistory.length} personal records used',
+                    ),
+                  ),
+                  children: referencedHistory
+                      .map(
+                        (item) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          title: Text(item),
+                        ),
+                      )
+                      .toList(),
+                ),
+            ],
+          ),
         ),
       ),
       actions: [
@@ -1407,28 +1449,49 @@ class _HistoryPageState extends State<HistoryPage> {
         title: Text(record.itemName),
         content: SizedBox(
           width: 480,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('¥${record.total.toStringAsFixed(2)}'),
-              const SizedBox(height: 10),
-              Text(
-                copy.t('模型建议：${record.verdict}', 'Model: ${record.verdict}'),
-              ),
-              Text(
-                copy.t(
-                  '你的决定：${record.userChoice}',
-                  'Your choice: ${record.userChoice}',
-                ),
-              ),
-              if (record.feedback != null)
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('¥${record.total.toStringAsFixed(2)}'),
+                const SizedBox(height: 10),
                 Text(
-                  copy.t('后来：${record.feedback}', 'Later: ${record.feedback}'),
+                  copy.t('模型建议：${record.verdict}', 'Model: ${record.verdict}'),
                 ),
-              const SizedBox(height: 12),
-              Text(record.summary),
-            ],
+                Text(
+                  copy.t(
+                    '你的决定：${record.userChoice}',
+                    'Your choice: ${record.userChoice}',
+                  ),
+                ),
+                if (record.feedback != null)
+                  Text(
+                    copy.t(
+                      '后来：${record.feedback}',
+                      'Later: ${record.feedback}',
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                Text(record.summary),
+                const SizedBox(height: 14),
+                Text(
+                  record.referencedHistory.isEmpty
+                      ? copy.t(
+                          '本次为通用分析，没有引用个人历史。',
+                          'General analysis; no personal history was used.',
+                        )
+                      : copy.t('本次引用的个人历史', 'Personal history used'),
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                ...record.referencedHistory.map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text('• $item'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         actions: [

@@ -1,9 +1,41 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shopping_guardian/src/analysis/model_client.dart';
 
 void main() {
+  test('sends only the selected history summaries', () async {
+    late Map<String, dynamic> requestBody;
+    final client = MockClient((request) async {
+      requestBody = jsonDecode(request.body) as Map<String, dynamic>;
+      return http.Response(
+        '{"choices":[{"message":{"content":"{\\"verdict\\":\\"wait\\",\\"summary\\":\\"参考过去先等等\\",\\"reasons\\":[],\\"missing_information\\":[]}"}}]}',
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+    });
+
+    await ModelClient(
+      baseUrl: 'https://example.com/v1',
+      apiKey: 'secret-key',
+      model: 'test',
+      client: client,
+    ).analyze(
+      itemName: '键盘',
+      price: 699,
+      relatedHistory: const ['过去买过同类键盘，后来很少使用'],
+    );
+
+    final messages = requestBody['messages'] as List;
+    final input =
+        jsonDecode((messages.last as Map<String, dynamic>)['content'] as String)
+            as Map<String, dynamic>;
+    expect(input['related_history'], ['过去买过同类键盘，后来很少使用']);
+    expect(jsonEncode(requestBody), isNot(contains('secret-key')));
+  });
+
   test('parses structured purchase advice', () async {
     final client = MockClient(
       (request) async => http.Response(

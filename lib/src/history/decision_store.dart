@@ -13,6 +13,7 @@ class DecisionRecord {
     required this.createdAt,
     this.waitUntil,
     this.feedback,
+    this.referencedHistory = const [],
   });
   final String id;
   final String itemName;
@@ -23,6 +24,7 @@ class DecisionRecord {
   final DateTime createdAt;
   final DateTime? waitUntil;
   final String? feedback;
+  final List<String> referencedHistory;
 
   Map<String, Object?> toJson() => {
     'id': id.isEmpty ? createdAt.microsecondsSinceEpoch.toString() : id,
@@ -34,6 +36,7 @@ class DecisionRecord {
     'createdAt': createdAt.toIso8601String(),
     'waitUntil': waitUntil?.toIso8601String(),
     'feedback': feedback,
+    'referencedHistory': referencedHistory,
   };
   factory DecisionRecord.fromJson(Map<String, dynamic> json) => DecisionRecord(
     id: '${json['id'] ?? json['createdAt']}',
@@ -47,6 +50,9 @@ class DecisionRecord {
         ? null
         : DateTime.parse('${json['waitUntil']}'),
     feedback: json['feedback']?.toString(),
+    referencedHistory:
+        (json['referencedHistory'] as List?)?.map((item) => '$item').toList() ??
+        const [],
   );
 }
 
@@ -90,6 +96,7 @@ class DecisionStore {
                   createdAt: record.createdAt,
                   waitUntil: record.waitUntil,
                   feedback: feedback,
+                  referencedHistory: record.referencedHistory,
                 )
               : record,
         )

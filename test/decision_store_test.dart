@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shopping_guardian/src/history/decision_history_retriever.dart';
 import 'package:shopping_guardian/src/history/decision_store.dart';
 
 void main() {
@@ -80,12 +83,34 @@ void main() {
         userChoice: 'buy',
         summary: '可以买',
         createdAt: DateTime(2026),
+        referencedHistory: const ['旧键盘，最后后悔'],
       ),
     );
     await store.setFeedback('one', 'regretted');
     final record = (await store.readAll()).single;
     expect(record.id, 'one');
     expect(record.feedback, 'regretted');
+    expect(record.referencedHistory, ['旧键盘，最后后悔']);
+  });
+
+  test('reads records created before history references were added', () async {
+    SharedPreferences.setMockInitialValues({
+      'decision_history_v1': [
+        jsonEncode({
+          'id': 'legacy',
+          'itemName': '旧记录',
+          'total': 10,
+          'verdict': 'wait',
+          'userChoice': 'wait',
+          'summary': '旧摘要',
+          'createdAt': '2026-01-01T00:00:00.000',
+        }),
+      ],
+    });
+
+    final record = (await const DecisionStore().readAll()).single;
+    expect(record.id, 'legacy');
+    expect(record.referencedHistory, isEmpty);
   });
 
   test('deletes one decision without affecting others', () async {
@@ -116,5 +141,11 @@ void main() {
     await store.delete('one');
     final records = await store.readAll();
     expect(records.single.id, 'two');
+    final matches = const DecisionHistoryRetriever().findRelevant(
+      itemName: '一',
+      price: 1,
+      records: records,
+    );
+    expect(matches.map((item) => item.record.id), isNot(contains('one')));
   });
 }
