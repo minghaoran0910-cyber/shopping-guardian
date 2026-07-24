@@ -34,6 +34,10 @@ void main() {
           exported = (call.arguments as Map)['content'] as String;
           return true;
         });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
 
     expect(await const DataExporter(channel: channel).export(), isTrue);
     final data = jsonDecode(exported!) as Map<String, dynamic>;
@@ -42,4 +46,18 @@ void main() {
     expect(exported, isNot(contains('must-not-export')));
     expect(exported, isNot(contains('api_key')));
   });
+
+  test(
+    'returns false when file export is unavailable on the platform',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+
+      expect(
+        await const DataExporter(
+          channel: MethodChannel('test/export_unavailable'),
+        ).export(),
+        isFalse,
+      );
+    },
+  );
 }

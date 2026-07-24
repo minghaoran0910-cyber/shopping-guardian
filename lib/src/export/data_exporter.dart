@@ -24,7 +24,13 @@ class DataExporter {
       },
       'decisions': records.map((record) => record.toJson()).toList(),
     });
-    return await channel.invokeMethod<bool>('saveJson', {'content': content}) ??
-        false;
+    try {
+      return await channel.invokeMethod<bool>('saveJson', {
+            'content': content,
+          }) ??
+          false;
+    } on MissingPluginException {
+      return false;
+    }
   }
 }
