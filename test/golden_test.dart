@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shopping_guardian/main.dart';
 
 void main() {
-  testWidgets('desktop workspace visual baseline', (tester) async {
+  testWidgets('desktop workspace visual baseline', tags: 'golden', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     tester.view.physicalSize = const Size(1440, 960);
     tester.view.devicePixelRatio = 1;
@@ -21,7 +23,7 @@ void main() {
     );
   });
 
-  testWidgets('settings visual baseline', (tester) async {
+  testWidgets('settings visual baseline', tags: 'golden', (tester) async {
     SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     tester.view.physicalSize = const Size(1440, 960);
     tester.view.devicePixelRatio = 1;
@@ -38,7 +40,7 @@ void main() {
     );
   });
 
-  testWidgets('import preview visual baseline', (tester) async {
+  testWidgets('import preview visual baseline', tags: 'golden', (tester) async {
     SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     tester.view.physicalSize = const Size(1440, 960);
     tester.view.devicePixelRatio = 1;
