@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../budget/budget_store.dart';
 import '../history/decision_store.dart';
 
 class DataExporter {
@@ -14,10 +15,11 @@ class DataExporter {
   Future<bool> export() async {
     final preferences = await SharedPreferences.getInstance();
     final records = await const DecisionStore().readAll();
+    final budget = await const BudgetStore().snapshot();
     final content = const JsonEncoder.withIndent('  ').convert({
       'schema_version': 1,
       'exported_at': DateTime.now().toUtc().toIso8601String(),
-      'monthly_budget': preferences.getDouble('monthly_budget_limit') ?? 0,
+      'monthly_budget': budget.limit,
       'model': {
         'base_url': preferences.getString('model_base_url'),
         'name': preferences.getString('model_name'),

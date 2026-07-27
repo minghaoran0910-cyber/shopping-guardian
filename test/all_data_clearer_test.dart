@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shopping_guardian/src/data/all_data_clearer.dart';
+import 'package:shopping_guardian/src/data/guardian_database.dart';
 import 'package:shopping_guardian/src/history/decision_store.dart';
 import 'package:shopping_guardian/src/notifications/local_notification_service.dart';
 import 'package:shopping_guardian/src/settings/api_key_store.dart';
@@ -60,6 +61,7 @@ void main() {
     );
 
     final keys = _MemoryApiKeyStore();
+    expect(await const DecisionStore().readAll(), hasLength(1));
     await AllDataClearer(
       apiKeyStore: keys,
       notificationService: const LocalNotificationService(channel: channel),
@@ -69,5 +71,11 @@ void main() {
     expect(keys.justOneApiKey, isEmpty);
     expect(keys.modelApiKey, isEmpty);
     expect(methods, ['cancelAll']);
+    expect(
+      await GuardianDatabase.instance
+          .select(GuardianDatabase.instance.decisions)
+          .get(),
+      isEmpty,
+    );
   });
 }

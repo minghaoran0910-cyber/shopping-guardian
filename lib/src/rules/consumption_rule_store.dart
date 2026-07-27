@@ -1,69 +1,53 @@
-import 'dart:convert';
+import 'package:drift/drift.dart';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import '../data/guardian_database.dart';
+import '../data/legacy_data_migrator.dart';
+import 'consumption_rule.dart';
 
-class ConsumptionRule {
-  const ConsumptionRule({
-    required this.id,
-    required this.name,
-    required this.description,
-    this.minimumAmount,
-    this.waitDays,
-    this.enabled = true,
-  });
-  final String id;
-  final String name;
-  final String description;
-  final double? minimumAmount;
-  final int? waitDays;
-  final bool enabled;
-
-  bool matches(double amount) =>
-      enabled && (minimumAmount == null || amount >= minimumAmount!);
-  Map<String, Object?> toJson() => {
-    'id': id,
-    'name': name,
-    'description': description,
-    'minimumAmount': minimumAmount,
-    'waitDays': waitDays,
-    'enabled': enabled,
-  };
-  factory ConsumptionRule.fromJson(Map<String, dynamic> json) =>
-      ConsumptionRule(
-        id: '${json['id']}',
-        name: '${json['name']}',
-        description: '${json['description']}',
-        minimumAmount: (json['minimumAmount'] as num?)?.toDouble(),
-        waitDays: (json['waitDays'] as num?)?.toInt(),
-        enabled: json['enabled'] != false,
-      );
-  ConsumptionRule copyWith({bool? enabled}) => ConsumptionRule(
-    id: id,
-    name: name,
-    description: description,
-    minimumAmount: minimumAmount,
-    waitDays: waitDays,
-    enabled: enabled ?? this.enabled,
-  );
-}
+export 'consumption_rule.dart';
 
 class ConsumptionRuleStore {
-  const ConsumptionRuleStore();
-  static const _key = 'consumption_rules_v1';
+  const ConsumptionRuleStore({this.database});
+
+  final GuardianDatabase? database;
+  GuardianDatabase get _database => database ?? GuardianDatabase.instance;
 
   Future<List<ConsumptionRule>> readAll() async {
-    final preferences = await SharedPreferences.getInstance();
-    return (preferences.getStringList(_key) ?? const [])
-        .map((item) => ConsumptionRule.fromJson(jsonDecode(item)))
+    await LegacyDataMigrator(_database).migrate();
+    final rows = await _database.select(_database.consumptionRules).get();
+    return rows
+        .map(
+          (row) => ConsumptionRule(
+            id: row.id,
+            name: row.name,
+            description: row.description,
+            minimumAmount: row.minimumAmount,
+            waitDays: row.waitDays,
+            enabled: row.enabled,
+          ),
+        )
         .toList();
   }
 
   Future<void> saveAll(List<ConsumptionRule> rules) async {
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setStringList(
-      _key,
-      rules.map((rule) => jsonEncode(rule.toJson())).toList(),
-    );
+    await LegacyDataMigrator(_database).migrate();
+    await _database.transaction(() async {
+      await _database.delete(_database.consumptionRules).go();
+      for (final rule in rules) {
+        await _database
+            .into(_database.consumptionRules)
+            .insert(
+              ConsumptionRulesCompanion.insert(
+                id: rule.id,
+                name: rule.name,
+                description: rule.description,
+                minimumAmount: Value(rule.minimumAmount),
+                waitDays: Value(rule.waitDays),
+                enabled: Value(rule.enabled),
+              ),
+            );
+      }
+    });
   }
 
   Future<List<ConsumptionRule>> matching(double amount) async =>

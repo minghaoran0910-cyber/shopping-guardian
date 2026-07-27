@@ -12,9 +12,9 @@
 
 ## P0：稳定 1.0
 
-- [ ] DATA-04 选择并接入 SQLite/Drift
-- [ ] DATA-05 迁移现有 SharedPreferences 决策、预算和规则
-- [ ] DATA-06 增加 Schema 版本、事务和损坏记录隔离
+- [x] DATA-04 选择并接入 SQLite/Drift
+- [x] DATA-05 迁移现有 SharedPreferences 决策、预算和规则
+- [x] DATA-06 增加 Schema 版本、事务和损坏记录隔离
 - [ ] DATA-07 实现 JSON 数据导入
 - [ ] DATA-08 支持导入预览、覆盖/合并和失败回滚
 - [ ] MODEL-01 Endpoint 支持标准路径与完整自定义地址
