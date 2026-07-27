@@ -62,6 +62,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('外观'), findsOneWidget);
+    expect(find.text('导入数据'), findsOneWidget);
     await tester.tap(find.text('English'));
     await tester.pumpAndSettle();
     expect(find.text('Appearance'), findsOneWidget);

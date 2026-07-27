@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shopping_guardian/src/export/data_exporter.dart';
 import 'package:shopping_guardian/src/history/decision_store.dart';
+import 'package:shopping_guardian/src/rules/consumption_rule_store.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,9 @@ void main() {
         createdAt: DateTime(2026, 7, 12),
       ),
     );
+    await const ConsumptionRuleStore().saveAll([
+      const ConsumptionRule(id: 'rule-1', name: '等待', description: '大额消费等两天'),
+    ]);
     const channel = MethodChannel('test/export');
     String? exported;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -41,8 +45,10 @@ void main() {
 
     expect(await const DataExporter(channel: channel).export(), isTrue);
     final data = jsonDecode(exported!) as Map<String, dynamic>;
+    expect(data['schema_version'], 2);
     expect(data['monthly_budget'], 2000);
     expect(data['decisions'], hasLength(1));
+    expect(data['rules'], hasLength(1));
     expect(exported, isNot(contains('must-not-export')));
     expect(exported, isNot(contains('api_key')));
   });

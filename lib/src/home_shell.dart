@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'analysis/model_client.dart';
 import 'budget/budget_store.dart';
 import 'data/all_data_clearer.dart';
+import 'export/data_importer.dart';
 import 'export/data_exporter.dart';
 import 'history/decision_store.dart';
 import 'history/decision_history_retriever.dart';
@@ -78,6 +79,7 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   GuardianDestination selected = GuardianDestination.analyze;
+  int dataRevision = 0;
 
   @override
   void didUpdateWidget(HomeShell oldWidget) {
@@ -103,12 +105,14 @@ class _HomeShellState extends State<HomeShell> {
       GuardianDestination.history => const HistoryPage(),
       GuardianDestination.insights => const InsightsPage(),
       GuardianDestination.settings => SettingsPage(
+        key: ValueKey(dataRevision),
         themeMode: widget.themeMode,
         locale: widget.locale,
         onThemeChanged: widget.onThemeChanged,
         onLocaleChanged: widget.onLocaleChanged,
         justOneApiToken: widget.justOneApiToken,
         onJustOneApiTokenChanged: widget.onJustOneApiTokenChanged,
+        onDataImported: () => setState(() => dataRevision++),
       ),
     };
 
@@ -1916,6 +1920,7 @@ class SettingsPage extends StatelessWidget {
     required this.onLocaleChanged,
     required this.justOneApiToken,
     required this.onJustOneApiTokenChanged,
+    required this.onDataImported,
   });
 
   final ThemeMode themeMode;
@@ -1924,6 +1929,7 @@ class SettingsPage extends StatelessWidget {
   final ValueChanged<Locale> onLocaleChanged;
   final String justOneApiToken;
   final Future<void> Function(String) onJustOneApiTokenChanged;
+  final VoidCallback onDataImported;
 
   @override
   Widget build(BuildContext context) {
@@ -2024,6 +2030,21 @@ class SettingsPage extends StatelessWidget {
                   },
                 ),
               ),
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.file_upload_outlined),
+                  title: Text(copy.t('导入数据', 'Import data')),
+                  subtitle: Text(
+                    copy.t(
+                      '先预览，再选择合并或覆盖。API Key 不会导入。',
+                      'Preview first, then merge or replace. API keys are never imported.',
+                    ),
+                  ),
+                  onTap: () => _importData(context, copy),
+                ),
+              ),
               const Divider(),
               Material(
                 color: Colors.transparent,
@@ -2072,6 +2093,155 @@ class SettingsPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _importData(BuildContext context, GuardianCopy copy) async {
+    try {
+      final importer = DataImporter();
+      final preview = await importer.pickAndPreview();
+      if (preview == null || !context.mounted) return;
+
+      var selectedMode = DataImportMode.merge;
+      final mode = await showDialog<DataImportMode>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text(copy.t('确认导入内容', 'Review import')),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      copy.t(
+                        '${preview.decisions.length} 条决策记录 · ${preview.rules.length} 条消费规则',
+                        '${preview.decisions.length} decisions · ${preview.rules.length} rules',
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      preview.monthlyBudget == null
+                          ? copy.t('文件中没有月预算', 'No monthly budget in file')
+                          : copy.t(
+                              '月预算：¥${preview.monthlyBudget!.toStringAsFixed(0)}',
+                              'Monthly budget: ¥${preview.monthlyBudget!.toStringAsFixed(0)}',
+                            ),
+                    ),
+                    if (preview.decisionConflicts + preview.ruleConflicts > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Text(
+                          copy.t(
+                            '${preview.decisionConflicts + preview.ruleConflicts} 条内容与本机 ID 重复。合并时会保留本机版本。',
+                            '${preview.decisionConflicts + preview.ruleConflicts} items share IDs with local data. Merge keeps the local versions.',
+                          ),
+                        ),
+                      ),
+                    if (preview.containsModelConfiguration)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Text(
+                          copy.t(
+                            '文件中的模型名称和地址不会自动改动。API Key 从不导入。',
+                            'Model name and endpoint will not be changed. API keys are never imported.',
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 18),
+                    SegmentedButton<DataImportMode>(
+                      segments: [
+                        ButtonSegment(
+                          value: DataImportMode.merge,
+                          label: Text(copy.t('合并', 'Merge')),
+                        ),
+                        ButtonSegment(
+                          value: DataImportMode.replace,
+                          label: Text(copy.t('覆盖本机', 'Replace local')),
+                        ),
+                      ],
+                      selected: {selectedMode},
+                      onSelectionChanged: (selection) =>
+                          setDialogState(() => selectedMode = selection.first),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      selectedMode == DataImportMode.merge
+                          ? copy.t(
+                              '保留本机内容，只加入不重复的记录。本机已有预算不变。',
+                              'Keep local data and add only new records. Your existing budget stays unchanged.',
+                            )
+                          : preview.containsRules
+                          ? copy.t(
+                              '删除本机决策、规则和预算，再写入这份文件。此操作无法撤销。',
+                              'Delete local decisions, rules, and budget before importing this file. This cannot be undone.',
+                            )
+                          : copy.t(
+                              '这是旧版备份：将替换决策和预算，但保留本机消费规则。此操作无法撤销。',
+                              'This is an older backup: decisions and budget will be replaced, while local rules are kept. This cannot be undone.',
+                            ),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(copy.t('取消', 'Cancel')),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, selectedMode),
+                child: Text(copy.t('开始导入', 'Import')),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (mode == null || !context.mounted) return;
+
+      final result = await importer.apply(preview, mode);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            copy.t(
+              '已导入 ${result.importedDecisions} 条决策和 ${result.importedRules} 条规则'
+                  '${result.skippedConflicts > 0 ? '，跳过 ${result.skippedConflicts} 条重复内容' : ''}。',
+              'Imported ${result.importedDecisions} decisions and ${result.importedRules} rules'
+                  '${result.skippedConflicts > 0 ? '; skipped ${result.skippedConflicts} duplicates' : ''}.',
+            ),
+          ),
+        ),
+      );
+      onDataImported();
+    } on DataImportException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            copy.t(
+              '无法导入：${error.message}',
+              'Could not import: ${error.message}',
+            ),
+          ),
+        ),
+      );
+    } on Object {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            copy.t(
+              '导入没有完成，本机数据没有改动。',
+              'Import did not finish. Local data was not changed.',
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _confirmClear(
