@@ -23,6 +23,25 @@ void main() {
     );
   });
 
+  testWidgets('dark workspace visual baseline', tags: 'golden', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'onboarding_seen': true,
+      'theme_mode': 'dark',
+    });
+    tester.view.physicalSize = const Size(1440, 960);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/dark_workspace.png'),
+    );
+  });
+
   testWidgets('settings visual baseline', tags: 'golden', (tester) async {
     SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     tester.view.physicalSize = const Size(1440, 960);

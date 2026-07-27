@@ -8,37 +8,37 @@
 
 ## Color
 
-以苔绿色作为品牌锚点，避免电商红、金融蓝和 AI 紫。Flutter 中使用 Material 3 语义色角色，不在页面组件内散落硬编码颜色。
+采用黑、白和同一组中性灰。界面不设置装饰性品牌色，主操作和当前选择使用高对比黑白反转；红色只用于错误和破坏性操作。Flutter 中使用 Material 3 语义色角色，不在页面组件内散落硬编码颜色。
 
 ### Light
 
 | Token | OKLCH | Usage |
 | --- | --- | --- |
 | background | `oklch(1 0 0)` | 主背景 |
-| surface | `oklch(0.975 0.004 140)` | 侧栏与分组表面 |
-| surfaceContainer | `oklch(0.945 0.007 140)` | 输入区和选中分组 |
-| ink | `oklch(0.205 0.018 145)` | 主文字 |
-| muted | `oklch(0.455 0.018 145)` | 次要文字 |
-| primary | `oklch(0.47 0.105 140)` | 主操作和当前选择 |
-| onPrimary | `oklch(0.99 0.004 140)` | 主色上的文字 |
-| accent | `oklch(0.55 0.13 32)` | 少量提醒和温度对比 |
+| surface | `oklch(1 0 0)` | 主内容表面 |
+| surfaceContainer | `oklch(0.965 0 0)` | 侧栏、输入区和分组表面 |
+| ink | `oklch(0.18 0 0)` | 主文字 |
+| muted | `oklch(0.45 0 0)` | 次要文字 |
+| primary | `oklch(0.18 0 0)` | 主操作和当前选择 |
+| onPrimary | `oklch(1 0 0)` | 主色上的文字 |
+| secondary | `oklch(0.35 0 0)` | 次级交互，不作装饰 |
 | error | `oklch(0.52 0.19 25)` | 错误与破坏性操作 |
-| outline | `oklch(0.82 0.012 140)` | 分隔与输入边界 |
+| outline | `oklch(0.82 0 0)` | 分隔与输入边界 |
 
 ### Dark
 
 | Token | OKLCH | Usage |
 | --- | --- | --- |
-| background | `oklch(0.115 0.006 140)` | 主背景 |
-| surface | `oklch(0.155 0.009 140)` | 侧栏与分组表面 |
-| surfaceContainer | `oklch(0.205 0.012 140)` | 输入区和选中分组 |
-| ink | `oklch(0.94 0.008 140)` | 主文字 |
-| muted | `oklch(0.72 0.014 140)` | 次要文字 |
-| primary | `oklch(0.72 0.105 140)` | 主操作和当前选择 |
-| onPrimary | `oklch(0.16 0.02 140)` | 主色上的文字 |
-| accent | `oklch(0.72 0.12 40)` | 少量提醒和温度对比 |
+| background | `oklch(0.11 0 0)` | 主背景 |
+| surface | `oklch(0.11 0 0)` | 主内容表面 |
+| surfaceContainer | `oklch(0.18 0 0)` | 侧栏、输入区和分组表面 |
+| ink | `oklch(0.94 0 0)` | 主文字 |
+| muted | `oklch(0.70 0 0)` | 次要文字 |
+| primary | `oklch(0.94 0 0)` | 主操作和当前选择 |
+| onPrimary | `oklch(0.11 0 0)` | 主色上的文字 |
+| secondary | `oklch(0.78 0 0)` | 次级交互，不作装饰 |
 | error | `oklch(0.72 0.15 25)` | 错误与破坏性操作 |
-| outline | `oklch(0.36 0.012 140)` | 分隔与输入边界 |
+| outline | `oklch(0.36 0 0)` | 分隔与输入边界 |
 
 实际 Flutter `Color` 值由这些 OKLCH 设计令牌转换后集中定义，并单独验证对比度。
 

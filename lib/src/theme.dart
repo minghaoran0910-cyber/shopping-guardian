@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
 
 abstract final class GuardianColors {
-  static const lightPrimary = Color(0xFF397547);
+  static const lightPrimary = Color(0xFF1A1A1A);
   static const lightOnPrimary = Color(0xFFFFFFFF);
-  static const lightSurface = Color(0xFFF7F9F6);
-  static const lightSurfaceContainer = Color(0xFFEDF2EC);
-  static const lightOutline = Color(0xFFC7D0C6);
-  static const lightInk = Color(0xFF1D281E);
-  static const lightMuted = Color(0xFF59675A);
-  static const accent = Color(0xFFAE563E);
+  static const lightSurface = Color(0xFFFFFFFF);
+  static const lightSurfaceContainer = Color(0xFFF3F3F3);
+  static const lightOutline = Color(0xFFD1D1D1);
+  static const lightInk = Color(0xFF1A1A1A);
+  static const lightMuted = Color(0xFF666666);
+  static const lightSecondary = Color(0xFF4A4A4A);
 
-  static const darkPrimary = Color(0xFF9BD4A2);
-  static const darkOnPrimary = Color(0xFF0E3518);
-  static const darkSurface = Color(0xFF171C18);
-  static const darkSurfaceContainer = Color(0xFF222923);
-  static const darkOutline = Color(0xFF424C43);
-  static const darkInk = Color(0xFFE8EFE7);
-  static const darkMuted = Color(0xFFB6C1B6);
+  static const darkPrimary = Color(0xFFF2F2F2);
+  static const darkOnPrimary = Color(0xFF121212);
+  static const darkSurface = Color(0xFF121212);
+  static const darkSurfaceContainer = Color(0xFF202020);
+  static const darkOutline = Color(0xFF494949);
+  static const darkInk = Color(0xFFF2F2F2);
+  static const darkMuted = Color(0xFFB3B3B3);
+  static const darkSecondary = Color(0xFFD0D0D0);
 }
 
 abstract final class GuardianTheme {
@@ -29,6 +30,7 @@ abstract final class GuardianTheme {
     outline: GuardianColors.lightOutline,
     ink: GuardianColors.lightInk,
     muted: GuardianColors.lightMuted,
+    secondary: GuardianColors.lightSecondary,
   );
 
   static ThemeData dark() => _theme(
@@ -40,6 +42,7 @@ abstract final class GuardianTheme {
     outline: GuardianColors.darkOutline,
     ink: GuardianColors.darkInk,
     muted: GuardianColors.darkMuted,
+    secondary: GuardianColors.darkSecondary,
   );
 
   static ThemeData _theme({
@@ -51,13 +54,16 @@ abstract final class GuardianTheme {
     required Color outline,
     required Color ink,
     required Color muted,
+    required Color secondary,
   }) {
     final scheme = ColorScheme(
       brightness: brightness,
       primary: primary,
       onPrimary: onPrimary,
-      secondary: GuardianColors.accent,
-      onSecondary: Colors.white,
+      secondary: secondary,
+      onSecondary: brightness == Brightness.light
+          ? Colors.white
+          : const Color(0xFF121212),
       error: brightness == Brightness.light
           ? const Color(0xFFB3261E)
           : const Color(0xFFFFB4AB),

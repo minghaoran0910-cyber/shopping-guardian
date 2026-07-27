@@ -31,6 +31,14 @@ class LocalNotificationService {
     }
   }
 
+  Future<void> cancelAll() async {
+    try {
+      await channel.invokeMethod<void>('cancelAll');
+    } on MissingPluginException {
+      return;
+    }
+  }
+
   Future<bool> isDelivered(String id) async {
     try {
       return await channel.invokeMethod<bool>('isDelivered', {'id': id}) ??

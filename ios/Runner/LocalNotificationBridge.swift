@@ -9,6 +9,12 @@ final class LocalNotificationBridge {
   }
 
   func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    if call.method == "cancelAll" {
+      center.removeAllPendingNotificationRequests()
+      center.removeAllDeliveredNotifications()
+      result(nil)
+      return
+    }
     guard let arguments = call.arguments as? [String: Any],
           let id = arguments["id"] as? String,
           !id.isEmpty else {

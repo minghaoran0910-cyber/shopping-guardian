@@ -94,6 +94,10 @@ class MainActivity : FlutterActivity() {
                     cancelNotification(id)
                     result.success(null)
                 }
+                "cancelAll" -> {
+                    cancelAllNotifications()
+                    result.success(null)
+                }
                 "isDelivered" -> {
                     val id = call.argument<String>("id").orEmpty()
                     val manager = getSystemService(NotificationManager::class.java)
@@ -172,6 +176,7 @@ class MainActivity : FlutterActivity() {
         val pendingIntent = notificationPendingIntent(request, PendingIntent.FLAG_UPDATE_CURRENT)
         val triggerAt = maxOf(request.timestamp, System.currentTimeMillis() + 1_000L)
         alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
+        addNotificationId(request.id)
         return true
     }
 
@@ -183,6 +188,36 @@ class MainActivity : FlutterActivity() {
         alarmManager.cancel(intent)
         intent.cancel()
         getSystemService(NotificationManager::class.java)?.cancel(id.hashCode())
+        removeNotificationId(id)
+    }
+
+    private fun cancelAllNotifications() {
+        scheduledNotificationIds().forEach(::cancelNotification)
+        getSystemService(NotificationManager::class.java)?.cancelAll()
+        getSharedPreferences(NOTIFICATION_PREFERENCES, MODE_PRIVATE)
+            .edit()
+            .remove(NOTIFICATION_IDS)
+            .apply()
+    }
+
+    private fun scheduledNotificationIds(): Set<String> =
+        getSharedPreferences(NOTIFICATION_PREFERENCES, MODE_PRIVATE)
+            .getStringSet(NOTIFICATION_IDS, emptySet())
+            .orEmpty()
+            .toSet()
+
+    private fun addNotificationId(id: String) {
+        val preferences = getSharedPreferences(NOTIFICATION_PREFERENCES, MODE_PRIVATE)
+        val ids = scheduledNotificationIds().toMutableSet()
+        ids.add(id)
+        preferences.edit().putStringSet(NOTIFICATION_IDS, ids).apply()
+    }
+
+    private fun removeNotificationId(id: String) {
+        val preferences = getSharedPreferences(NOTIFICATION_PREFERENCES, MODE_PRIVATE)
+        val ids = scheduledNotificationIds().toMutableSet()
+        ids.remove(id)
+        preferences.edit().putStringSet(NOTIFICATION_IDS, ids).apply()
     }
 
     private fun notificationPendingIntent(
@@ -214,6 +249,8 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val OCR_PICK_REQUEST = 4201
         private const val NOTIFICATION_PERMISSION_REQUEST = 4202
+        private const val NOTIFICATION_PREFERENCES = "shopping_guardian_notifications"
+        private const val NOTIFICATION_IDS = "scheduled_ids"
     }
 
     private data class NotificationRequest(

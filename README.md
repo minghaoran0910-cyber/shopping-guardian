@@ -194,6 +194,8 @@ build/macos/Build/Products/Release/购物守护者.app
 - [PRD](购物守护者-PRD-v0.1-macOS.md)
 - [产品上下文](PRODUCT.md)
 - [设计规范](DESIGN.md)
+- [v1.3.0 审查与验收报告](docs/AUDIT-2026-07-27.md)
+- [开发待办与路线图](docs/ROADMAP.md)
 
 ## 隐私
 

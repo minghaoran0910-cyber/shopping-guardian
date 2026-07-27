@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'analysis/model_client.dart';
 import 'budget/budget_store.dart';
+import 'data/all_data_clearer.dart';
 import 'export/data_exporter.dart';
 import 'history/decision_store.dart';
 import 'history/decision_history_retriever.dart';
@@ -2042,6 +2043,30 @@ class SettingsPage extends StatelessWidget {
                   onTap: () => _confirmClear(context, copy, clearConfig: true),
                 ),
               ),
+              const Divider(),
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    Icons.delete_forever_outlined,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  title: Text(
+                    copy.t('清除全部本地数据', 'Clear all local data'),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  subtitle: Text(
+                    copy.t(
+                      '包括记录、预算、规则、API 配置、偏好和提醒。',
+                      'Includes history, budget, rules, API settings, preferences, and reminders.',
+                    ),
+                  ),
+                  onTap: () => _confirmClearAll(context, copy),
+                ),
+              ),
             ],
           ),
         ],
@@ -2090,6 +2115,52 @@ class SettingsPage extends StatelessWidget {
         context,
       ).showSnackBar(SnackBar(content: Text(copy.t('已经清除。', 'Cleared.'))));
     }
+  }
+
+  Future<void> _confirmClearAll(BuildContext context, GuardianCopy copy) async {
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(copy.t('清除全部本地数据？', 'Clear all local data?')),
+            content: Text(
+              copy.t(
+                '记录、预算、规则、API 配置、应用偏好和已安排的提醒都会删除。这个操作不能撤销。',
+                'History, budget, rules, API settings, app preferences, and scheduled reminders will be removed. This cannot be undone.',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(copy.t('取消', 'Cancel')),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  foregroundColor: Theme.of(context).colorScheme.onError,
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(copy.t('全部清除', 'Clear everything')),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed) return;
+
+    await const AllDataClearer().clear();
+    await onJustOneApiTokenChanged('');
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          copy.t(
+            '本地数据已清除。重新打开应用后会回到首次设置。',
+            'Local data cleared. Reopen the app to start fresh.',
+          ),
+        ),
+      ),
+    );
   }
 }
 

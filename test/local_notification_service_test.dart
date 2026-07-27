@@ -18,6 +18,7 @@ void main() {
       isTrue,
     );
     await service.cancel('one');
-    expect(methods, ['schedule', 'cancel']);
+    await service.cancelAll();
+    expect(methods, ['schedule', 'cancel', 'cancelAll']);
   });
 }

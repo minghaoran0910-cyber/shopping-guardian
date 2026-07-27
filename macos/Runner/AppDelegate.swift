@@ -48,11 +48,19 @@ class AppDelegate: FlutterAppDelegate {
     }
     let notificationChannel = FlutterMethodChannel(name: "shopping_guardian/notifications", binaryMessenger: controller.engine.binaryMessenger)
     notificationChannel.setMethodCallHandler { call, result in
+      if call.method == "cancelAll" {
+        let center = UNUserNotificationCenter.current()
+        center.removeAllPendingNotificationRequests()
+        center.removeAllDeliveredNotifications()
+        result(nil); return
+      }
       guard let arguments = call.arguments as? [String: Any], let id = arguments["id"] as? String else {
         result(FlutterMethodNotImplemented); return
       }
       if call.method == "cancel" {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [id])
+        center.removeDeliveredNotifications(withIdentifiers: [id])
         result(nil); return
       }
       guard call.method == "schedule", let title = arguments["title"] as? String, let timestamp = arguments["timestamp"] as? Int64 else {
