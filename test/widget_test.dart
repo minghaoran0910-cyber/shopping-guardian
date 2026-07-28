@@ -10,17 +10,29 @@ import 'package:shopping_guardian/src/history/decision_store.dart';
 import 'package:shopping_guardian/src/import/shared_text_receiver.dart';
 
 void main() {
-  testWidgets('shows privacy notice on first launch', (tester) async {
+  testWidgets('shows setup choices on first launch', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const ShoppingGuardianApp());
     await tester.pumpAndSettle();
-    expect(find.text('先说清楚数据去哪儿'), findsOneWidget);
+    expect(find.text('三步开始使用'), findsOneWidget);
     expect(find.textContaining('JustOneAPI'), findsOneWidget);
-    expect(find.textContaining('开始分析前'), findsOneWidget);
-    expect(find.text('我知道了'), findsOneWidget);
-    await tester.tap(find.text('我知道了'));
+    expect(find.textContaining('只有 AI 分析需要模型'), findsOneWidget);
+    expect(find.text('先逛逛'), findsOneWidget);
+    await tester.tap(find.text('先逛逛'));
     await tester.pumpAndSettle();
-    expect(find.text('先说清楚数据去哪儿'), findsNothing);
+    expect(find.text('三步开始使用'), findsNothing);
+  });
+
+  testWidgets('opens settings from first-run setup', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('去设置'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('设置'), findsWidgets);
+    expect(find.text('模型'), findsOneWidget);
+    expect(find.text('JustOneAPI'), findsWidgets);
   });
 
   testWidgets('shows the local-first analysis workspace', (tester) async {
@@ -102,6 +114,7 @@ void main() {
     expect(find.text('认出了 1 项'), findsOneWidget);
     expect(find.text('vivo X300 蔡司2亿超级主摄'), findsOneWidget);
     expect(find.text('京东 · 单品'), findsOneWidget);
+    expect(find.text('需核对'), findsOneWidget);
 
     await tester.tap(find.text('继续分析'));
     await tester.pumpAndSettle();
@@ -135,6 +148,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('淘宝 · 单品 · ¥88'), findsOneWidget);
+    expect(find.text('信息完整'), findsOneWidget);
     await tester.tap(find.byIcon(Icons.edit_outlined));
     await tester.pumpAndSettle();
     expect(find.text('修改商品'), findsOneWidget);
@@ -144,6 +158,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('改过的商品'), findsOneWidget);
     expect(find.text('淘宝 · 单品 · ¥99'), findsOneWidget);
+    expect(find.text('已核对'), findsOneWidget);
   });
 
   testWidgets('previews Taobao and JD items received from Android sharing', (

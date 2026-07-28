@@ -215,6 +215,11 @@ build/macos/Build/Products/Release/购物守护者.app
 - Android、iOS 和 Windows 的 API Key 使用系统安全存储；macOS 使用 Application Support 目录下权限为 `0600` 的文件
 - 决策、预算和规则存入本机 SQLite 数据库，设置存入本机偏好；数据库与 JSON 导出未额外加密，请保护好设备和备份文件
 
+## 无障碍
+
+- 自动化测试覆盖 200% 字号、桌面键盘焦点、可点击控件标签和 Android 触控尺寸
+- 发布前仍需在真实设备上分别使用 TalkBack 与 VoiceOver 走查主要流程；自动化语义检查不能替代真人读屏体验
+
 ## License
 
 Apache License 2.0

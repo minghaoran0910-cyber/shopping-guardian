@@ -23,6 +23,7 @@ class _ShoppingGuardianAppState extends State<ShoppingGuardianApp> {
   String justOneApiToken = const String.fromEnvironment('JUSTONEAPI_TOKEN');
   late final SharedTextReceiver sharedTextReceiver;
   String? sharedText;
+  int openSettingsRevision = 0;
 
   @override
   void initState() {
@@ -83,50 +84,69 @@ class _ShoppingGuardianAppState extends State<ShoppingGuardianApp> {
     final dialogContext = navigatorKey.currentContext;
     if (!mounted || dialogContext == null) return;
     final isZh = locale.languageCode == 'zh';
-    await showDialog<void>(
+    final openSettings = await showDialog<bool>(
       context: dialogContext,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        icon: const Icon(Icons.shield_outlined),
-        title: Text(isZh ? '先说清楚数据去哪儿' : 'Where your data goes'),
+        icon: const Icon(Icons.tune_outlined),
+        title: Text(isZh ? '三步开始使用' : 'Get started in three steps'),
         content: SizedBox(
           width: 480,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isZh
-                    ? '商品、预算、规则和历史默认保存在这台设备；截图识别也在本地完成。'
-                    : 'Items, budgets, rules, and history stay on this device by default. Screenshot recognition also runs locally.',
-              ),
-              const SizedBox(height: 12),
-              Text(
-                isZh
-                    ? '获取商品资料时，商品链接或 ID 会直达 JustOneAPI。开始分析前，应用会让你核对将要直达模型服务的商品、理由、预算、规则和相关历史摘要。'
-                    : 'To retrieve product details, the product link or ID goes directly to JustOneAPI. Before analysis, you can review the item, reason, budget, rules, and related-history summaries sent directly to your model service.',
-              ),
-              const SizedBox(height: 12),
-              Text(
-                isZh
-                    ? '本项目没有账号和中转服务器。API Key 不会放进请求正文或数据导出。模型建议仅供参考，不会替你购买。'
-                    : 'This project has no accounts or relay server. API keys are excluded from request bodies and data exports. Model advice is informational and never purchases for you.',
-              ),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _OnboardingStep(
+                  number: '1',
+                  title: isZh ? '现在就能用' : 'Ready now',
+                  body: isZh
+                      ? '手动填写、粘贴分享文字和截图识别都在本地完成。商品、预算、规则和历史默认只存在这台设备。'
+                      : 'Manual entry, shared text, and screenshot recognition work locally. Items, budgets, rules, and history stay on this device by default.',
+                ),
+                const SizedBox(height: 12),
+                _OnboardingStep(
+                  number: '2',
+                  title: isZh ? '分析前配置自己的模型' : 'Add your model for analysis',
+                  body: isZh
+                      ? '只有 AI 分析需要模型 Endpoint、模型名和你自己的 API Key。发送前可以核对内容；项目没有中转服务器。'
+                      : 'AI analysis needs your model endpoint, model name, and API key. You can review the payload before sending; this project has no relay server.',
+                ),
+                const SizedBox(height: 12),
+                _OnboardingStep(
+                  number: '3',
+                  title: isZh ? '商品自动补全是可选项' : 'Product enrichment is optional',
+                  body: isZh
+                      ? 'JustOneAPI Token 只用于补全淘宝或京东商品资料。不填写也能用手动输入和截图导入。所有密钥都不会进入业务数据导出。'
+                      : 'A JustOneAPI token only enriches Taobao or JD product details. Manual and screenshot imports work without it. Keys are excluded from business-data exports.',
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
+          TextButton(
+            onPressed: () async {
+              final preferences = await SharedPreferences.getInstance();
+              await preferences.setBool('onboarding_seen', true);
+              if (context.mounted) Navigator.pop(context, false);
+            },
+            child: Text(isZh ? '先逛逛' : 'Explore first'),
+          ),
           FilledButton(
             onPressed: () async {
               final preferences = await SharedPreferences.getInstance();
               await preferences.setBool('onboarding_seen', true);
-              if (context.mounted) Navigator.pop(context);
+              if (context.mounted) Navigator.pop(context, true);
             },
-            child: Text(isZh ? '我知道了' : 'Got it'),
+            child: Text(isZh ? '去设置' : 'Open settings'),
           ),
         ],
       ),
     );
+    if (openSettings == true && mounted) {
+      setState(() => openSettingsRevision++);
+    }
   }
 
   Future<void> _setThemeMode(ThemeMode value) async {
@@ -162,7 +182,39 @@ class _ShoppingGuardianAppState extends State<ShoppingGuardianApp> {
         onJustOneApiTokenChanged: _setJustOneApiToken,
         sharedText: sharedText,
         onSharedTextConsumed: _consumeSharedText,
+        openSettingsRevision: openSettingsRevision,
       ),
     );
   }
+}
+
+class _OnboardingStep extends StatelessWidget {
+  const _OnboardingStep({
+    required this.number,
+    required this.title,
+    required this.body,
+  });
+
+  final String number;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      CircleAvatar(radius: 14, child: Text(number)),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 3),
+            Text(body),
+          ],
+        ),
+      ),
+    ],
+  );
 }

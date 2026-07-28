@@ -2,6 +2,8 @@ enum ShoppingPlatform { taobao, jd, unknown }
 
 enum ShareKind { product, collection }
 
+enum ImportCompleteness { complete, needsReview, reviewed }
+
 class SharedShoppingItem {
   const SharedShoppingItem({
     required this.platform,
@@ -12,6 +14,7 @@ class SharedShoppingItem {
     this.price,
     this.imageUrl,
     this.quantity = 1,
+    this.reviewed = false,
   });
 
   final ShoppingPlatform platform;
@@ -22,6 +25,15 @@ class SharedShoppingItem {
   final double? price;
   final Uri? imageUrl;
   final int quantity;
+  final bool reviewed;
+
+  ImportCompleteness get completeness {
+    if (reviewed) return ImportCompleteness.reviewed;
+    if (title?.trim().isNotEmpty == true && price != null) {
+      return ImportCompleteness.complete;
+    }
+    return ImportCompleteness.needsReview;
+  }
 }
 
 abstract final class ShoppingShareParser {

@@ -70,6 +70,7 @@ class HomeShell extends StatefulWidget {
     required this.onJustOneApiTokenChanged,
     this.sharedText,
     required this.onSharedTextConsumed,
+    required this.openSettingsRevision,
   });
 
   final ThemeMode themeMode;
@@ -80,6 +81,7 @@ class HomeShell extends StatefulWidget {
   final Future<void> Function(String) onJustOneApiTokenChanged;
   final String? sharedText;
   final VoidCallback onSharedTextConsumed;
+  final int openSettingsRevision;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -95,6 +97,9 @@ class _HomeShellState extends State<HomeShell> {
     if (widget.sharedText != null &&
         widget.sharedText != oldWidget.sharedText) {
       selected = GuardianDestination.analyze;
+    }
+    if (widget.openSettingsRevision != oldWidget.openSettingsRevision) {
+      selected = GuardianDestination.settings;
     }
   }
 
@@ -778,6 +783,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                   price: parsedPrice,
                   imageUrl: item.imageUrl,
                   quantity: parsedQuantity,
+                  reviewed: true,
                 ),
               );
             },
@@ -844,6 +850,39 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                             item.title ?? copy.t('未读到商品名称', 'No title found'),
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  item.completeness ==
+                                      ImportCompleteness.needsReview
+                                  ? Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainerHighest
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.secondaryContainer,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(switch (item.completeness) {
+                              ImportCompleteness.complete => copy.t(
+                                '信息完整',
+                                'Details complete',
+                              ),
+                              ImportCompleteness.needsReview => copy.t(
+                                '需核对',
+                                'Needs review',
+                              ),
+                              ImportCompleteness.reviewed => copy.t(
+                                '已核对',
+                                'Reviewed',
+                              ),
+                            }, style: Theme.of(context).textTheme.labelSmall),
                           ),
                           const SizedBox(height: 6),
                           Text(
@@ -3201,7 +3240,10 @@ class _SettingRow extends StatelessWidget {
             children: [
               Text(title, style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 10),
-              child,
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: child,
+              ),
             ],
           );
         }
@@ -3243,7 +3285,12 @@ class _SettingsSection extends StatelessWidget {
             children: [
               Icon(icon),
               const SizedBox(width: 10),
-              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
