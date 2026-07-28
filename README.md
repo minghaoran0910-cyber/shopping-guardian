@@ -202,6 +202,7 @@ build/macos/Build/Products/Release/购物守护者.app
 - [设计规范](DESIGN.md)
 - [v1.3.0 审查与验收报告](docs/AUDIT-2026-07-27.md)
 - [开发待办与路线图](docs/ROADMAP.md)
+- [分发与签名决策](docs/DISTRIBUTION.md)
 
 ## 隐私
 

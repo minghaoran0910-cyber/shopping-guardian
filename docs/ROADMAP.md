@@ -51,5 +51,5 @@
 - [ ] A11Y-03 TalkBack 与 VoiceOver 验收
 - [ ] RELEASE-01 macOS 签名与公证
 - [ ] RELEASE-02 Windows 代码签名
-- [ ] RELEASE-03 iOS TestFlight 或维持源码自签的长期决策
+- [x] RELEASE-03 iOS TestFlight 或维持源码自签的长期决策
 - [x] RELEASE-04 版本检查与升级说明
