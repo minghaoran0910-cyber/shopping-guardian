@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'analysis_request_summary.dart';
+
 typedef RetryDelay = Future<void> Function(Duration duration);
 
 enum PurchaseVerdict { buy, wait, skip, alternative, insufficientData }
@@ -62,14 +64,17 @@ class ModelClient {
   }) async {
     final requestClient = client ?? http.Client();
     try {
-      final input = jsonEncode({
-        'item_name': itemName,
-        'price': price,
-        'purchase_reason': reason,
-        'monthly_budget': monthlyBudget,
-        'matched_rules': matchedRules,
-        'related_history': relatedHistory,
-      });
+      final input = jsonEncode(
+        AnalysisRequestSummary(
+          endpoint: endpoint,
+          itemName: itemName,
+          price: price,
+          reason: reason,
+          monthlyBudget: monthlyBudget,
+          matchedRules: matchedRules,
+          relatedHistory: relatedHistory,
+        ).requestBody,
+      );
       final content = await _complete(requestClient, [
         {
           'role': 'system',

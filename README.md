@@ -203,9 +203,12 @@ build/macos/Build/Products/Release/购物守护者.app
 
 - 不需要注册账号
 - 不上传购物车截图
-- 不提供模型或商品接口中转服务
-- API Key 不会提交到 Git
-- 模型请求直接发送到用户填写的服务地址
+- 项目不提供模型或商品接口中转服务，也不会收集遥测数据
+- 补全商品资料时，商品链接或 ID 与 JustOneAPI Token 会直接发送到 JustOneAPI
+- 模型分析前会展示发送摘要；商品、价格、购买理由、预算、命中规则和最多 5 条相关历史摘要会直接发送到用户填写的模型服务
+- API Key 仅用于对应服务的鉴权请求头，不进入模型正文、业务数据导出或 Git
+- Android、iOS 和 Windows 的 API Key 使用系统安全存储；macOS 使用 Application Support 目录下权限为 `0600` 的文件
+- 决策、预算和规则存入本机 SQLite 数据库，设置存入本机偏好；数据库与 JSON 导出未额外加密，请保护好设备和备份文件
 
 ## License
 

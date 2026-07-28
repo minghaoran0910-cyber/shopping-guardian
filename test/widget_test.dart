@@ -15,6 +15,8 @@ void main() {
     await tester.pumpWidget(const ShoppingGuardianApp());
     await tester.pumpAndSettle();
     expect(find.text('先说清楚数据去哪儿'), findsOneWidget);
+    expect(find.textContaining('JustOneAPI'), findsOneWidget);
+    expect(find.textContaining('开始分析前'), findsOneWidget);
     expect(find.text('我知道了'), findsOneWidget);
     await tester.tap(find.text('我知道了'));
     await tester.pumpAndSettle();
@@ -65,6 +67,9 @@ void main() {
     expect(find.text('导入数据'), findsOneWidget);
     expect(find.text('服务预设'), findsOneWidget);
     expect(find.text('请求 JSON 输出'), findsOneWidget);
+    expect(find.text('隐私与外部请求'), findsOneWidget);
+    expect(find.textContaining('最多 5 条相关历史摘要'), findsOneWidget);
+    expect(find.textContaining('JSON 导出没有额外加密'), findsOneWidget);
     await tester.tap(find.text('English'));
     await tester.pumpAndSettle();
     expect(find.text('Appearance'), findsOneWidget);

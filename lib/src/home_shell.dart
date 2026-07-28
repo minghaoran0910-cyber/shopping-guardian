@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'analysis/analysis_request_summary.dart';
+import 'analysis/analysis_request_review_dialog.dart';
 import 'analysis/model_client.dart';
 import 'budget/budget_store.dart';
 import 'data/all_data_clearer.dart';
@@ -1075,6 +1077,24 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
         price: total,
         records: await const DecisionStore().readAll(),
       );
+      final itemName = widget.items
+          .map((item) => item.title ?? copy.t('未命名商品', 'Unnamed item'))
+          .join(copy.t('、', ', '));
+      final ruleSummaries = matchedRules
+          .map((rule) => '${rule.name}：${rule.description}')
+          .toList();
+      final historySummaries = history.map((item) => item.summary).toList();
+      final requestSummary = AnalysisRequestSummary(
+        endpoint: config.endpoint,
+        itemName: itemName,
+        price: total,
+        reason: reason.text.trim(),
+        monthlyBudget: double.tryParse(budget.text.trim()),
+        matchedRules: ruleSummaries,
+        relatedHistory: historySummaries,
+      );
+      final confirmed = await _confirmAnalysisRequest(requestSummary);
+      if (!confirmed || !mounted) return;
       final advice =
           await ModelClient(
             endpoint: config.endpoint,
@@ -1082,16 +1102,12 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
             model: config.model,
             useStructuredOutput: config.structuredOutput,
           ).analyze(
-            itemName: widget.items
-                .map((item) => item.title ?? '未命名商品')
-                .join('、'),
+            itemName: itemName,
             price: total,
             reason: reason.text.trim(),
             monthlyBudget: double.tryParse(budget.text.trim()),
-            matchedRules: matchedRules
-                .map((rule) => '${rule.name}：${rule.description}')
-                .toList(),
-            relatedHistory: history.map((item) => item.summary).toList(),
+            matchedRules: ruleSummaries,
+            relatedHistory: historySummaries,
           );
       if (!mounted) return;
       Navigator.pop(context);
@@ -1100,8 +1116,8 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
         builder: (context) => _DecisionDialog(
           advice: advice,
           total: total,
-          itemName: widget.items.map((item) => item.title ?? '未命名商品').join('、'),
-          referencedHistory: history.map((item) => item.summary).toList(),
+          itemName: itemName,
+          referencedHistory: historySummaries,
         ),
       );
     } on Object catch (error) {
@@ -1115,6 +1131,14 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
     } finally {
       if (mounted) setState(() => analyzing = false);
     }
+  }
+
+  Future<bool> _confirmAnalysisRequest(AnalysisRequestSummary summary) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AnalysisRequestReviewDialog(summary: summary),
+        ) ??
+        false;
   }
 
   @override
@@ -1990,6 +2014,58 @@ class SettingsPage extends StatelessWidget {
           const _RuleSettings(),
           const SizedBox(height: 16),
           _SettingsSection(
+            title: copy.t('隐私与外部请求', 'Privacy and external requests'),
+            icon: Icons.shield_outlined,
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.inventory_2_outlined),
+                title: Text(copy.t('商品信息', 'Product details')),
+                subtitle: Text(
+                  copy.t(
+                    '补全淘宝或京东商品时，商品链接或 ID 和你的 JustOneAPI Token 会直达 JustOneAPI。',
+                    'When enriching Taobao or JD items, the product link or ID and your JustOneAPI token go directly to JustOneAPI.',
+                  ),
+                ),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.auto_awesome_outlined),
+                title: Text(copy.t('模型分析', 'Model analysis')),
+                subtitle: Text(
+                  copy.t(
+                    '商品、价格、购买理由、预算、命中规则和最多 5 条相关历史摘要会直达你配置的模型服务。发送前可以核对并取消。',
+                    'The item, price, reason, budget, matched rules, and up to five related-history summaries go directly to your configured model service. You can review and cancel before sending.',
+                  ),
+                ),
+              ),
+              const Divider(),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.key_outlined),
+                title: Text(copy.t('API Key 如何保存', 'How API keys are stored')),
+                subtitle: Text(
+                  copy.t(
+                    'Android、iOS 和 Windows 使用系统安全存储；macOS 使用应用支持目录内权限为 0600 的本地文件。',
+                    'Android, iOS, and Windows use platform secure storage. macOS uses a local file with 0600 permissions in Application Support.',
+                  ),
+                ),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.storage_outlined),
+                title: Text(copy.t('业务数据与导出', 'App data and exports')),
+                subtitle: Text(
+                  copy.t(
+                    '决策、预算和规则保存在本机数据库；设置保存在本机偏好。数据库和 JSON 导出没有额外加密，请妥善保管设备和备份文件。',
+                    'Decisions, budgets, and rules are stored in a local database; settings use local preferences. The database and JSON exports are not additionally encrypted, so protect your device and backup files.',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SettingsSection(
             title: copy.t('数据', 'Data'),
             icon: Icons.lock_outline_rounded,
             children: [
@@ -1999,8 +2075,8 @@ class SettingsPage extends StatelessWidget {
                 title: Text(copy.t('只存在这台设备', 'Stored on this device')),
                 subtitle: Text(
                   copy.t(
-                    '商品、预算和记录不会传到我们的服务器。',
-                    'Items, budgets, and history stay on this device.',
+                    '本项目没有账号或中转服务器；外部请求范围见上方说明。',
+                    'This project has no accounts or relay server; see the external request details above.',
                   ),
                 ),
               ),
