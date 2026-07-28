@@ -50,6 +50,17 @@ class DecisionReferences extends Table {
   Set<Column<Object>> get primaryKey => {decisionId, position};
 }
 
+@DataClassName('StoredDecisionPatternReference')
+class DecisionPatternReferences extends Table {
+  TextColumn get decisionId =>
+      text().references(Decisions, #id, onDelete: KeyAction.cascade)();
+  IntColumn get position => integer()();
+  TextColumn get summary => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {decisionId, position};
+}
+
 @DataClassName('StoredDecisionAlternative')
 class DecisionAlternatives extends Table {
   TextColumn get decisionId =>
@@ -106,6 +117,7 @@ class MigrationQuarantine extends Table {
     Decisions,
     DecisionEvents,
     DecisionReferences,
+    DecisionPatternReferences,
     DecisionAlternatives,
     DecisionTags,
     ConsumptionRules,
@@ -136,7 +148,7 @@ class GuardianDatabase extends _$GuardianDatabase {
   }
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -153,6 +165,9 @@ class GuardianDatabase extends _$GuardianDatabase {
         await migrator.addColumn(decisions, decisions.category);
         await migrator.createTable(decisionTags);
       }
+      if (from < 4) {
+        await migrator.createTable(decisionPatternReferences);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -162,6 +177,7 @@ class GuardianDatabase extends _$GuardianDatabase {
   Future<void> clearBusinessData() => transaction(() async {
     await delete(decisionEvents).go();
     await delete(decisionReferences).go();
+    await delete(decisionPatternReferences).go();
     await delete(decisionAlternatives).go();
     await delete(decisionTags).go();
     await delete(decisions).go();

@@ -13,6 +13,7 @@ void main() {
       monthlyBudget: 2000,
       matchedRules: ['大额商品：至少等两天'],
       relatedHistory: ['上次买键盘后使用频率很低'],
+      confirmedPatterns: ['我买唱片后通常很少播放'],
     );
 
     expect(summary.destination, 'models.example.com');
@@ -25,6 +26,7 @@ void main() {
       'monthly_budget': 2000,
       'matched_rules': ['大额商品：至少等两天'],
       'related_history': ['上次买键盘后使用频率很低'],
+      'confirmed_patterns': ['我买唱片后通常很少播放'],
     });
     expect(summary.requestBody.toString(), isNot(contains('api_key')));
     expect(summary.requestBody.toString(), isNot(contains('secret')));

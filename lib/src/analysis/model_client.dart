@@ -63,6 +63,7 @@ class ModelClient {
     double? monthlyBudget,
     List<String> matchedRules = const [],
     List<String> relatedHistory = const [],
+    List<String> confirmedPatterns = const [],
   }) async {
     final requestClient = client ?? http.Client();
     try {
@@ -77,6 +78,7 @@ class ModelClient {
           monthlyBudget: monthlyBudget,
           matchedRules: matchedRules,
           relatedHistory: relatedHistory,
+          confirmedPatterns: confirmedPatterns,
         ).requestBody,
       );
       final content = await _complete(requestClient, [

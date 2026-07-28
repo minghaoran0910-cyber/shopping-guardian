@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../budget/budget_store.dart';
 import '../history/decision_store.dart';
+import '../patterns/pattern_store.dart';
 import '../rules/consumption_rule_store.dart';
 
 class DataExporter {
@@ -18,8 +19,9 @@ class DataExporter {
     final records = await const DecisionStore().readAll();
     final rules = await const ConsumptionRuleStore().readAll();
     final budget = await const BudgetStore().snapshot();
+    final patterns = await const PatternStore().readAll();
     final content = const JsonEncoder.withIndent('  ').convert({
-      'schema_version': 3,
+      'schema_version': 4,
       'exported_at': DateTime.now().toUtc().toIso8601String(),
       'monthly_budget': budget.limit,
       'model': {
@@ -32,6 +34,7 @@ class DataExporter {
       },
       'decisions': records.map((record) => record.toJson()).toList(),
       'rules': rules.map((rule) => rule.toJson()).toList(),
+      'personal_patterns': patterns.map((pattern) => pattern.toJson()).toList(),
     });
     try {
       return await channel.invokeMethod<bool>('saveJson', {

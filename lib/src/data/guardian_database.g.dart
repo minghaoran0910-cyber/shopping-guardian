@@ -1533,6 +1533,291 @@ class DecisionReferencesCompanion
   }
 }
 
+class $DecisionPatternReferencesTable extends DecisionPatternReferences
+    with
+        TableInfo<
+          $DecisionPatternReferencesTable,
+          StoredDecisionPatternReference
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DecisionPatternReferencesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _decisionIdMeta = const VerificationMeta(
+    'decisionId',
+  );
+  @override
+  late final GeneratedColumn<String> decisionId = GeneratedColumn<String>(
+    'decision_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES decisions (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _summaryMeta = const VerificationMeta(
+    'summary',
+  );
+  @override
+  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
+    'summary',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [decisionId, position, summary];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'decision_pattern_references';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StoredDecisionPatternReference> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('decision_id')) {
+      context.handle(
+        _decisionIdMeta,
+        decisionId.isAcceptableOrUnknown(data['decision_id']!, _decisionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_decisionIdMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('summary')) {
+      context.handle(
+        _summaryMeta,
+        summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_summaryMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {decisionId, position};
+  @override
+  StoredDecisionPatternReference map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StoredDecisionPatternReference(
+      decisionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decision_id'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      summary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}summary'],
+      )!,
+    );
+  }
+
+  @override
+  $DecisionPatternReferencesTable createAlias(String alias) {
+    return $DecisionPatternReferencesTable(attachedDatabase, alias);
+  }
+}
+
+class StoredDecisionPatternReference extends DataClass
+    implements Insertable<StoredDecisionPatternReference> {
+  final String decisionId;
+  final int position;
+  final String summary;
+  const StoredDecisionPatternReference({
+    required this.decisionId,
+    required this.position,
+    required this.summary,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['decision_id'] = Variable<String>(decisionId);
+    map['position'] = Variable<int>(position);
+    map['summary'] = Variable<String>(summary);
+    return map;
+  }
+
+  DecisionPatternReferencesCompanion toCompanion(bool nullToAbsent) {
+    return DecisionPatternReferencesCompanion(
+      decisionId: Value(decisionId),
+      position: Value(position),
+      summary: Value(summary),
+    );
+  }
+
+  factory StoredDecisionPatternReference.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StoredDecisionPatternReference(
+      decisionId: serializer.fromJson<String>(json['decisionId']),
+      position: serializer.fromJson<int>(json['position']),
+      summary: serializer.fromJson<String>(json['summary']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'decisionId': serializer.toJson<String>(decisionId),
+      'position': serializer.toJson<int>(position),
+      'summary': serializer.toJson<String>(summary),
+    };
+  }
+
+  StoredDecisionPatternReference copyWith({
+    String? decisionId,
+    int? position,
+    String? summary,
+  }) => StoredDecisionPatternReference(
+    decisionId: decisionId ?? this.decisionId,
+    position: position ?? this.position,
+    summary: summary ?? this.summary,
+  );
+  StoredDecisionPatternReference copyWithCompanion(
+    DecisionPatternReferencesCompanion data,
+  ) {
+    return StoredDecisionPatternReference(
+      decisionId: data.decisionId.present
+          ? data.decisionId.value
+          : this.decisionId,
+      position: data.position.present ? data.position.value : this.position,
+      summary: data.summary.present ? data.summary.value : this.summary,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoredDecisionPatternReference(')
+          ..write('decisionId: $decisionId, ')
+          ..write('position: $position, ')
+          ..write('summary: $summary')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(decisionId, position, summary);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StoredDecisionPatternReference &&
+          other.decisionId == this.decisionId &&
+          other.position == this.position &&
+          other.summary == this.summary);
+}
+
+class DecisionPatternReferencesCompanion
+    extends UpdateCompanion<StoredDecisionPatternReference> {
+  final Value<String> decisionId;
+  final Value<int> position;
+  final Value<String> summary;
+  final Value<int> rowid;
+  const DecisionPatternReferencesCompanion({
+    this.decisionId = const Value.absent(),
+    this.position = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DecisionPatternReferencesCompanion.insert({
+    required String decisionId,
+    required int position,
+    required String summary,
+    this.rowid = const Value.absent(),
+  }) : decisionId = Value(decisionId),
+       position = Value(position),
+       summary = Value(summary);
+  static Insertable<StoredDecisionPatternReference> custom({
+    Expression<String>? decisionId,
+    Expression<int>? position,
+    Expression<String>? summary,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (decisionId != null) 'decision_id': decisionId,
+      if (position != null) 'position': position,
+      if (summary != null) 'summary': summary,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DecisionPatternReferencesCompanion copyWith({
+    Value<String>? decisionId,
+    Value<int>? position,
+    Value<String>? summary,
+    Value<int>? rowid,
+  }) {
+    return DecisionPatternReferencesCompanion(
+      decisionId: decisionId ?? this.decisionId,
+      position: position ?? this.position,
+      summary: summary ?? this.summary,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (decisionId.present) {
+      map['decision_id'] = Variable<String>(decisionId.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (summary.present) {
+      map['summary'] = Variable<String>(summary.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DecisionPatternReferencesCompanion(')
+          ..write('decisionId: $decisionId, ')
+          ..write('position: $position, ')
+          ..write('summary: $summary, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $DecisionAlternativesTable extends DecisionAlternatives
     with TableInfo<$DecisionAlternativesTable, StoredDecisionAlternative> {
   @override
@@ -3091,6 +3376,8 @@ abstract class _$GuardianDatabase extends GeneratedDatabase {
   late final $DecisionEventsTable decisionEvents = $DecisionEventsTable(this);
   late final $DecisionReferencesTable decisionReferences =
       $DecisionReferencesTable(this);
+  late final $DecisionPatternReferencesTable decisionPatternReferences =
+      $DecisionPatternReferencesTable(this);
   late final $DecisionAlternativesTable decisionAlternatives =
       $DecisionAlternativesTable(this);
   late final $DecisionTagsTable decisionTags = $DecisionTagsTable(this);
@@ -3108,6 +3395,7 @@ abstract class _$GuardianDatabase extends GeneratedDatabase {
     decisions,
     decisionEvents,
     decisionReferences,
+    decisionPatternReferences,
     decisionAlternatives,
     decisionTags,
     consumptionRules,
@@ -3129,6 +3417,15 @@ abstract class _$GuardianDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('decision_references', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'decisions',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [
+        TableUpdate('decision_pattern_references', kind: UpdateKind.delete),
+      ],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
@@ -3230,6 +3527,31 @@ final class $$DecisionsTableReferences
 
     final cache = $_typedResult.readTableOrNull(
       _decisionReferencesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $DecisionPatternReferencesTable,
+    List<StoredDecisionPatternReference>
+  >
+  _decisionPatternReferencesRefsTable(_$GuardianDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.decisionPatternReferences,
+        aliasName: 'decisions__id__decision_pattern_references__decision_id',
+      );
+
+  $$DecisionPatternReferencesTableProcessedTableManager
+  get decisionPatternReferencesRefs {
+    final manager = $$DecisionPatternReferencesTableTableManager(
+      $_db,
+      $_db.decisionPatternReferences,
+    ).filter((f) => f.decisionId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _decisionPatternReferencesRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -3417,6 +3739,33 @@ class $$DecisionsTableFilterComposer
                 $removeJoinBuilderFromRootComposer,
           ),
     );
+    return f(composer);
+  }
+
+  Expression<bool> decisionPatternReferencesRefs(
+    Expression<bool> Function($$DecisionPatternReferencesTableFilterComposer f)
+    f,
+  ) {
+    final $$DecisionPatternReferencesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.decisionPatternReferences,
+          getReferencedColumn: (t) => t.decisionId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$DecisionPatternReferencesTableFilterComposer(
+                $db: $db,
+                $table: $db.decisionPatternReferences,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
     return f(composer);
   }
 
@@ -3681,6 +4030,33 @@ class $$DecisionsTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> decisionPatternReferencesRefs<T extends Object>(
+    Expression<T> Function($$DecisionPatternReferencesTableAnnotationComposer a)
+    f,
+  ) {
+    final $$DecisionPatternReferencesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.decisionPatternReferences,
+          getReferencedColumn: (t) => t.decisionId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$DecisionPatternReferencesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.decisionPatternReferences,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
   Expression<T> decisionAlternativesRefs<T extends Object>(
     Expression<T> Function($$DecisionAlternativesTableAnnotationComposer a) f,
   ) {
@@ -3749,6 +4125,7 @@ class $$DecisionsTableTableManager
           PrefetchHooks Function({
             bool decisionEventsRefs,
             bool decisionReferencesRefs,
+            bool decisionPatternReferencesRefs,
             bool decisionAlternativesRefs,
             bool decisionTagsRefs,
           })
@@ -3852,6 +4229,7 @@ class $$DecisionsTableTableManager
               ({
                 decisionEventsRefs = false,
                 decisionReferencesRefs = false,
+                decisionPatternReferencesRefs = false,
                 decisionAlternativesRefs = false,
                 decisionTagsRefs = false,
               }) {
@@ -3860,6 +4238,8 @@ class $$DecisionsTableTableManager
                   explicitlyWatchedTables: [
                     if (decisionEventsRefs) db.decisionEvents,
                     if (decisionReferencesRefs) db.decisionReferences,
+                    if (decisionPatternReferencesRefs)
+                      db.decisionPatternReferences,
                     if (decisionAlternativesRefs) db.decisionAlternatives,
                     if (decisionTagsRefs) db.decisionTags,
                   ],
@@ -3902,6 +4282,27 @@ class $$DecisionsTableTableManager
                                 table,
                                 p0,
                               ).decisionReferencesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.decisionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (decisionPatternReferencesRefs)
+                        await $_getPrefetchedData<
+                          StoredDecision,
+                          $DecisionsTable,
+                          StoredDecisionPatternReference
+                        >(
+                          currentTable: table,
+                          referencedTable: $$DecisionsTableReferences
+                              ._decisionPatternReferencesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$DecisionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).decisionPatternReferencesRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.decisionId == item.id,
@@ -3973,6 +4374,7 @@ typedef $$DecisionsTableProcessedTableManager =
       PrefetchHooks Function({
         bool decisionEventsRefs,
         bool decisionReferencesRefs,
+        bool decisionPatternReferencesRefs,
         bool decisionAlternativesRefs,
         bool decisionTagsRefs,
       })
@@ -4582,6 +4984,313 @@ typedef $$DecisionReferencesTableProcessedTableManager =
       $$DecisionReferencesTableUpdateCompanionBuilder,
       (StoredDecisionReference, $$DecisionReferencesTableReferences),
       StoredDecisionReference,
+      PrefetchHooks Function({bool decisionId})
+    >;
+typedef $$DecisionPatternReferencesTableCreateCompanionBuilder =
+    DecisionPatternReferencesCompanion Function({
+      required String decisionId,
+      required int position,
+      required String summary,
+      Value<int> rowid,
+    });
+typedef $$DecisionPatternReferencesTableUpdateCompanionBuilder =
+    DecisionPatternReferencesCompanion Function({
+      Value<String> decisionId,
+      Value<int> position,
+      Value<String> summary,
+      Value<int> rowid,
+    });
+
+final class $$DecisionPatternReferencesTableReferences
+    extends
+        BaseReferences<
+          _$GuardianDatabase,
+          $DecisionPatternReferencesTable,
+          StoredDecisionPatternReference
+        > {
+  $$DecisionPatternReferencesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $DecisionsTable _decisionIdTable(_$GuardianDatabase db) => db.decisions
+      .createAlias('decision_pattern_references__decision_id__decisions__id');
+
+  $$DecisionsTableProcessedTableManager get decisionId {
+    final $_column = $_itemColumn<String>('decision_id')!;
+
+    final manager = $$DecisionsTableTableManager(
+      $_db,
+      $_db.decisions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_decisionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$DecisionPatternReferencesTableFilterComposer
+    extends Composer<_$GuardianDatabase, $DecisionPatternReferencesTable> {
+  $$DecisionPatternReferencesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$DecisionsTableFilterComposer get decisionId {
+    final $$DecisionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.decisionId,
+      referencedTable: $db.decisions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DecisionsTableFilterComposer(
+            $db: $db,
+            $table: $db.decisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DecisionPatternReferencesTableOrderingComposer
+    extends Composer<_$GuardianDatabase, $DecisionPatternReferencesTable> {
+  $$DecisionPatternReferencesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$DecisionsTableOrderingComposer get decisionId {
+    final $$DecisionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.decisionId,
+      referencedTable: $db.decisions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DecisionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.decisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DecisionPatternReferencesTableAnnotationComposer
+    extends Composer<_$GuardianDatabase, $DecisionPatternReferencesTable> {
+  $$DecisionPatternReferencesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get summary =>
+      $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  $$DecisionsTableAnnotationComposer get decisionId {
+    final $$DecisionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.decisionId,
+      referencedTable: $db.decisions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DecisionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.decisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DecisionPatternReferencesTableTableManager
+    extends
+        RootTableManager<
+          _$GuardianDatabase,
+          $DecisionPatternReferencesTable,
+          StoredDecisionPatternReference,
+          $$DecisionPatternReferencesTableFilterComposer,
+          $$DecisionPatternReferencesTableOrderingComposer,
+          $$DecisionPatternReferencesTableAnnotationComposer,
+          $$DecisionPatternReferencesTableCreateCompanionBuilder,
+          $$DecisionPatternReferencesTableUpdateCompanionBuilder,
+          (
+            StoredDecisionPatternReference,
+            $$DecisionPatternReferencesTableReferences,
+          ),
+          StoredDecisionPatternReference,
+          PrefetchHooks Function({bool decisionId})
+        > {
+  $$DecisionPatternReferencesTableTableManager(
+    _$GuardianDatabase db,
+    $DecisionPatternReferencesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DecisionPatternReferencesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$DecisionPatternReferencesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$DecisionPatternReferencesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> decisionId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<String> summary = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DecisionPatternReferencesCompanion(
+                decisionId: decisionId,
+                position: position,
+                summary: summary,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String decisionId,
+                required int position,
+                required String summary,
+                Value<int> rowid = const Value.absent(),
+              }) => DecisionPatternReferencesCompanion.insert(
+                decisionId: decisionId,
+                position: position,
+                summary: summary,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$DecisionPatternReferencesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({decisionId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (decisionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.decisionId,
+                                referencedTable:
+                                    $$DecisionPatternReferencesTableReferences
+                                        ._decisionIdTable(db),
+                                referencedColumn:
+                                    $$DecisionPatternReferencesTableReferences
+                                        ._decisionIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$DecisionPatternReferencesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GuardianDatabase,
+      $DecisionPatternReferencesTable,
+      StoredDecisionPatternReference,
+      $$DecisionPatternReferencesTableFilterComposer,
+      $$DecisionPatternReferencesTableOrderingComposer,
+      $$DecisionPatternReferencesTableAnnotationComposer,
+      $$DecisionPatternReferencesTableCreateCompanionBuilder,
+      $$DecisionPatternReferencesTableUpdateCompanionBuilder,
+      (
+        StoredDecisionPatternReference,
+        $$DecisionPatternReferencesTableReferences,
+      ),
+      StoredDecisionPatternReference,
       PrefetchHooks Function({bool decisionId})
     >;
 typedef $$DecisionAlternativesTableCreateCompanionBuilder =
@@ -5761,6 +6470,11 @@ class $GuardianDatabaseManager {
       $$DecisionEventsTableTableManager(_db, _db.decisionEvents);
   $$DecisionReferencesTableTableManager get decisionReferences =>
       $$DecisionReferencesTableTableManager(_db, _db.decisionReferences);
+  $$DecisionPatternReferencesTableTableManager get decisionPatternReferences =>
+      $$DecisionPatternReferencesTableTableManager(
+        _db,
+        _db.decisionPatternReferences,
+      );
   $$DecisionAlternativesTableTableManager get decisionAlternatives =>
       $$DecisionAlternativesTableTableManager(_db, _db.decisionAlternatives);
   $$DecisionTagsTableTableManager get decisionTags =>

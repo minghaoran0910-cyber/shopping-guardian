@@ -14,6 +14,9 @@ import 'history/purchase_feedback_dialog.dart';
 import 'insights/decision_insights.dart';
 import 'notifications/local_notification_service.dart';
 import 'notifications/feedback_reminder_service.dart';
+import 'patterns/pattern_generator.dart';
+import 'patterns/pattern_store.dart';
+import 'patterns/personal_pattern.dart';
 import 'rules/consumption_rule_store.dart';
 import 'copy.dart';
 import 'import/jd_cart_importer.dart';
@@ -1090,6 +1093,11 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
           .map((rule) => '${rule.name}：${rule.description}')
           .toList();
       final historySummaries = history.map((item) => item.summary).toList();
+      final confirmedPatterns = (await const PatternStore().readAll())
+          .where((pattern) => pattern.status == 'confirmed')
+          .map((pattern) => pattern.text)
+          .take(10)
+          .toList();
       final tagValues = tags.text
           .split(RegExp(r'[,，]'))
           .map((tag) => tag.trim())
@@ -1107,6 +1115,7 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
         monthlyBudget: double.tryParse(budget.text.trim()),
         matchedRules: ruleSummaries,
         relatedHistory: historySummaries,
+        confirmedPatterns: confirmedPatterns,
       );
       final confirmed = await _confirmAnalysisRequest(requestSummary);
       if (!confirmed || !mounted) return;
@@ -1127,6 +1136,7 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
             monthlyBudget: double.tryParse(budget.text.trim()),
             matchedRules: ruleSummaries,
             relatedHistory: historySummaries,
+            confirmedPatterns: confirmedPatterns,
           );
       if (!mounted) return;
       Navigator.pop(context);
@@ -1137,6 +1147,7 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
           total: total,
           itemName: itemName,
           referencedHistory: historySummaries,
+          referencedPatterns: confirmedPatterns,
           category: category.text.trim().isEmpty ? null : category.text.trim(),
           tags: tagValues,
         ),
@@ -1249,6 +1260,7 @@ class _DecisionDialog extends StatelessWidget {
     required this.total,
     required this.itemName,
     required this.referencedHistory,
+    required this.referencedPatterns,
     required this.category,
     required this.tags,
   });
@@ -1256,6 +1268,7 @@ class _DecisionDialog extends StatelessWidget {
   final double total;
   final String itemName;
   final List<String> referencedHistory;
+  final List<String> referencedPatterns;
   final String? category;
   final List<String> tags;
 
@@ -1276,6 +1289,7 @@ class _DecisionDialog extends StatelessWidget {
         createdAt: now,
         waitUntil: waitUntil,
         referencedHistory: referencedHistory,
+        referencedPatterns: referencedPatterns,
         category: category,
         tags: tags,
         risk: advice.risk.name,
@@ -1432,6 +1446,19 @@ class _DecisionDialog extends StatelessWidget {
                           title: Text(item),
                         ),
                       )
+                      .toList(),
+                ),
+              if (referencedPatterns.isNotEmpty)
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: Text(
+                    copy.t(
+                      '引用了 ${referencedPatterns.length} 条已确认规律',
+                      '${referencedPatterns.length} confirmed patterns used',
+                    ),
+                  ),
+                  children: referencedPatterns
+                      .map((pattern) => ListTile(title: Text(pattern)))
                       .toList(),
                 ),
             ],
@@ -1803,6 +1830,19 @@ class _HistoryPageState extends State<HistoryPage> {
                     child: Text('• $item'),
                   ),
                 ),
+                if (record.referencedPatterns.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    copy.t('本次引用的已确认规律', 'Confirmed patterns used'),
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  ...record.referencedPatterns.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text('• $item'),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -2022,8 +2062,55 @@ class InsightsPage extends StatefulWidget {
 }
 
 class _InsightsPageState extends State<InsightsPage> {
-  late final Future<List<DecisionRecord>> records = const DecisionStore()
-      .readAll();
+  late Future<(List<DecisionRecord>, List<PersonalPattern>)> data = _load();
+
+  Future<(List<DecisionRecord>, List<PersonalPattern>)> _load() async {
+    final records = await const DecisionStore().readAll();
+    final stored = await const PatternStore().readAll();
+    final patterns = const PatternGenerator().merge(
+      const PatternGenerator().generate(records),
+      stored,
+    );
+    return (records, patterns);
+  }
+
+  Future<void> _save(PersonalPattern pattern) async {
+    await const PatternStore().save(pattern);
+    if (mounted) setState(() => data = _load());
+  }
+
+  Future<void> _edit(PersonalPattern pattern) async {
+    final controller = TextEditingController(text: pattern.text);
+    final text = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        final copy = GuardianCopy.of(context);
+        return AlertDialog(
+          title: Text(copy.t('修改这条规律', 'Edit pattern')),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLines: 4,
+            maxLength: 200,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(copy.t('取消', 'Cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text.trim()),
+              child: Text(copy.t('保存', 'Save')),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+    if (text?.isNotEmpty == true) {
+      await _save(pattern.copyWith(text: text, status: 'confirmed'));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2031,10 +2118,11 @@ class _InsightsPageState extends State<InsightsPage> {
     return _PageFrame(
       title: copy.t('你的习惯', 'Your patterns'),
       subtitle: copy.t('用过一阵子，这里才会有东西。', 'This fills in as you use the app.'),
-      child: FutureBuilder<List<DecisionRecord>>(
-        future: records,
+      child: FutureBuilder<(List<DecisionRecord>, List<PersonalPattern>)>(
+        future: data,
         builder: (context, snapshot) {
-          final allRecords = snapshot.data ?? const <DecisionRecord>[];
+          final allRecords = snapshot.data?.$1 ?? const <DecisionRecord>[];
+          final patterns = snapshot.data?.$2 ?? const <PersonalPattern>[];
           final insights = DecisionInsights.from(allRecords);
           final owned = allRecords.where((record) => record.countsAsPurchased);
           return Column(
@@ -2094,6 +2182,100 @@ class _InsightsPageState extends State<InsightsPage> {
                             ),
                           ],
                         ),
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 24),
+              Text(
+                copy.t('你的规律', 'Your patterns'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                copy.t(
+                  '至少三条同类记录后才会出现候选。只有你确认的内容会参与之后的分析。',
+                  'Candidates need at least three similar records. Only patterns you confirm are used in later analysis.',
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (patterns.isEmpty)
+                Text(copy.t('目前还没有足够证据。', 'Not enough evidence yet.'))
+              else
+                ...patterns.map(
+                  (pattern) => Card(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 8, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                pattern.status == 'confirmed'
+                                    ? Icons.check_circle_outline
+                                    : Icons.auto_awesome_outlined,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text(pattern.text)),
+                            ],
+                          ),
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            title: Text(
+                              copy.t(
+                                '${pattern.evidence.length} 条依据',
+                                '${pattern.evidence.length} pieces of evidence',
+                              ),
+                            ),
+                            children: pattern.evidence
+                                .map(
+                                  (evidence) => ListTile(
+                                    dense: true,
+                                    leading: Icon(
+                                      evidence.supportsPattern
+                                          ? Icons.add_circle_outline
+                                          : Icons.remove_circle_outline,
+                                    ),
+                                    title: Text(evidence.summary),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                          Wrap(
+                            spacing: 8,
+                            children: pattern.status == 'candidate'
+                                ? [
+                                    FilledButton.tonal(
+                                      onPressed: () => _save(
+                                        pattern.copyWith(status: 'confirmed'),
+                                      ),
+                                      child: Text(copy.t('确认', 'Confirm')),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => _save(
+                                        pattern.copyWith(status: 'ignored'),
+                                      ),
+                                      child: Text(copy.t('忽略', 'Ignore')),
+                                    ),
+                                  ]
+                                : [
+                                    TextButton.icon(
+                                      onPressed: () => _edit(pattern),
+                                      icon: const Icon(Icons.edit_outlined),
+                                      label: Text(copy.t('修改', 'Edit')),
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: () => _save(
+                                        pattern.copyWith(status: 'ignored'),
+                                      ),
+                                      icon: const Icon(Icons.delete_outline),
+                                      label: Text(copy.t('删除', 'Delete')),
+                                    ),
+                                  ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -2267,8 +2449,8 @@ class SettingsPage extends StatelessWidget {
                 title: Text(copy.t('模型分析', 'Model analysis')),
                 subtitle: Text(
                   copy.t(
-                    '商品、价格、购买理由、分类标签、预算、命中规则和最多 5 条相关历史摘要会直达你配置的模型服务。发送前可以核对并取消。',
-                    'The item, price, reason, category, tags, budget, matched rules, and up to five related-history summaries go directly to your configured model service. You can review and cancel before sending.',
+                    '商品、价格、购买理由、分类标签、预算、命中规则、最多 5 条相关历史摘要和你确认的个人规律会直达你配置的模型服务。发送前可以核对并取消。',
+                    'The item, price, reason, category, tags, budget, matched rules, up to five related-history summaries, and personal patterns you confirmed go directly to your configured model service. You can review and cancel before sending.',
                   ),
                 ),
               ),

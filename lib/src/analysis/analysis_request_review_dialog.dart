@@ -69,6 +69,12 @@ class AnalysisRequestReviewDialog extends StatelessWidget {
                     ? copy.t('无', 'None')
                     : summary.relatedHistory.join('\n'),
               ),
+              _SummaryRow(
+                label: copy.t('已确认的个人规律', 'Confirmed personal patterns'),
+                value: summary.confirmedPatterns.isEmpty
+                    ? copy.t('无', 'None')
+                    : summary.confirmedPatterns.join('\n'),
+              ),
               const SizedBox(height: 8),
               Text(
                 copy.t(

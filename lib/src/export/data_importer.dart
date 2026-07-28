@@ -6,6 +6,8 @@ import 'package:file_selector/file_selector.dart';
 import '../data/guardian_database.dart';
 import '../data/legacy_data_migrator.dart';
 import '../history/decision_record.dart';
+import '../patterns/pattern_store.dart';
+import '../patterns/personal_pattern.dart';
 import '../rules/consumption_rule.dart';
 
 enum DataImportMode { merge, replace }
@@ -29,6 +31,7 @@ class DataImportPreview {
     required this.ruleConflicts,
     required this.containsModelConfiguration,
     required this.containsRules,
+    this.personalPatterns = const [],
   });
 
   final int schemaVersion;
@@ -39,6 +42,7 @@ class DataImportPreview {
   final int ruleConflicts;
   final bool containsModelConfiguration;
   final bool containsRules;
+  final List<PersonalPattern> personalPatterns;
 }
 
 class DataImportResult {
@@ -90,13 +94,14 @@ class DataImporter {
     }
     final document = Map<String, dynamic>.from(decoded);
     final version = document['schema_version'];
-    if (version is! int || version < 1 || version > 3) {
+    if (version is! int || version < 1 || version > 4) {
       throw const DataImportException('不支持这个数据版本，请先升级应用');
     }
 
     final decisions = _parseDecisions(document['decisions']);
     final rules = _parseRules(document['rules'], version);
     final budget = _parseBudget(document['monthly_budget']);
+    final patterns = _parsePatterns(document['personal_patterns'], version);
     await LegacyDataMigrator(_database).migrate();
 
     final existingDecisionIds =
@@ -121,6 +126,7 @@ class DataImporter {
           .length,
       containsModelConfiguration: document['model'] is Map,
       containsRules: version >= 2,
+      personalPatterns: patterns,
     );
   }
 
@@ -133,6 +139,7 @@ class DataImporter {
       if (mode == DataImportMode.replace) {
         await _database.delete(_database.decisionEvents).go();
         await _database.delete(_database.decisionReferences).go();
+        await _database.delete(_database.decisionPatternReferences).go();
         await _database.delete(_database.decisionAlternatives).go();
         await _database.delete(_database.decisions).go();
         if (preview.containsRules) {
@@ -141,6 +148,9 @@ class DataImporter {
         await (_database.delete(
           _database.appValues,
         )..where((row) => row.key.equals(_budgetKey))).go();
+        await (_database.delete(
+          _database.appValues,
+        )..where((row) => row.key.equals(PatternStore.key))).go();
       }
 
       final existingDecisionIds =
@@ -192,6 +202,26 @@ class DataImporter {
           budgetImported = true;
         }
       }
+      if (preview.personalPatterns.isNotEmpty) {
+        final existing = mode == DataImportMode.merge
+            ? await PatternStore(database: _database).readAll()
+            : const <PersonalPattern>[];
+        final merged = {
+          for (final pattern in existing) pattern.id: pattern,
+          for (final pattern in preview.personalPatterns) pattern.id: pattern,
+        }.values.toList();
+        await _database
+            .into(_database.appValues)
+            .insert(
+              AppValuesCompanion.insert(
+                key: PatternStore.key,
+                value: jsonEncode(
+                  merged.map((pattern) => pattern.toJson()).toList(),
+                ),
+              ),
+              mode: InsertMode.insertOrReplace,
+            );
+      }
 
       return DataImportResult(
         importedDecisions: importedDecisions,
@@ -224,6 +254,8 @@ class DataImporter {
             (json['events'] != null && json['events'] is! List) ||
             (json['referencedHistory'] != null &&
                 json['referencedHistory'] is! List) ||
+            (json['referencedPatterns'] != null &&
+                json['referencedPatterns'] is! List) ||
             (json['alternatives'] != null && json['alternatives'] is! List) ||
             !_isNullableString(json['feedback']) ||
             !_isNullableString(json['usageFrequency']) ||
@@ -238,6 +270,7 @@ class DataImporter {
         }
         final events = json['events'] as List?;
         final references = json['referencedHistory'] as List?;
+        final patternReferences = json['referencedPatterns'] as List?;
         final alternatives = json['alternatives'] as List?;
         final tags = json['tags'] as List?;
         if (events != null &&
@@ -249,6 +282,8 @@ class DataImporter {
                 ) ||
             references != null &&
                 references.any((reference) => reference is! String) ||
+            patternReferences != null &&
+                patternReferences.any((reference) => reference is! String) ||
             alternatives != null &&
                 alternatives.any((alternative) => alternative is! String) ||
             tags != null &&
@@ -320,6 +355,40 @@ class DataImporter {
     return rules;
   }
 
+  List<PersonalPattern> _parsePatterns(Object? value, int version) {
+    if (value == null && version < 4) return const [];
+    if (value is! List) {
+      throw const DataImportException('personal_patterns 必须是数组');
+    }
+    try {
+      final patterns = value
+          .map(
+            (item) => PersonalPattern.fromJson(
+              Map<String, dynamic>.from(item as Map),
+            ),
+          )
+          .toList();
+      final ids = <String>{};
+      if (patterns.any(
+        (pattern) =>
+            pattern.id.trim().isEmpty ||
+            pattern.text.trim().isEmpty ||
+            pattern.text.length > 200 ||
+            !ids.add(pattern.id) ||
+            !const {
+              'candidate',
+              'confirmed',
+              'ignored',
+            }.contains(pattern.status),
+      )) {
+        throw const FormatException();
+      }
+      return patterns;
+    } on Object {
+      throw const DataImportException('personal_patterns 格式有误');
+    }
+  }
+
   double? _parseBudget(Object? value) {
     if (value == null) return null;
     if (value is! num || value < 0 || !value.isFinite) {
@@ -381,6 +450,17 @@ class DataImporter {
           .into(_database.decisionReferences)
           .insert(
             DecisionReferencesCompanion.insert(
+              decisionId: record.id,
+              position: position,
+              summary: summary,
+            ),
+          );
+    }
+    for (final (position, summary) in record.referencedPatterns.indexed) {
+      await _database
+          .into(_database.decisionPatternReferences)
+          .insert(
+            DecisionPatternReferencesCompanion.insert(
               decisionId: record.id,
               position: position,
               summary: summary,

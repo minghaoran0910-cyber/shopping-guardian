@@ -130,6 +130,17 @@ class LegacyDataMigrator {
             ),
           );
     }
+    for (final (position, summary) in record.referencedPatterns.indexed) {
+      await database
+          .into(database.decisionPatternReferences)
+          .insert(
+            DecisionPatternReferencesCompanion.insert(
+              decisionId: id,
+              position: position,
+              summary: summary,
+            ),
+          );
+    }
     for (final (position, tag) in record.tags.indexed) {
       await database
           .into(database.decisionTags)

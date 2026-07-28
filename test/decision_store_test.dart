@@ -84,6 +84,7 @@ void main() {
         summary: '可以买',
         createdAt: DateTime(2026),
         referencedHistory: const ['旧键盘，最后后悔'],
+        referencedPatterns: const ['购买键盘前先检查已有设备'],
         risk: 'medium',
         confidence: 'high',
         budgetImpact: '占预算 20%',
@@ -95,6 +96,7 @@ void main() {
     expect(record.id, 'one');
     expect(record.feedback, 'regretted');
     expect(record.referencedHistory, ['旧键盘，最后后悔']);
+    expect(record.referencedPatterns, ['购买键盘前先检查已有设备']);
     expect(record.risk, 'medium');
     expect(record.confidence, 'high');
     expect(record.budgetImpact, '占预算 20%');

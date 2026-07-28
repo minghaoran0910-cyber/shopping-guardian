@@ -9,6 +9,7 @@ class AnalysisRequestSummary {
     required this.monthlyBudget,
     required this.matchedRules,
     required this.relatedHistory,
+    this.confirmedPatterns = const [],
   });
 
   final String endpoint;
@@ -20,6 +21,7 @@ class AnalysisRequestSummary {
   final double? monthlyBudget;
   final List<String> matchedRules;
   final List<String> relatedHistory;
+  final List<String> confirmedPatterns;
 
   String get destination {
     final uri = Uri.tryParse(endpoint);
@@ -35,5 +37,6 @@ class AnalysisRequestSummary {
     'monthly_budget': monthlyBudget,
     'matched_rules': matchedRules,
     'related_history': relatedHistory,
+    'confirmed_patterns': confirmedPatterns,
   };
 }
