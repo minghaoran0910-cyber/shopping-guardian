@@ -15,6 +15,9 @@ class Decisions extends Table {
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get waitUntil => dateTime().nullable()();
   TextColumn get feedback => text().nullable()();
+  TextColumn get usageFrequency => text().nullable()();
+  IntColumn get satisfaction => integer().nullable()();
+  TextColumn get regretReason => text().nullable()();
   TextColumn get risk => text().nullable()();
   TextColumn get confidence => text().nullable()();
   TextColumn get budgetImpact => text().nullable()();
@@ -120,12 +123,19 @@ class GuardianDatabase extends _$GuardianDatabase {
   }
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
+    },
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.addColumn(decisions, decisions.usageFrequency);
+        await migrator.addColumn(decisions, decisions.satisfaction);
+        await migrator.addColumn(decisions, decisions.regretReason);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

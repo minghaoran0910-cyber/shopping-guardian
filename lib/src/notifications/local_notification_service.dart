@@ -18,7 +18,7 @@ class LocalNotificationService {
             'timestamp': at.millisecondsSinceEpoch,
           }) ??
           false;
-    } on MissingPluginException {
+    } on PlatformException {
       return false;
     }
   }
@@ -26,7 +26,7 @@ class LocalNotificationService {
   Future<void> cancel(String id) async {
     try {
       await channel.invokeMethod<void>('cancel', {'id': id});
-    } on MissingPluginException {
+    } on PlatformException {
       return;
     }
   }
@@ -34,7 +34,7 @@ class LocalNotificationService {
   Future<void> cancelAll() async {
     try {
       await channel.invokeMethod<void>('cancelAll');
-    } on MissingPluginException {
+    } on PlatformException {
       return;
     }
   }
@@ -43,7 +43,7 @@ class LocalNotificationService {
     try {
       return await channel.invokeMethod<bool>('isDelivered', {'id': id}) ??
           false;
-    } on MissingPluginException {
+    } on PlatformException {
       return false;
     }
   }

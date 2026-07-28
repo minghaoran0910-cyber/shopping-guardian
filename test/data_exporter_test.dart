@@ -26,6 +26,10 @@ void main() {
         userChoice: 'wait',
         summary: '等等',
         createdAt: DateTime(2026, 7, 12),
+        feedback: 'regretted',
+        usageFrequency: 'rarely',
+        satisfaction: 2,
+        regretReason: '使用太少',
       ),
     );
     await const ConsumptionRuleStore().saveAll([
@@ -48,6 +52,10 @@ void main() {
     expect(data['schema_version'], 2);
     expect(data['monthly_budget'], 2000);
     expect(data['decisions'], hasLength(1));
+    final decision = (data['decisions'] as List).single as Map<String, dynamic>;
+    expect(decision['usageFrequency'], 'rarely');
+    expect(decision['satisfaction'], 2);
+    expect(decision['regretReason'], '使用太少');
     expect(data['rules'], hasLength(1));
     expect(exported, isNot(contains('must-not-export')));
     expect(exported, isNot(contains('api_key')));

@@ -10,8 +10,10 @@ import 'export/data_importer.dart';
 import 'export/data_exporter.dart';
 import 'history/decision_store.dart';
 import 'history/decision_history_retriever.dart';
+import 'history/purchase_feedback_dialog.dart';
 import 'insights/decision_insights.dart';
 import 'notifications/local_notification_service.dart';
+import 'notifications/feedback_reminder_service.dart';
 import 'rules/consumption_rule_store.dart';
 import 'copy.dart';
 import 'import/jd_cart_importer.dart';
@@ -1533,36 +1535,46 @@ class _HistoryPageState extends State<HistoryPage> {
     );
     if (selected == null || selected == record.currentStatus) return;
     await const DecisionStore().setStatus(record.id, selected);
-    if (selected != 'waiting') {
+    var reminderScheduled = true;
+    if (selected == 'purchased') {
       await const LocalNotificationService().cancel(record.id);
+      reminderScheduled = await const FeedbackReminderService().schedule(
+        decisionId: record.id,
+        title: copy.t(
+          '回顾一下：${record.itemName}',
+          'How is it going: ${record.itemName}',
+        ),
+      );
+    } else {
+      if (selected != 'waiting') {
+        await const LocalNotificationService().cancel(record.id);
+      }
+      await const FeedbackReminderService().cancel(record.id);
+    }
+    if (!reminderScheduled && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            copy.t(
+              '已标记为购买，但没能创建 7 天后的反馈提醒。',
+              'Marked as purchased, but the 7-day feedback reminder could not be created.',
+            ),
+          ),
+        ),
+      );
     }
     await _reload();
   }
 
   Future<void> _feedback(DecisionRecord record) async {
-    final copy = GuardianCopy.of(context);
-    final value = await showDialog<String>(
+    final value = await showDialog<PurchaseFeedback>(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: Text(copy.t('后来怎么样？', 'What happened later?')),
-        children: [
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, 'satisfied'),
-            child: Text(copy.t('买了，很满意', 'Bought it, satisfied')),
-          ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, 'regretted'),
-            child: Text(copy.t('买了，有点后悔', 'Bought it, regretted')),
-          ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, 'not_bought'),
-            child: Text(copy.t('最后没有买', 'Did not buy')),
-          ),
-        ],
-      ),
+      builder: (context) => const PurchaseFeedbackDialog(),
     );
     if (value == null) return;
-    await const DecisionStore().setFeedback(record.id, value);
+    await const DecisionStore().setStructuredFeedback(record.id, value);
+    await const LocalNotificationService().cancel(record.id);
+    await const FeedbackReminderService().cancel(record.id);
     await _reload();
   }
 
@@ -1593,8 +1605,29 @@ class _HistoryPageState extends State<HistoryPage> {
                 if (record.feedback != null)
                   Text(
                     copy.t(
-                      '后来：${record.feedback}',
-                      'Later: ${record.feedback}',
+                      '后来：${_feedbackLabel(copy, record.feedback!)}',
+                      'Later: ${_feedbackLabel(copy, record.feedback!)}',
+                    ),
+                  ),
+                if (record.usageFrequency != null)
+                  Text(
+                    copy.t(
+                      '使用频率：${_usageLabel(copy, record.usageFrequency!)}',
+                      'Usage: ${_usageLabel(copy, record.usageFrequency!)}',
+                    ),
+                  ),
+                if (record.satisfaction != null)
+                  Text(
+                    copy.t(
+                      '满意度：${record.satisfaction}/5',
+                      'Satisfaction: ${record.satisfaction}/5',
+                    ),
+                  ),
+                if (record.regretReason?.isNotEmpty == true)
+                  Text(
+                    copy.t(
+                      '后悔原因：${record.regretReason}',
+                      'Regret reason: ${record.regretReason}',
                     ),
                   ),
                 const SizedBox(height: 14),
@@ -1716,6 +1749,7 @@ class _HistoryPageState extends State<HistoryPage> {
       if (confirmed) {
         await const DecisionStore().delete(record.id);
         await const LocalNotificationService().cancel(record.id);
+        await const FeedbackReminderService().cancel(record.id);
         await _reload();
       }
     }
@@ -1809,7 +1843,7 @@ class _HistoryPageState extends State<HistoryPage> {
                               Text(_statusLabel(copy, record.currentStatus)),
                               if (record.feedback != null)
                                 Text(
-                                  record.feedback!,
+                                  _feedbackLabel(copy, record.feedback!),
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                             ],
@@ -1848,6 +1882,23 @@ class _HistoryPageState extends State<HistoryPage> {
         'feedback_completed' => copy.t('已反馈', 'Feedback added'),
         _ => status,
       };
+
+  static String _feedbackLabel(GuardianCopy copy, String feedback) =>
+      switch (feedback) {
+        'satisfied' => copy.t('满意', 'Satisfied'),
+        'regretted' => copy.t('后悔', 'Regretted'),
+        'not_bought' => copy.t('没有购买', 'Not bought'),
+        _ => feedback,
+      };
+
+  static String _usageLabel(GuardianCopy copy, String usage) => switch (usage) {
+    'not_used' => copy.t('还没用过', 'Not used yet'),
+    'rarely' => copy.t('很少使用', 'Rarely'),
+    'monthly' => copy.t('每月几次', 'A few times a month'),
+    'weekly' => copy.t('每周几次', 'A few times a week'),
+    'daily' => copy.t('几乎每天', 'Almost daily'),
+    _ => usage,
+  };
 }
 
 class InsightsPage extends StatefulWidget {

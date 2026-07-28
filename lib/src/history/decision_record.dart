@@ -26,6 +26,9 @@ class DecisionRecord {
     required this.createdAt,
     this.waitUntil,
     this.feedback,
+    this.usageFrequency,
+    this.satisfaction,
+    this.regretReason,
     this.referencedHistory = const [],
     this.risk,
     this.confidence,
@@ -43,6 +46,9 @@ class DecisionRecord {
   final DateTime createdAt;
   final DateTime? waitUntil;
   final String? feedback;
+  final String? usageFrequency;
+  final int? satisfaction;
+  final String? regretReason;
   final List<String> referencedHistory;
   final String? risk;
   final String? confidence;
@@ -85,6 +91,9 @@ class DecisionRecord {
     'createdAt': createdAt.toIso8601String(),
     'waitUntil': waitUntil?.toIso8601String(),
     'feedback': feedback,
+    'usageFrequency': usageFrequency,
+    'satisfaction': satisfaction,
+    'regretReason': regretReason,
     'referencedHistory': referencedHistory,
     'risk': risk,
     'confidence': confidence,
@@ -105,6 +114,9 @@ class DecisionRecord {
         ? null
         : DateTime.parse('${json['waitUntil']}'),
     feedback: json['feedback']?.toString(),
+    usageFrequency: json['usageFrequency']?.toString(),
+    satisfaction: (json['satisfaction'] as num?)?.toInt(),
+    regretReason: json['regretReason']?.toString(),
     referencedHistory:
         (json['referencedHistory'] as List?)?.map((item) => '$item').toList() ??
         const [],
@@ -125,22 +137,37 @@ class DecisionRecord {
         const [],
   );
 
-  DecisionRecord copyWith({String? feedback, List<DecisionEvent>? events}) =>
-      DecisionRecord(
-        id: id,
-        itemName: itemName,
-        total: total,
-        verdict: verdict,
-        userChoice: userChoice,
-        summary: summary,
-        createdAt: createdAt,
-        waitUntil: waitUntil,
-        feedback: feedback ?? this.feedback,
-        referencedHistory: referencedHistory,
-        risk: risk,
-        confidence: confidence,
-        budgetImpact: budgetImpact,
-        alternatives: alternatives,
-        events: events ?? this.events,
-      );
+  DecisionRecord copyWith({
+    String? feedback,
+    String? usageFrequency,
+    int? satisfaction,
+    String? regretReason,
+    bool replaceFeedbackDetails = false,
+    List<DecisionEvent>? events,
+  }) => DecisionRecord(
+    id: id,
+    itemName: itemName,
+    total: total,
+    verdict: verdict,
+    userChoice: userChoice,
+    summary: summary,
+    createdAt: createdAt,
+    waitUntil: waitUntil,
+    feedback: feedback ?? this.feedback,
+    usageFrequency: replaceFeedbackDetails
+        ? usageFrequency
+        : usageFrequency ?? this.usageFrequency,
+    satisfaction: replaceFeedbackDetails
+        ? satisfaction
+        : satisfaction ?? this.satisfaction,
+    regretReason: replaceFeedbackDetails
+        ? regretReason
+        : regretReason ?? this.regretReason,
+    referencedHistory: referencedHistory,
+    risk: risk,
+    confidence: confidence,
+    budgetImpact: budgetImpact,
+    alternatives: alternatives,
+    events: events ?? this.events,
+  );
 }

@@ -226,6 +226,9 @@ class DataImporter {
                 json['referencedHistory'] is! List) ||
             (json['alternatives'] != null && json['alternatives'] is! List) ||
             !_isNullableString(json['feedback']) ||
+            !_isNullableString(json['usageFrequency']) ||
+            (json['satisfaction'] != null && json['satisfaction'] is! int) ||
+            !_isNullableString(json['regretReason']) ||
             !_isNullableString(json['risk']) ||
             !_isNullableString(json['confidence']) ||
             !_isNullableString(json['budgetImpact'])) {
@@ -251,7 +254,9 @@ class DataImporter {
         if (record.id.trim().isEmpty ||
             record.itemName.trim().isEmpty ||
             record.total < 0 ||
-            !record.total.isFinite) {
+            !record.total.isFinite ||
+            (record.satisfaction != null &&
+                (record.satisfaction! < 1 || record.satisfaction! > 5))) {
           throw const FormatException();
         }
         if (!ids.add(record.id)) {
@@ -333,6 +338,9 @@ class DataImporter {
             createdAt: record.createdAt,
             waitUntil: Value(record.waitUntil),
             feedback: Value(record.feedback),
+            usageFrequency: Value(record.usageFrequency),
+            satisfaction: Value(record.satisfaction),
+            regretReason: Value(record.regretReason),
             risk: Value(record.risk),
             confidence: Value(record.confidence),
             budgetImpact: Value(record.budgetImpact),

@@ -91,8 +91,22 @@ class DecisionHistoryRetriever {
       'rarely_used' => '，购后反馈：很少使用',
       _ => '',
     };
+    final usage = switch (record.usageFrequency) {
+      'not_used' => '，尚未使用',
+      'rarely' => '，很少使用',
+      'monthly' => '，每月使用',
+      'weekly' => '，每周使用',
+      'daily' => '，每天使用',
+      _ => '',
+    };
+    final satisfaction = record.satisfaction == null
+        ? ''
+        : '，满意度：${record.satisfaction}/5';
+    final regretReason = record.regretReason?.trim().isNotEmpty == true
+        ? '，后悔原因：${record.regretReason!.trim()}'
+        : '';
     return '$day，${record.itemName}，¥${record.total.toStringAsFixed(2)}，'
         '用户最初决定：${record.userChoice}，当前状态：${record.currentStatus}'
-        '$feedback。${record.summary}';
+        '$feedback$usage$satisfaction$regretReason。${record.summary}';
   }
 }

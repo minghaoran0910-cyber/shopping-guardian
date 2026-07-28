@@ -196,8 +196,12 @@ void main() {
     const notificationChannel = MethodChannel(
       'shopping_guardian/notifications',
     );
+    final notificationCalls = <MethodCall>[];
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(notificationChannel, (_) async => null);
+        .setMockMethodCallHandler(notificationChannel, (call) async {
+          notificationCalls.add(call);
+          return call.method == 'schedule';
+        });
     addTearDown(
       () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(notificationChannel, null),
@@ -255,6 +259,14 @@ void main() {
     expect(
       find.descendant(of: find.byType(Card), matching: find.text('已购买')),
       findsOneWidget,
+    );
+    expect(
+      notificationCalls.any(
+        (call) =>
+            call.method == 'schedule' &&
+            (call.arguments as Map)['id'] == 'one_feedback',
+      ),
+      isTrue,
     );
   });
 }

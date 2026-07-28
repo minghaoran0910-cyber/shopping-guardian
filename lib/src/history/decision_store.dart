@@ -72,18 +72,32 @@ class DecisionStore {
   }
 
   Future<void> setFeedback(String id, String feedback) async {
+    await setStructuredFeedback(id, PurchaseFeedback(outcome: feedback));
+  }
+
+  Future<void> setStructuredFeedback(
+    String id,
+    PurchaseFeedback feedback,
+  ) async {
+    feedback.validate();
     final record = await _find(id);
     if (record == null) return;
     final now = DateTime.now();
     await _replace(
       record.copyWith(
-        feedback: feedback,
+        feedback: feedback.outcome,
+        usageFrequency: feedback.usageFrequency,
+        satisfaction: feedback.satisfaction,
+        regretReason: feedback.regretReason,
+        replaceFeedbackDetails: true,
         events: [
           ...record.effectiveEvents,
-          if ((feedback == 'satisfied' || feedback == 'regretted') &&
+          if ((feedback.outcome == 'satisfied' ||
+                  feedback.outcome == 'regretted') &&
               !record.countsAsPurchased)
             DecisionEvent(status: 'purchased', occurredAt: now),
-          if (feedback == 'not_bought' && record.currentStatus != 'skipped')
+          if (feedback.outcome == 'not_bought' &&
+              record.currentStatus != 'skipped')
             DecisionEvent(status: 'skipped', occurredAt: now),
           DecisionEvent(status: 'feedback_completed', occurredAt: now),
         ],
@@ -164,6 +178,9 @@ class DecisionStore {
             createdAt: record.createdAt,
             waitUntil: Value(record.waitUntil),
             feedback: Value(record.feedback),
+            usageFrequency: Value(record.usageFrequency),
+            satisfaction: Value(record.satisfaction),
+            regretReason: Value(record.regretReason),
             risk: Value(record.risk),
             confidence: Value(record.confidence),
             budgetImpact: Value(record.budgetImpact),
@@ -221,6 +238,9 @@ class DecisionStore {
       createdAt: row.createdAt,
       waitUntil: row.waitUntil,
       feedback: row.feedback,
+      usageFrequency: row.usageFrequency,
+      satisfaction: row.satisfaction,
+      regretReason: row.regretReason,
       referencedHistory: references.map((item) => item.summary).toList(),
       risk: row.risk,
       confidence: row.confidence,
@@ -235,5 +255,46 @@ class DecisionStore {
           )
           .toList(),
     );
+  }
+}
+
+class PurchaseFeedback {
+  const PurchaseFeedback({
+    required this.outcome,
+    this.usageFrequency,
+    this.satisfaction,
+    this.regretReason,
+  });
+
+  final String outcome;
+  final String? usageFrequency;
+  final int? satisfaction;
+  final String? regretReason;
+
+  void validate() {
+    if (!const {'satisfied', 'regretted', 'not_bought'}.contains(outcome)) {
+      throw ArgumentError.value(outcome, 'outcome', 'unsupported feedback');
+    }
+    if (usageFrequency != null &&
+        !const {
+          'not_used',
+          'rarely',
+          'monthly',
+          'weekly',
+          'daily',
+        }.contains(usageFrequency)) {
+      throw ArgumentError.value(
+        usageFrequency,
+        'usageFrequency',
+        'unsupported usage frequency',
+      );
+    }
+    if (satisfaction != null && (satisfaction! < 1 || satisfaction! > 5)) {
+      throw ArgumentError.value(
+        satisfaction,
+        'satisfaction',
+        'must be between 1 and 5',
+      );
+    }
   }
 }

@@ -221,6 +221,59 @@ void main() {
     expect(record.events.last.status, 'feedback_completed');
   });
 
+  test(
+    'stores structured feedback and clears stale details on replacement',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      const store = DecisionStore();
+      await store.add(
+        DecisionRecord(
+          id: 'structured',
+          itemName: '键盘',
+          total: 699,
+          verdict: 'buy',
+          userChoice: 'buy',
+          summary: '',
+          createdAt: DateTime(2026, 7, 24),
+        ),
+      );
+
+      await store.setStructuredFeedback(
+        'structured',
+        const PurchaseFeedback(
+          outcome: 'regretted',
+          usageFrequency: 'rarely',
+          satisfaction: 2,
+          regretReason: '使用太少',
+        ),
+      );
+      var record = (await store.readAll()).single;
+      expect(record.usageFrequency, 'rarely');
+      expect(record.satisfaction, 2);
+      expect(record.regretReason, '使用太少');
+
+      await store.setStructuredFeedback(
+        'structured',
+        const PurchaseFeedback(outcome: 'not_bought'),
+      );
+      record = (await store.readAll()).single;
+      expect(record.feedback, 'not_bought');
+      expect(record.usageFrequency, isNull);
+      expect(record.satisfaction, isNull);
+      expect(record.regretReason, isNull);
+    },
+  );
+
+  test('rejects invalid structured feedback', () async {
+    expect(
+      () => const DecisionStore().setStructuredFeedback(
+        'one',
+        PurchaseFeedback(outcome: 'satisfied', satisfaction: 6),
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('rejects unsupported decision statuses', () async {
     SharedPreferences.setMockInitialValues({});
     expect(

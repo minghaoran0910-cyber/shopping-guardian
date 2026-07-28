@@ -104,6 +104,39 @@ class $DecisionsTable extends Decisions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _usageFrequencyMeta = const VerificationMeta(
+    'usageFrequency',
+  );
+  @override
+  late final GeneratedColumn<String> usageFrequency = GeneratedColumn<String>(
+    'usage_frequency',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _satisfactionMeta = const VerificationMeta(
+    'satisfaction',
+  );
+  @override
+  late final GeneratedColumn<int> satisfaction = GeneratedColumn<int>(
+    'satisfaction',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _regretReasonMeta = const VerificationMeta(
+    'regretReason',
+  );
+  @override
+  late final GeneratedColumn<String> regretReason = GeneratedColumn<String>(
+    'regret_reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _riskMeta = const VerificationMeta('risk');
   @override
   late final GeneratedColumn<String> risk = GeneratedColumn<String>(
@@ -146,6 +179,9 @@ class $DecisionsTable extends Decisions
     createdAt,
     waitUntil,
     feedback,
+    usageFrequency,
+    satisfaction,
+    regretReason,
     risk,
     confidence,
     budgetImpact,
@@ -227,6 +263,33 @@ class $DecisionsTable extends Decisions
         feedback.isAcceptableOrUnknown(data['feedback']!, _feedbackMeta),
       );
     }
+    if (data.containsKey('usage_frequency')) {
+      context.handle(
+        _usageFrequencyMeta,
+        usageFrequency.isAcceptableOrUnknown(
+          data['usage_frequency']!,
+          _usageFrequencyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('satisfaction')) {
+      context.handle(
+        _satisfactionMeta,
+        satisfaction.isAcceptableOrUnknown(
+          data['satisfaction']!,
+          _satisfactionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('regret_reason')) {
+      context.handle(
+        _regretReasonMeta,
+        regretReason.isAcceptableOrUnknown(
+          data['regret_reason']!,
+          _regretReasonMeta,
+        ),
+      );
+    }
     if (data.containsKey('risk')) {
       context.handle(
         _riskMeta,
@@ -293,6 +356,18 @@ class $DecisionsTable extends Decisions
         DriftSqlType.string,
         data['${effectivePrefix}feedback'],
       ),
+      usageFrequency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}usage_frequency'],
+      ),
+      satisfaction: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}satisfaction'],
+      ),
+      regretReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}regret_reason'],
+      ),
       risk: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}risk'],
@@ -324,6 +399,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
   final DateTime createdAt;
   final DateTime? waitUntil;
   final String? feedback;
+  final String? usageFrequency;
+  final int? satisfaction;
+  final String? regretReason;
   final String? risk;
   final String? confidence;
   final String? budgetImpact;
@@ -337,6 +415,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     required this.createdAt,
     this.waitUntil,
     this.feedback,
+    this.usageFrequency,
+    this.satisfaction,
+    this.regretReason,
     this.risk,
     this.confidence,
     this.budgetImpact,
@@ -356,6 +437,15 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     }
     if (!nullToAbsent || feedback != null) {
       map['feedback'] = Variable<String>(feedback);
+    }
+    if (!nullToAbsent || usageFrequency != null) {
+      map['usage_frequency'] = Variable<String>(usageFrequency);
+    }
+    if (!nullToAbsent || satisfaction != null) {
+      map['satisfaction'] = Variable<int>(satisfaction);
+    }
+    if (!nullToAbsent || regretReason != null) {
+      map['regret_reason'] = Variable<String>(regretReason);
     }
     if (!nullToAbsent || risk != null) {
       map['risk'] = Variable<String>(risk);
@@ -384,6 +474,15 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
       feedback: feedback == null && nullToAbsent
           ? const Value.absent()
           : Value(feedback),
+      usageFrequency: usageFrequency == null && nullToAbsent
+          ? const Value.absent()
+          : Value(usageFrequency),
+      satisfaction: satisfaction == null && nullToAbsent
+          ? const Value.absent()
+          : Value(satisfaction),
+      regretReason: regretReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(regretReason),
       risk: risk == null && nullToAbsent ? const Value.absent() : Value(risk),
       confidence: confidence == null && nullToAbsent
           ? const Value.absent()
@@ -409,6 +508,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       waitUntil: serializer.fromJson<DateTime?>(json['waitUntil']),
       feedback: serializer.fromJson<String?>(json['feedback']),
+      usageFrequency: serializer.fromJson<String?>(json['usageFrequency']),
+      satisfaction: serializer.fromJson<int?>(json['satisfaction']),
+      regretReason: serializer.fromJson<String?>(json['regretReason']),
       risk: serializer.fromJson<String?>(json['risk']),
       confidence: serializer.fromJson<String?>(json['confidence']),
       budgetImpact: serializer.fromJson<String?>(json['budgetImpact']),
@@ -427,6 +529,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'waitUntil': serializer.toJson<DateTime?>(waitUntil),
       'feedback': serializer.toJson<String?>(feedback),
+      'usageFrequency': serializer.toJson<String?>(usageFrequency),
+      'satisfaction': serializer.toJson<int?>(satisfaction),
+      'regretReason': serializer.toJson<String?>(regretReason),
       'risk': serializer.toJson<String?>(risk),
       'confidence': serializer.toJson<String?>(confidence),
       'budgetImpact': serializer.toJson<String?>(budgetImpact),
@@ -443,6 +548,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     DateTime? createdAt,
     Value<DateTime?> waitUntil = const Value.absent(),
     Value<String?> feedback = const Value.absent(),
+    Value<String?> usageFrequency = const Value.absent(),
+    Value<int?> satisfaction = const Value.absent(),
+    Value<String?> regretReason = const Value.absent(),
     Value<String?> risk = const Value.absent(),
     Value<String?> confidence = const Value.absent(),
     Value<String?> budgetImpact = const Value.absent(),
@@ -456,6 +564,11 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     createdAt: createdAt ?? this.createdAt,
     waitUntil: waitUntil.present ? waitUntil.value : this.waitUntil,
     feedback: feedback.present ? feedback.value : this.feedback,
+    usageFrequency: usageFrequency.present
+        ? usageFrequency.value
+        : this.usageFrequency,
+    satisfaction: satisfaction.present ? satisfaction.value : this.satisfaction,
+    regretReason: regretReason.present ? regretReason.value : this.regretReason,
     risk: risk.present ? risk.value : this.risk,
     confidence: confidence.present ? confidence.value : this.confidence,
     budgetImpact: budgetImpact.present ? budgetImpact.value : this.budgetImpact,
@@ -473,6 +586,15 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       waitUntil: data.waitUntil.present ? data.waitUntil.value : this.waitUntil,
       feedback: data.feedback.present ? data.feedback.value : this.feedback,
+      usageFrequency: data.usageFrequency.present
+          ? data.usageFrequency.value
+          : this.usageFrequency,
+      satisfaction: data.satisfaction.present
+          ? data.satisfaction.value
+          : this.satisfaction,
+      regretReason: data.regretReason.present
+          ? data.regretReason.value
+          : this.regretReason,
       risk: data.risk.present ? data.risk.value : this.risk,
       confidence: data.confidence.present
           ? data.confidence.value
@@ -495,6 +617,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
           ..write('createdAt: $createdAt, ')
           ..write('waitUntil: $waitUntil, ')
           ..write('feedback: $feedback, ')
+          ..write('usageFrequency: $usageFrequency, ')
+          ..write('satisfaction: $satisfaction, ')
+          ..write('regretReason: $regretReason, ')
           ..write('risk: $risk, ')
           ..write('confidence: $confidence, ')
           ..write('budgetImpact: $budgetImpact')
@@ -513,6 +638,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     createdAt,
     waitUntil,
     feedback,
+    usageFrequency,
+    satisfaction,
+    regretReason,
     risk,
     confidence,
     budgetImpact,
@@ -530,6 +658,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
           other.createdAt == this.createdAt &&
           other.waitUntil == this.waitUntil &&
           other.feedback == this.feedback &&
+          other.usageFrequency == this.usageFrequency &&
+          other.satisfaction == this.satisfaction &&
+          other.regretReason == this.regretReason &&
           other.risk == this.risk &&
           other.confidence == this.confidence &&
           other.budgetImpact == this.budgetImpact);
@@ -545,6 +676,9 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
   final Value<DateTime> createdAt;
   final Value<DateTime?> waitUntil;
   final Value<String?> feedback;
+  final Value<String?> usageFrequency;
+  final Value<int?> satisfaction;
+  final Value<String?> regretReason;
   final Value<String?> risk;
   final Value<String?> confidence;
   final Value<String?> budgetImpact;
@@ -559,6 +693,9 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     this.createdAt = const Value.absent(),
     this.waitUntil = const Value.absent(),
     this.feedback = const Value.absent(),
+    this.usageFrequency = const Value.absent(),
+    this.satisfaction = const Value.absent(),
+    this.regretReason = const Value.absent(),
     this.risk = const Value.absent(),
     this.confidence = const Value.absent(),
     this.budgetImpact = const Value.absent(),
@@ -574,6 +711,9 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     required DateTime createdAt,
     this.waitUntil = const Value.absent(),
     this.feedback = const Value.absent(),
+    this.usageFrequency = const Value.absent(),
+    this.satisfaction = const Value.absent(),
+    this.regretReason = const Value.absent(),
     this.risk = const Value.absent(),
     this.confidence = const Value.absent(),
     this.budgetImpact = const Value.absent(),
@@ -595,6 +735,9 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     Expression<DateTime>? createdAt,
     Expression<DateTime>? waitUntil,
     Expression<String>? feedback,
+    Expression<String>? usageFrequency,
+    Expression<int>? satisfaction,
+    Expression<String>? regretReason,
     Expression<String>? risk,
     Expression<String>? confidence,
     Expression<String>? budgetImpact,
@@ -610,6 +753,9 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
       if (createdAt != null) 'created_at': createdAt,
       if (waitUntil != null) 'wait_until': waitUntil,
       if (feedback != null) 'feedback': feedback,
+      if (usageFrequency != null) 'usage_frequency': usageFrequency,
+      if (satisfaction != null) 'satisfaction': satisfaction,
+      if (regretReason != null) 'regret_reason': regretReason,
       if (risk != null) 'risk': risk,
       if (confidence != null) 'confidence': confidence,
       if (budgetImpact != null) 'budget_impact': budgetImpact,
@@ -627,6 +773,9 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     Value<DateTime>? createdAt,
     Value<DateTime?>? waitUntil,
     Value<String?>? feedback,
+    Value<String?>? usageFrequency,
+    Value<int?>? satisfaction,
+    Value<String?>? regretReason,
     Value<String?>? risk,
     Value<String?>? confidence,
     Value<String?>? budgetImpact,
@@ -642,6 +791,9 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
       createdAt: createdAt ?? this.createdAt,
       waitUntil: waitUntil ?? this.waitUntil,
       feedback: feedback ?? this.feedback,
+      usageFrequency: usageFrequency ?? this.usageFrequency,
+      satisfaction: satisfaction ?? this.satisfaction,
+      regretReason: regretReason ?? this.regretReason,
       risk: risk ?? this.risk,
       confidence: confidence ?? this.confidence,
       budgetImpact: budgetImpact ?? this.budgetImpact,
@@ -679,6 +831,15 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     if (feedback.present) {
       map['feedback'] = Variable<String>(feedback.value);
     }
+    if (usageFrequency.present) {
+      map['usage_frequency'] = Variable<String>(usageFrequency.value);
+    }
+    if (satisfaction.present) {
+      map['satisfaction'] = Variable<int>(satisfaction.value);
+    }
+    if (regretReason.present) {
+      map['regret_reason'] = Variable<String>(regretReason.value);
+    }
     if (risk.present) {
       map['risk'] = Variable<String>(risk.value);
     }
@@ -706,6 +867,9 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
           ..write('createdAt: $createdAt, ')
           ..write('waitUntil: $waitUntil, ')
           ..write('feedback: $feedback, ')
+          ..write('usageFrequency: $usageFrequency, ')
+          ..write('satisfaction: $satisfaction, ')
+          ..write('regretReason: $regretReason, ')
           ..write('risk: $risk, ')
           ..write('confidence: $confidence, ')
           ..write('budgetImpact: $budgetImpact, ')
@@ -2663,6 +2827,9 @@ typedef $$DecisionsTableCreateCompanionBuilder =
       required DateTime createdAt,
       Value<DateTime?> waitUntil,
       Value<String?> feedback,
+      Value<String?> usageFrequency,
+      Value<int?> satisfaction,
+      Value<String?> regretReason,
       Value<String?> risk,
       Value<String?> confidence,
       Value<String?> budgetImpact,
@@ -2679,6 +2846,9 @@ typedef $$DecisionsTableUpdateCompanionBuilder =
       Value<DateTime> createdAt,
       Value<DateTime?> waitUntil,
       Value<String?> feedback,
+      Value<String?> usageFrequency,
+      Value<int?> satisfaction,
+      Value<String?> regretReason,
       Value<String?> risk,
       Value<String?> confidence,
       Value<String?> budgetImpact,
@@ -2810,6 +2980,21 @@ class $$DecisionsTableFilterComposer
 
   ColumnFilters<String> get feedback => $composableBuilder(
     column: $table.feedback,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get usageFrequency => $composableBuilder(
+    column: $table.usageFrequency,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get satisfaction => $composableBuilder(
+    column: $table.satisfaction,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get regretReason => $composableBuilder(
+    column: $table.regretReason,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2958,6 +3143,21 @@ class $$DecisionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get usageFrequency => $composableBuilder(
+    column: $table.usageFrequency,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get satisfaction => $composableBuilder(
+    column: $table.satisfaction,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get regretReason => $composableBuilder(
+    column: $table.regretReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get risk => $composableBuilder(
     column: $table.risk,
     builder: (column) => ColumnOrderings(column),
@@ -3011,6 +3211,21 @@ class $$DecisionsTableAnnotationComposer
 
   GeneratedColumn<String> get feedback =>
       $composableBuilder(column: $table.feedback, builder: (column) => column);
+
+  GeneratedColumn<String> get usageFrequency => $composableBuilder(
+    column: $table.usageFrequency,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get satisfaction => $composableBuilder(
+    column: $table.satisfaction,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get regretReason => $composableBuilder(
+    column: $table.regretReason,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get risk =>
       $composableBuilder(column: $table.risk, builder: (column) => column);
@@ -3144,6 +3359,9 @@ class $$DecisionsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> waitUntil = const Value.absent(),
                 Value<String?> feedback = const Value.absent(),
+                Value<String?> usageFrequency = const Value.absent(),
+                Value<int?> satisfaction = const Value.absent(),
+                Value<String?> regretReason = const Value.absent(),
                 Value<String?> risk = const Value.absent(),
                 Value<String?> confidence = const Value.absent(),
                 Value<String?> budgetImpact = const Value.absent(),
@@ -3158,6 +3376,9 @@ class $$DecisionsTableTableManager
                 createdAt: createdAt,
                 waitUntil: waitUntil,
                 feedback: feedback,
+                usageFrequency: usageFrequency,
+                satisfaction: satisfaction,
+                regretReason: regretReason,
                 risk: risk,
                 confidence: confidence,
                 budgetImpact: budgetImpact,
@@ -3174,6 +3395,9 @@ class $$DecisionsTableTableManager
                 required DateTime createdAt,
                 Value<DateTime?> waitUntil = const Value.absent(),
                 Value<String?> feedback = const Value.absent(),
+                Value<String?> usageFrequency = const Value.absent(),
+                Value<int?> satisfaction = const Value.absent(),
+                Value<String?> regretReason = const Value.absent(),
                 Value<String?> risk = const Value.absent(),
                 Value<String?> confidence = const Value.absent(),
                 Value<String?> budgetImpact = const Value.absent(),
@@ -3188,6 +3412,9 @@ class $$DecisionsTableTableManager
                 createdAt: createdAt,
                 waitUntil: waitUntil,
                 feedback: feedback,
+                usageFrequency: usageFrequency,
+                satisfaction: satisfaction,
+                regretReason: regretReason,
                 risk: risk,
                 confidence: confidence,
                 budgetImpact: budgetImpact,
