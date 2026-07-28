@@ -17,10 +17,10 @@
 - [x] DATA-06 增加 Schema 版本、事务和损坏记录隔离
 - [x] DATA-07 实现 JSON 数据导入
 - [x] DATA-08 支持导入预览、覆盖/合并和失败回滚
-- [ ] MODEL-01 Endpoint 支持标准路径与完整自定义地址
-- [ ] MODEL-02 `response_format` 可配置
-- [ ] MODEL-03 增加 Ollama 和常见兼容服务预设
-- [ ] MODEL-04 处理 429、5xx 和有限退避
+- [x] MODEL-01 Endpoint 支持标准路径与完整自定义地址
+- [x] MODEL-02 `response_format` 可配置
+- [x] MODEL-03 增加 Ollama 和常见兼容服务预设
+- [x] MODEL-04 处理 429、5xx 和有限退避
 - [ ] PRIVACY-01 重写首次启动与设置页的第三方数据说明
 - [ ] PRIVACY-02 分析前展示即将发送的数据摘要
 - [ ] PRIVACY-03 说明各平台密钥和业务数据的存储方式

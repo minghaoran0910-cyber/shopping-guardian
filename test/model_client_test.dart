@@ -18,7 +18,7 @@ void main() {
     });
 
     await ModelClient(
-      baseUrl: 'https://example.com/v1',
+      endpoint: 'https://example.com/v1/chat/completions',
       apiKey: 'secret-key',
       model: 'test',
       client: client,
@@ -45,7 +45,7 @@ void main() {
       ),
     );
     final advice = await ModelClient(
-      baseUrl: 'https://example.com/v1',
+      endpoint: 'https://example.com/v1/chat/completions',
       apiKey: 'test',
       model: 'test',
       client: client,
@@ -69,7 +69,7 @@ void main() {
     );
 
     final advice = await ModelClient(
-      baseUrl: 'https://example.com/v1',
+      endpoint: 'https://example.com/v1/chat/completions',
       apiKey: 'test',
       model: 'test',
       client: client,
@@ -93,7 +93,7 @@ void main() {
       );
     });
     final advice = await ModelClient(
-      baseUrl: 'https://example.com/v1',
+      endpoint: 'https://example.com/v1/chat/completions',
       apiKey: 'test',
       model: 'test',
       client: client,
@@ -106,7 +106,7 @@ void main() {
     final client = MockClient((_) async => http.Response('{}', 401));
     expect(
       () => ModelClient(
-        baseUrl: 'https://example.com/v1',
+        endpoint: 'https://example.com/v1/chat/completions',
         apiKey: 'bad',
         model: 'test',
         client: client,
@@ -119,5 +119,108 @@ void main() {
         ),
       ),
     );
+  });
+
+  test('uses the exact endpoint and can omit JSON mode and auth', () async {
+    late http.Request captured;
+    final client = MockClient((request) async {
+      captured = request;
+      return http.Response(
+        '{"choices":[{"message":{"content":"{\\"verdict\\":\\"skip\\",\\"risk\\":\\"low\\",\\"confidence\\":\\"high\\",\\"summary\\":\\"不买\\",\\"reasons\\":[],\\"budget_impact\\":\\"无\\",\\"alternatives\\":[],\\"missing_information\\":[]}"}}]}',
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+    });
+
+    await ModelClient(
+      endpoint: 'http://localhost:11434/v1/chat/completions?tenant=local',
+      apiKey: '',
+      model: 'local-model',
+      useStructuredOutput: false,
+      client: client,
+    ).analyze(itemName: '商品', price: 1);
+
+    final body = jsonDecode(captured.body) as Map<String, dynamic>;
+    expect(
+      captured.url.toString(),
+      'http://localhost:11434/v1/chat/completions?tenant=local',
+    );
+    expect(captured.headers, isNot(contains('authorization')));
+    expect(body, isNot(contains('response_format')));
+  });
+
+  test('retries 429 and 5xx with bounded delays before succeeding', () async {
+    var calls = 0;
+    final delays = <Duration>[];
+    final client = MockClient((_) async {
+      calls++;
+      if (calls == 1) {
+        return http.Response('{}', 429, headers: {'retry-after': '1'});
+      }
+      if (calls == 2) return http.Response('{}', 503);
+      return http.Response(
+        '{"choices":[{"message":{"content":"{\\"verdict\\":\\"wait\\",\\"risk\\":\\"medium\\",\\"confidence\\":\\"high\\",\\"summary\\":\\"等等\\",\\"reasons\\":[],\\"budget_impact\\":\\"低\\",\\"alternatives\\":[],\\"missing_information\\":[]}"}}]}',
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+    });
+
+    final advice = await ModelClient(
+      endpoint: 'https://example.com/chat/completions',
+      apiKey: 'key',
+      model: 'model',
+      client: client,
+      retryDelay: (duration) async => delays.add(duration),
+    ).analyze(itemName: '商品', price: 1);
+
+    expect(advice.verdict, PurchaseVerdict.wait);
+    expect(calls, 3);
+    expect(delays, [const Duration(seconds: 1), const Duration(seconds: 1)]);
+  });
+
+  test('stops after the configured retry limit', () async {
+    var calls = 0;
+    final client = MockClient((_) async {
+      calls++;
+      return http.Response('{}', 500);
+    });
+
+    await expectLater(
+      ModelClient(
+        endpoint: 'https://example.com/chat/completions',
+        apiKey: 'key',
+        model: 'model',
+        client: client,
+        retryDelay: (_) async {},
+      ).analyze(itemName: '商品', price: 1),
+      throwsA(
+        isA<ModelClientException>().having(
+          (error) => error.message,
+          'message',
+          contains('HTTP 500'),
+        ),
+      ),
+    );
+    expect(calls, 3);
+  });
+
+  test('does not retry non-transient client errors', () async {
+    var calls = 0;
+    final client = MockClient((_) async {
+      calls++;
+      return http.Response('{}', 404);
+    });
+
+    await expectLater(
+      ModelClient(
+        endpoint: 'https://example.com/chat/completions',
+        apiKey: 'key',
+        model: 'model',
+        client: client,
+        retryDelay: (_) async {},
+      ).analyze(itemName: '商品', price: 1),
+      throwsA(isA<ModelClientException>()),
+    );
+    expect(calls, 1);
   });
 }

@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+typedef RetryDelay = Future<void> Function(Duration duration);
+
 enum PurchaseVerdict { buy, wait, skip, alternative, insufficientData }
 
 enum AdviceLevel { low, medium, high }
@@ -33,15 +35,21 @@ class PurchaseAdvice {
 
 class ModelClient {
   const ModelClient({
-    required this.baseUrl,
+    required this.endpoint,
     required this.apiKey,
     required this.model,
+    this.useStructuredOutput = true,
+    this.maxRetries = 2,
+    this.retryDelay = _defaultRetryDelay,
     this.client,
   });
 
-  final String baseUrl;
+  final String endpoint;
   final String apiKey;
   final String model;
+  final bool useStructuredOutput;
+  final int maxRetries;
+  final RetryDelay retryDelay;
   final http.Client? client;
 
   Future<PurchaseAdvice> analyze({
@@ -100,36 +108,69 @@ class ModelClient {
     http.Client requestClient,
     List<Map<String, String>> messages,
   ) async {
-    final response = await requestClient
-        .post(
-          Uri.parse(
-            '${baseUrl.replaceFirst(RegExp(r'/$'), '')}/chat/completions',
-          ),
-          headers: {
-            'Authorization': 'Bearer $apiKey',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode({
-            'model': model,
-            'response_format': {'type': 'json_object'},
-            'messages': messages,
-          }),
-        )
-        .timeout(const Duration(seconds: 45));
-    if (response.statusCode == 401 || response.statusCode == 403) {
-      throw const ModelClientException('API Key 无效或没有权限');
+    final uri = Uri.tryParse(endpoint);
+    if (uri == null ||
+        (uri.scheme != 'http' && uri.scheme != 'https') ||
+        uri.host.isEmpty) {
+      throw const ModelClientException('模型接口地址格式不正确');
     }
-    if (response.statusCode == 404) {
-      throw const ModelClientException('模型或接口地址不存在');
+
+    for (var attempt = 0; ; attempt++) {
+      final body = <String, Object>{
+        'model': model,
+        if (useStructuredOutput) 'response_format': {'type': 'json_object'},
+        'messages': messages,
+      };
+      final response = await requestClient
+          .post(
+            uri,
+            headers: {
+              if (apiKey.isNotEmpty) 'Authorization': 'Bearer $apiKey',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 45));
+      final retryable =
+          response.statusCode == 429 || response.statusCode >= 500;
+      if (retryable && attempt < maxRetries) {
+        await retryDelay(_retryDuration(response, attempt));
+        continue;
+      }
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw const ModelClientException('API Key 无效或没有权限');
+      }
+      if (response.statusCode == 404) {
+        throw const ModelClientException('模型或接口地址不存在');
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw ModelClientException('模型服务错误（HTTP ${response.statusCode}）');
+      }
+      try {
+        final envelope = jsonDecode(utf8.decode(response.bodyBytes));
+        final content = envelope['choices']?[0]?['message']?['content'];
+        if (content is! String) {
+          throw const ModelClientException('模型没有返回内容');
+        }
+        return content;
+      } on ModelClientException {
+        rethrow;
+      } on Object {
+        throw const ModelClientException('模型服务返回了无法识别的内容');
+      }
     }
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ModelClientException('模型服务错误（HTTP ${response.statusCode}）');
-    }
-    final envelope = jsonDecode(utf8.decode(response.bodyBytes));
-    final content = envelope['choices']?[0]?['message']?['content'];
-    if (content is! String) throw const ModelClientException('模型没有返回内容');
-    return content;
   }
+
+  static Duration _retryDuration(http.Response response, int attempt) {
+    final retryAfter = int.tryParse(response.headers['retry-after'] ?? '');
+    if (retryAfter != null && retryAfter >= 0) {
+      return Duration(seconds: retryAfter.clamp(0, 5));
+    }
+    return Duration(milliseconds: 500 * (1 << attempt).clamp(1, 4));
+  }
+
+  static Future<void> _defaultRetryDelay(Duration duration) =>
+      Future<void>.delayed(duration);
 
   static PurchaseAdvice _parse(String content) {
     final data = jsonDecode(content) as Map<String, dynamic>;

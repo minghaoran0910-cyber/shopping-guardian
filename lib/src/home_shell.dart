@@ -1077,9 +1077,10 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
       );
       final advice =
           await ModelClient(
-            baseUrl: config.baseUrl,
+            endpoint: config.endpoint,
             apiKey: config.apiKey,
             model: config.model,
+            useStructuredOutput: config.structuredOutput,
           ).analyze(
             itemName: widget.items
                 .map((item) => item.title ?? '未命名商品')
@@ -2500,9 +2501,11 @@ class _ModelSettings extends StatefulWidget {
 }
 
 class _ModelSettingsState extends State<_ModelSettings> {
-  final baseUrl = TextEditingController();
+  final endpoint = TextEditingController();
   final apiKey = TextEditingController();
   final model = TextEditingController();
+  ModelServicePreset preset = ModelServicePreset.custom;
+  bool structuredOutput = true;
   bool loading = true;
   bool testing = false;
 
@@ -2515,9 +2518,11 @@ class _ModelSettingsState extends State<_ModelSettings> {
   Future<void> _load() async {
     try {
       final config = await const ModelConfigStore().read();
-      baseUrl.text = config.baseUrl;
+      endpoint.text = config.endpoint;
       apiKey.text = config.apiKey;
       model.text = config.model;
+      preset = config.preset;
+      structuredOutput = config.structuredOutput;
     } on MissingPluginException {
       // Native storage is unavailable in widget tests.
     } finally {
@@ -2528,14 +2533,21 @@ class _ModelSettingsState extends State<_ModelSettings> {
   Future<void> _testAndSave() async {
     final copy = GuardianCopy.of(context);
     final config = ModelConfig(
-      baseUrl: baseUrl.text.trim(),
+      endpoint: endpoint.text.trim(),
       model: model.text.trim(),
       apiKey: apiKey.text.trim(),
+      structuredOutput: structuredOutput,
+      preset: preset,
     );
     if (!config.isComplete) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(copy.t('三个字段都要填写。', 'Fill in all three fields.')),
+          content: Text(
+            copy.t(
+              '请填写有效的接口地址和模型名称。',
+              'Enter a valid endpoint and model name.',
+            ),
+          ),
         ),
       );
       return;
@@ -2543,9 +2555,10 @@ class _ModelSettingsState extends State<_ModelSettings> {
     setState(() => testing = true);
     try {
       await ModelClient(
-        baseUrl: config.baseUrl,
+        endpoint: config.endpoint,
         apiKey: config.apiKey,
         model: config.model,
+        useStructuredOutput: config.structuredOutput,
       ).analyze(itemName: '连接测试', price: 1, reason: '只测试连接');
       await const ModelConfigStore().write(config);
       if (!mounted) return;
@@ -2570,7 +2583,7 @@ class _ModelSettingsState extends State<_ModelSettings> {
 
   @override
   void dispose() {
-    baseUrl.dispose();
+    endpoint.dispose();
     apiKey.dispose();
     model.dispose();
     super.dispose();
@@ -2583,20 +2596,56 @@ class _ModelSettingsState extends State<_ModelSettings> {
       title: copy.t('模型', 'Model'),
       icon: Icons.hub_outlined,
       children: [
+        DropdownButtonFormField<ModelServicePreset>(
+          initialValue: preset,
+          decoration: InputDecoration(
+            labelText: copy.t('服务预设', 'Service preset'),
+          ),
+          items: ModelServicePreset.values
+              .map(
+                (value) => DropdownMenuItem(
+                  value: value,
+                  child: Text(switch (value) {
+                    ModelServicePreset.custom => copy.t('自定义', 'Custom'),
+                    ModelServicePreset.openAI => 'OpenAI',
+                    ModelServicePreset.deepSeek => 'DeepSeek',
+                    ModelServicePreset.ollama => 'Ollama',
+                  }),
+                ),
+              )
+              .toList(),
+          onChanged: loading
+              ? null
+              : (value) {
+                  if (value == null) return;
+                  setState(() {
+                    preset = value;
+                    if (value.endpoint.isNotEmpty) {
+                      endpoint.text = value.endpoint;
+                    }
+                  });
+                },
+        ),
         TextField(
-          controller: baseUrl,
+          controller: endpoint,
           enabled: !loading,
-          decoration: const InputDecoration(
-            labelText: 'Base URL',
-            hintText: 'https://api.example.com/v1',
+          onChanged: (value) {
+            if (preset != ModelServicePreset.custom &&
+                value.trim() != preset.endpoint) {
+              setState(() => preset = ModelServicePreset.custom);
+            }
+          },
+          decoration: InputDecoration(
+            labelText: copy.t('完整接口地址', 'Full endpoint'),
+            hintText: 'https://api.example.com/v1/chat/completions',
           ),
         ),
         TextField(
           controller: apiKey,
           enabled: !loading,
           obscureText: true,
-          decoration: const InputDecoration(
-            labelText: 'API Key',
+          decoration: InputDecoration(
+            labelText: copy.t('API Key（选填）', 'API Key (optional)'),
             hintText: '••••••••••••',
           ),
         ),
@@ -2605,7 +2654,21 @@ class _ModelSettingsState extends State<_ModelSettings> {
           enabled: !loading,
           decoration: InputDecoration(
             labelText: copy.t('模型名称', 'Model name'),
-            hintText: 'deepseek-chat',
+            hintText: copy.t('填写服务中的模型名', 'Model name from your service'),
+          ),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: structuredOutput,
+          onChanged: loading
+              ? null
+              : (value) => setState(() => structuredOutput = value),
+          title: Text(copy.t('请求 JSON 输出', 'Request JSON output')),
+          subtitle: Text(
+            copy.t(
+              '如果服务不支持 response_format，请关闭。应用仍会检查并尝试修复返回内容。',
+              'Turn this off if the service rejects response_format. The app will still validate and repair the response.',
+            ),
           ),
         ),
         Align(

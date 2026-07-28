@@ -23,8 +23,12 @@ class DataExporter {
       'exported_at': DateTime.now().toUtc().toIso8601String(),
       'monthly_budget': budget.limit,
       'model': {
-        'base_url': preferences.getString('model_base_url'),
+        'endpoint':
+            preferences.getString('model_endpoint') ??
+            preferences.getString('model_base_url'),
         'name': preferences.getString('model_name'),
+        'structured_output':
+            preferences.getBool('model_structured_output') ?? true,
       },
       'decisions': records.map((record) => record.toJson()).toList(),
       'rules': rules.map((rule) => rule.toJson()).toList(),

@@ -63,6 +63,8 @@ void main() {
 
     expect(find.text('外观'), findsOneWidget);
     expect(find.text('导入数据'), findsOneWidget);
+    expect(find.text('服务预设'), findsOneWidget);
+    expect(find.text('请求 JSON 输出'), findsOneWidget);
     await tester.tap(find.text('English'));
     await tester.pumpAndSettle();
     expect(find.text('Appearance'), findsOneWidget);
