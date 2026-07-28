@@ -1,0 +1,141 @@
+name: Windows signed release
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: Tag, branch, or commit to build
+        required: true
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  sign:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.revision }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.6
+          cache: true
+
+      - name: Require signing credentials
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_BASE64)) {
+            throw "WINDOWS_CERTIFICATE_BASE64 is not configured"
+          }
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
+            throw "WINDOWS_CERTIFICATE_PASSWORD is not configured"
+          }
+
+      - name: Analyze and test
+        run: |
+          flutter pub get
+          dart analyze lib test integration_test tool
+          flutter test --exclude-tags golden
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Import signing certificate
+        id: certificate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $certificatePath = Join-Path $env:RUNNER_TEMP "windows-signing.pfx"
+          [IO.File]::WriteAllBytes(
+            $certificatePath,
+            [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64)
+          )
+          $password = ConvertTo-SecureString `
+            $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $certificate = Import-PfxCertificate `
+            -FilePath $certificatePath `
+            -CertStoreLocation Cert:\CurrentUser\My `
+            -Password $password
+          Remove-Item $certificatePath -Force
+          "thumbprint=$($certificate.Thumbprint)" >> $env:GITHUB_OUTPUT
+
+      - name: Sign and verify binaries
+        shell: pwsh
+        env:
+          CERTIFICATE_THUMBPRINT: ${{ steps.certificate.outputs.thumbprint }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $signTool = Get-ChildItem `
+            "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if ($null -eq $signTool) {
+            throw "signtool.exe was not found"
+          }
+
+          $release = "build\windows\x64\runner\Release"
+          $binaries = Get-ChildItem $release -Recurse -File |
+            Where-Object { $_.Extension -in ".exe", ".dll" }
+          if ($binaries.Count -eq 0) {
+            throw "No Windows binaries were found"
+          }
+
+          foreach ($binary in $binaries) {
+            & $signTool.FullName sign `
+              /sha1 $env:CERTIFICATE_THUMBPRINT `
+              /fd SHA256 `
+              /tr https://timestamp.digicert.com `
+              /td SHA256 `
+              $binary.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "Signing failed: $($binary.FullName)"
+            }
+            & $signTool.FullName verify /pa /all /v $binary.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "Signature verification failed: $($binary.FullName)"
+            }
+            $authenticode = Get-AuthenticodeSignature $binary.FullName
+            if ($authenticode.Status -ne "Valid") {
+              throw "Invalid Authenticode status for $($binary.Name): $($authenticode.Status)"
+            }
+          }
+
+      - name: Package signed app
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path build/windows/x64/runner/Release/* `
+            -DestinationPath shopping-guardian-windows-signed.zip
+          $hash = Get-FileHash `
+            shopping-guardian-windows-signed.zip -Algorithm SHA256
+          "$($hash.Hash.ToLower())  shopping-guardian-windows-signed.zip" |
+            Set-Content shopping-guardian-windows-signed.zip.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shopping-guardian-windows-signed
+          path: |
+            shopping-guardian-windows-signed.zip
+            shopping-guardian-windows-signed.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Remove imported certificate
+        if: always() && steps.certificate.outputs.thumbprint != ''
+        shell: pwsh
+        run: |
+          Remove-Item `
+            "Cert:\CurrentUser\My\${{ steps.certificate.outputs.thumbprint }}" `
+            -Force
+          Remove-Item `
+            (Join-Path $env:RUNNER_TEMP "windows-signing.pfx") `
+            -Force -ErrorAction SilentlyContinue

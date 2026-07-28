@@ -1,0 +1,63 @@
+name: 真机无障碍验收
+description: 记录 TalkBack 或 VoiceOver 的发布候选验收结果
+title: "[A11Y] "
+labels:
+  - accessibility
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先完整执行 `docs/ACCESSIBILITY-ACCEPTANCE.md`。不要在 Issue 中粘贴 API Key、真实购物记录或包含隐私的录屏。
+  - type: input
+    id: revision
+    attributes:
+      label: 候选版本与提交
+      placeholder: v1.8.0 / 18c759d
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 平台
+      options:
+        - Android / TalkBack
+        - iOS / VoiceOver
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 设备、系统与读屏版本
+    validations:
+      required: true
+  - type: textarea
+    id: failed_steps
+    attributes:
+      label: 失败步骤
+      description: 全部通过时填写“无”；否则填写步骤编号、实际播报、预期结果和复现方式。
+    validations:
+      required: true
+  - type: checkboxes
+    id: gates
+    attributes:
+      label: 验收门禁
+      options:
+        - label: 已完成 A01–A05
+          required: true
+        - label: 已完成 B01–B05
+          required: true
+        - label: 已完成 C01–C05
+          required: true
+        - label: 已完成 D01–D05
+          required: true
+        - label: 证据不包含密钥和个人购物数据
+          required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: 结论
+      options:
+        - 不通过
+        - 通过
+    validations:
+      required: true

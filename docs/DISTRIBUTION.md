@@ -27,10 +27,23 @@
 3. CI 中凭据只以加密 Secret 注入，完成后删除临时钥匙串。
 4. 对 ZIP 内应用执行签名检查、`stapler validate` 和 Gatekeeper 验证。
 
+仓库已提供手动工作流 `macOS signed release`。配置以下 GitHub Actions Secrets 后，输入待发布的 tag 或提交运行：
+
+- `MACOS_CERTIFICATE_BASE64`
+- `MACOS_CERTIFICATE_PASSWORD`
+- `MACOS_SIGNING_IDENTITY`
+- `APPLE_API_KEY_BASE64`
+- `APPLE_API_KEY_ID`
+- `APPLE_API_ISSUER_ID`
+
+工作流会重新分析、测试和构建，再依次执行 Developer ID 签名、公证、装订、Gatekeeper 验证并生成 SHA-256。缺少任何凭据时会立即失败，不会产出看似正式的未签名包。
+
 ## Windows 代码签名的完成条件
 
 1. 提供受信任 CA 颁发的代码签名证书或云签名服务。
 2. 密钥不进入仓库或普通 artifact。
 3. 对 EXE 和必要 DLL 签名，并用 `Get-AuthenticodeSignature` 验证。
+
+仓库已提供手动工作流 `Windows signed release`。配置 `WINDOWS_CERTIFICATE_BASE64` 和 `WINDOWS_CERTIFICATE_PASSWORD` 后，输入待发布的 tag 或提交运行。工作流会签署 release 目录内全部 EXE/DLL，同时用 `signtool verify` 和 `Get-AuthenticodeSignature` 双重验证，然后生成带 SHA-256 的便携 ZIP。
 
 没有证书时，项目继续发布可复现、带哈希的未签名构建，不使用自签证书伪装成受信任分发。

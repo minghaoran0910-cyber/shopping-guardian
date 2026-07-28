@@ -220,6 +220,7 @@ build/macos/Build/Products/Release/购物守护者.app
 
 - 自动化测试覆盖 200% 字号、桌面键盘焦点、可点击控件标签和 Android 触控尺寸
 - 发布前仍需在真实设备上分别使用 TalkBack 与 VoiceOver 走查主要流程；自动化语义检查不能替代真人读屏体验
+- 真机设备矩阵、20 个验收步骤、通过标准和记录模板见 [真机无障碍验收](docs/ACCESSIBILITY-ACCEPTANCE.md)
 
 ## 更新
 

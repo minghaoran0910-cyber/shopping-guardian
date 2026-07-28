@@ -48,8 +48,8 @@
 - [x] UX-03 技术错误转为可执行提示
 - [x] A11Y-01 200% 字号与文字溢出验收
 - [x] A11Y-02 键盘导航验收
-- [ ] A11Y-03 TalkBack 与 VoiceOver 验收
-- [ ] RELEASE-01 macOS 签名与公证
-- [ ] RELEASE-02 Windows 代码签名
+- [ ] A11Y-03 TalkBack 与 VoiceOver 验收（真机流程与证据模板已固化，待 Android/iPhone 各一份通过记录）
+- [ ] RELEASE-01 macOS 签名与公证（工作流已就绪，待 Developer ID 与公证凭据执行）
+- [ ] RELEASE-02 Windows 代码签名（工作流已就绪，待受信任证书执行）
 - [x] RELEASE-03 iOS TestFlight 或维持源码自签的长期决策
 - [x] RELEASE-04 版本检查与升级说明
