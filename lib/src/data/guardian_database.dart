@@ -18,6 +18,7 @@ class Decisions extends Table {
   TextColumn get usageFrequency => text().nullable()();
   IntColumn get satisfaction => integer().nullable()();
   TextColumn get regretReason => text().nullable()();
+  TextColumn get category => text().nullable()();
   TextColumn get risk => text().nullable()();
   TextColumn get confidence => text().nullable()();
   TextColumn get budgetImpact => text().nullable()();
@@ -60,6 +61,17 @@ class DecisionAlternatives extends Table {
   Set<Column<Object>> get primaryKey => {decisionId, position};
 }
 
+@DataClassName('StoredDecisionTag')
+class DecisionTags extends Table {
+  TextColumn get decisionId =>
+      text().references(Decisions, #id, onDelete: KeyAction.cascade)();
+  IntColumn get position => integer()();
+  TextColumn get tag => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {decisionId, position};
+}
+
 @DataClassName('StoredConsumptionRule')
 class ConsumptionRules extends Table {
   TextColumn get id => text()();
@@ -95,6 +107,7 @@ class MigrationQuarantine extends Table {
     DecisionEvents,
     DecisionReferences,
     DecisionAlternatives,
+    DecisionTags,
     ConsumptionRules,
     AppValues,
     MigrationQuarantine,
@@ -123,7 +136,7 @@ class GuardianDatabase extends _$GuardianDatabase {
   }
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -136,6 +149,10 @@ class GuardianDatabase extends _$GuardianDatabase {
         await migrator.addColumn(decisions, decisions.satisfaction);
         await migrator.addColumn(decisions, decisions.regretReason);
       }
+      if (from < 3) {
+        await migrator.addColumn(decisions, decisions.category);
+        await migrator.createTable(decisionTags);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -146,6 +163,7 @@ class GuardianDatabase extends _$GuardianDatabase {
     await delete(decisionEvents).go();
     await delete(decisionReferences).go();
     await delete(decisionAlternatives).go();
+    await delete(decisionTags).go();
     await delete(decisions).go();
     await delete(consumptionRules).go();
     await delete(appValues).go();

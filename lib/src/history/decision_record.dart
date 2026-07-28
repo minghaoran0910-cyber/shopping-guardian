@@ -29,6 +29,8 @@ class DecisionRecord {
     this.usageFrequency,
     this.satisfaction,
     this.regretReason,
+    this.category,
+    this.tags = const [],
     this.referencedHistory = const [],
     this.risk,
     this.confidence,
@@ -49,6 +51,8 @@ class DecisionRecord {
   final String? usageFrequency;
   final int? satisfaction;
   final String? regretReason;
+  final String? category;
+  final List<String> tags;
   final List<String> referencedHistory;
   final String? risk;
   final String? confidence;
@@ -94,6 +98,8 @@ class DecisionRecord {
     'usageFrequency': usageFrequency,
     'satisfaction': satisfaction,
     'regretReason': regretReason,
+    'category': category,
+    'tags': tags,
     'referencedHistory': referencedHistory,
     'risk': risk,
     'confidence': confidence,
@@ -117,6 +123,8 @@ class DecisionRecord {
     usageFrequency: json['usageFrequency']?.toString(),
     satisfaction: (json['satisfaction'] as num?)?.toInt(),
     regretReason: json['regretReason']?.toString(),
+    category: json['category']?.toString(),
+    tags: (json['tags'] as List?)?.map((item) => '$item').toList() ?? const [],
     referencedHistory:
         (json['referencedHistory'] as List?)?.map((item) => '$item').toList() ??
         const [],
@@ -142,6 +150,9 @@ class DecisionRecord {
     String? usageFrequency,
     int? satisfaction,
     String? regretReason,
+    String? category,
+    List<String>? tags,
+    bool replaceMetadata = false,
     bool replaceFeedbackDetails = false,
     List<DecisionEvent>? events,
   }) => DecisionRecord(
@@ -163,6 +174,8 @@ class DecisionRecord {
     regretReason: replaceFeedbackDetails
         ? regretReason
         : regretReason ?? this.regretReason,
+    category: replaceMetadata ? category : category ?? this.category,
+    tags: replaceMetadata ? tags ?? const [] : tags ?? this.tags,
     referencedHistory: referencedHistory,
     risk: risk,
     confidence: confidence,

@@ -108,6 +108,8 @@ void main() {
     expect(find.text('买它是为了什么？'), findsOneWidget);
     expect(find.text('购买理由'), findsOneWidget);
     expect(find.text('本月剩余预算（选填）'), findsOneWidget);
+    expect(find.text('分类（选填）'), findsOneWidget);
+    expect(find.text('标签（选填）'), findsOneWidget);
   });
 
   testWidgets('previews a manually entered product', (tester) async {
@@ -268,5 +270,45 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  testWidgets('shows purchased records in the personal item library', (
+    tester,
+  ) async {
+    final createdAt = DateTime(2026, 7, 28, 10);
+    SharedPreferences.setMockInitialValues({
+      'onboarding_seen': true,
+      'decision_history_v1': [
+        jsonEncode({
+          'id': 'owned',
+          'itemName': '宁芝键盘',
+          'total': 699,
+          'verdict': 'buy',
+          'userChoice': 'buy',
+          'summary': '适合办公',
+          'createdAt': createdAt.toIso8601String(),
+          'category': '数码',
+          'tags': ['办公', '键盘'],
+          'events': [
+            {'status': 'purchased', 'occurredAt': createdAt.toIso8601String()},
+          ],
+        }),
+      ],
+    });
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.tap(find.text('习惯'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('我的物品'), findsOneWidget);
+    expect(find.text('宁芝键盘'), findsOneWidget);
+    expect(find.text('数码 · 办公 · 键盘'), findsOneWidget);
+    await tester.tap(find.text('宁芝键盘'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('来自 2026-07-28 10:00 的决策记录'), findsOneWidget);
   });
 }

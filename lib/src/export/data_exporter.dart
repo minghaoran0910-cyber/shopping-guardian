@@ -19,7 +19,7 @@ class DataExporter {
     final rules = await const ConsumptionRuleStore().readAll();
     final budget = await const BudgetStore().snapshot();
     final content = const JsonEncoder.withIndent('  ').convert({
-      'schema_version': 2,
+      'schema_version': 3,
       'exported_at': DateTime.now().toUtc().toIso8601String(),
       'monthly_budget': budget.limit,
       'model': {

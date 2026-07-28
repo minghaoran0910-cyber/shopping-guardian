@@ -4,6 +4,8 @@ class AnalysisRequestSummary {
     required this.itemName,
     required this.price,
     required this.reason,
+    this.category,
+    this.tags = const [],
     required this.monthlyBudget,
     required this.matchedRules,
     required this.relatedHistory,
@@ -13,6 +15,8 @@ class AnalysisRequestSummary {
   final String itemName;
   final double price;
   final String? reason;
+  final String? category;
+  final List<String> tags;
   final double? monthlyBudget;
   final List<String> matchedRules;
   final List<String> relatedHistory;
@@ -26,6 +30,8 @@ class AnalysisRequestSummary {
     'item_name': itemName,
     'price': price,
     'purchase_reason': reason,
+    'category': category,
+    'tags': tags,
     'monthly_budget': monthlyBudget,
     'matched_rules': matchedRules,
     'related_history': relatedHistory,

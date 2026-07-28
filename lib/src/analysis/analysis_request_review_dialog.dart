@@ -40,6 +40,18 @@ class AnalysisRequestReviewDialog extends StatelessWidget {
                     : copy.t('未填写', 'Not provided'),
               ),
               _SummaryRow(
+                label: copy.t('分类', 'Category'),
+                value: summary.category?.isNotEmpty == true
+                    ? summary.category!
+                    : copy.t('未填写', 'Not provided'),
+              ),
+              _SummaryRow(
+                label: copy.t('标签', 'Tags'),
+                value: summary.tags.isEmpty
+                    ? copy.t('无', 'None')
+                    : summary.tags.join('、'),
+              ),
+              _SummaryRow(
                 label: copy.t('本月预算', 'Monthly budget'),
                 value: summary.monthlyBudget == null
                     ? copy.t('未填写', 'Not provided')

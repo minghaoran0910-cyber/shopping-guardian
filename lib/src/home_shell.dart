@@ -1046,6 +1046,8 @@ class _AnalysisDialog extends StatefulWidget {
 class _AnalysisDialogState extends State<_AnalysisDialog> {
   final reason = TextEditingController();
   final budget = TextEditingController();
+  final category = TextEditingController();
+  final tags = TextEditingController();
   bool analyzing = false;
   double get total => widget.items.fold<double>(
     0,
@@ -1056,6 +1058,8 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
   void dispose() {
     reason.dispose();
     budget.dispose();
+    category.dispose();
+    tags.dispose();
     super.dispose();
   }
 
@@ -1086,11 +1090,20 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
           .map((rule) => '${rule.name}：${rule.description}')
           .toList();
       final historySummaries = history.map((item) => item.summary).toList();
+      final tagValues = tags.text
+          .split(RegExp(r'[,，]'))
+          .map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toSet()
+          .take(10)
+          .toList();
       final requestSummary = AnalysisRequestSummary(
         endpoint: config.endpoint,
         itemName: itemName,
         price: total,
         reason: reason.text.trim(),
+        category: category.text.trim().isEmpty ? null : category.text.trim(),
+        tags: tagValues,
         monthlyBudget: double.tryParse(budget.text.trim()),
         matchedRules: ruleSummaries,
         relatedHistory: historySummaries,
@@ -1107,6 +1120,10 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
             itemName: itemName,
             price: total,
             reason: reason.text.trim(),
+            category: category.text.trim().isEmpty
+                ? null
+                : category.text.trim(),
+            tags: tagValues,
             monthlyBudget: double.tryParse(budget.text.trim()),
             matchedRules: ruleSummaries,
             relatedHistory: historySummaries,
@@ -1120,6 +1137,8 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
           total: total,
           itemName: itemName,
           referencedHistory: historySummaries,
+          category: category.text.trim().isEmpty ? null : category.text.trim(),
+          tags: tagValues,
         ),
       );
     } on Object catch (error) {
@@ -1168,6 +1187,22 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
                 prefixText: '¥ ',
               ),
             ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: category,
+              decoration: InputDecoration(
+                labelText: copy.t('分类（选填）', 'Category (optional)'),
+                hintText: copy.t('例如：数码、唱片、家居', 'e.g. Tech, Music, Home'),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: tags,
+              decoration: InputDecoration(
+                labelText: copy.t('标签（选填）', 'Tags (optional)'),
+                hintText: copy.t('用逗号分隔', 'Separate with commas'),
+              ),
+            ),
             FutureBuilder<List<ConsumptionRule>>(
               future: const ConsumptionRuleStore().matching(total),
               builder: (context, snapshot) {
@@ -1214,11 +1249,15 @@ class _DecisionDialog extends StatelessWidget {
     required this.total,
     required this.itemName,
     required this.referencedHistory,
+    required this.category,
+    required this.tags,
   });
   final PurchaseAdvice advice;
   final double total;
   final String itemName;
   final List<String> referencedHistory;
+  final String? category;
+  final List<String> tags;
 
   Future<void> _choose(BuildContext context, String choice) async {
     final now = DateTime.now();
@@ -1237,6 +1276,8 @@ class _DecisionDialog extends StatelessWidget {
         createdAt: now,
         waitUntil: waitUntil,
         referencedHistory: referencedHistory,
+        category: category,
+        tags: tags,
         risk: advice.risk.name,
         confidence: advice.confidence.name,
         budgetImpact: advice.budgetImpact,
@@ -1578,6 +1619,59 @@ class _HistoryPageState extends State<HistoryPage> {
     await _reload();
   }
 
+  Future<void> _editMetadata(DecisionRecord record) async {
+    final copy = GuardianCopy.of(context);
+    final category = TextEditingController(text: record.category);
+    final tags = TextEditingController(text: record.tags.join('，'));
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(copy.t('分类和标签', 'Category and tags')),
+        content: SizedBox(
+          width: 440,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: category,
+                decoration: InputDecoration(
+                  labelText: copy.t('分类（选填）', 'Category (optional)'),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: tags,
+                decoration: InputDecoration(
+                  labelText: copy.t('标签（逗号分隔）', 'Tags (comma-separated)'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(copy.t('取消', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(copy.t('保存', 'Save')),
+          ),
+        ],
+      ),
+    );
+    if (saved == true) {
+      await const DecisionStore().setMetadata(
+        record.id,
+        category: category.text,
+        tags: tags.text.split(RegExp(r'[,，]')),
+      );
+      await _reload();
+    }
+    category.dispose();
+    tags.dispose();
+  }
+
   Future<void> _details(DecisionRecord record) async {
     final copy = GuardianCopy.of(context);
     final action = await showDialog<String>(
@@ -1607,6 +1701,20 @@ class _HistoryPageState extends State<HistoryPage> {
                     copy.t(
                       '后来：${_feedbackLabel(copy, record.feedback!)}',
                       'Later: ${_feedbackLabel(copy, record.feedback!)}',
+                    ),
+                  ),
+                if (record.category?.isNotEmpty == true)
+                  Text(
+                    copy.t(
+                      '分类：${record.category}',
+                      'Category: ${record.category}',
+                    ),
+                  ),
+                if (record.tags.isNotEmpty)
+                  Text(
+                    copy.t(
+                      '标签：${record.tags.join('、')}',
+                      'Tags: ${record.tags.join(', ')}',
                     ),
                   ),
                 if (record.usageFrequency != null)
@@ -1712,6 +1820,10 @@ class _HistoryPageState extends State<HistoryPage> {
             onPressed: () => Navigator.pop(context, 'feedback'),
             child: Text(copy.t('补充反馈', 'Add feedback')),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'metadata'),
+            child: Text(copy.t('分类标签', 'Category & tags')),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(context),
             child: Text(copy.t('关闭', 'Close')),
@@ -1721,6 +1833,7 @@ class _HistoryPageState extends State<HistoryPage> {
     );
     if (action == 'status') await _changeStatus(record);
     if (action == 'feedback') await _feedback(record);
+    if (action == 'metadata') await _editMetadata(record);
     if (action == 'delete' && mounted) {
       final confirmed =
           await showDialog<bool>(
@@ -1921,41 +2034,110 @@ class _InsightsPageState extends State<InsightsPage> {
       child: FutureBuilder<List<DecisionRecord>>(
         future: records,
         builder: (context, snapshot) {
-          final insights = DecisionInsights.from(snapshot.data ?? const []);
-          if (!insights.hasEnoughEvidence) {
-            return _EmptyState(
-              icon: Icons.psychology_outlined,
-              title: copy.t('暂时看不出什么', 'Not enough data yet'),
-              description: copy.t(
-                '有三次以上记录后，再来看看。',
-                'Come back after at least three decisions.',
-              ),
-            );
-          }
-          return Wrap(
-            spacing: 16,
-            runSpacing: 16,
+          final allRecords = snapshot.data ?? const <DecisionRecord>[];
+          final insights = DecisionInsights.from(allRecords);
+          final owned = allRecords.where((record) => record.countsAsPurchased);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _InsightCard(
-                label: copy.t('分析过', 'Analyzed'),
-                value: insights.total,
+              Text(
+                copy.t('我的物品', 'My items'),
+                style: Theme.of(context).textTheme.titleLarge,
               ),
-              _InsightCard(
-                label: copy.t('决定购买', 'Bought'),
-                value: insights.bought,
+              const SizedBox(height: 10),
+              if (owned.isEmpty)
+                Text(
+                  copy.t(
+                    '确认购买后，物品会出现在这里。',
+                    'Items appear here after you confirm a purchase.',
+                  ),
+                )
+              else
+                ...owned.map(
+                  (record) => Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.inventory_2_outlined),
+                      title: Text(record.itemName),
+                      subtitle: Text(
+                        [
+                          if (record.category?.isNotEmpty == true)
+                            record.category!,
+                          if (record.tags.isNotEmpty) record.tags.join(' · '),
+                          if (record.usageFrequency != null)
+                            _HistoryPageState._usageLabel(
+                              copy,
+                              record.usageFrequency!,
+                            ),
+                          if (record.satisfaction != null)
+                            '${record.satisfaction}/5',
+                        ].join(' · '),
+                      ),
+                      trailing: Text('¥${record.total.toStringAsFixed(2)}'),
+                      onTap: () => showDialog<void>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text(record.itemName),
+                          content: Text(
+                            copy.t(
+                              '来自 ${record.createdAt.toLocal().toString().substring(0, 16)} 的决策记录。\n'
+                                  '决定：${record.userChoice}\n'
+                                  '反馈：${record.feedback == null ? '尚未反馈' : _HistoryPageState._feedbackLabel(copy, record.feedback!)}',
+                              'From the decision recorded at ${record.createdAt.toLocal().toString().substring(0, 16)}.\n'
+                                  'Decision: ${record.userChoice}\n'
+                                  'Feedback: ${record.feedback == null ? 'Not added' : _HistoryPageState._feedbackLabel(copy, record.feedback!)}',
+                            ),
+                          ),
+                          actions: [
+                            FilledButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(copy.t('关闭', 'Close')),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 24),
+              Text(
+                copy.t('记录概览', 'Decision overview'),
+                style: Theme.of(context).textTheme.titleLarge,
               ),
-              _InsightCard(
-                label: copy.t('选择等待', 'Waited'),
-                value: insights.waited,
-              ),
-              _InsightCard(
-                label: copy.t('主动放弃', 'Skipped'),
-                value: insights.skipped,
-              ),
-              _InsightCard(
-                label: copy.t('买后后悔', 'Regretted'),
-                value: insights.regretted,
-              ),
+              const SizedBox(height: 10),
+              if (!insights.hasEnoughEvidence)
+                Text(
+                  copy.t(
+                    '有三次以上记录后，再展示统计。',
+                    'Statistics appear after at least three decisions.',
+                  ),
+                )
+              else
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    _InsightCard(
+                      label: copy.t('分析过', 'Analyzed'),
+                      value: insights.total,
+                    ),
+                    _InsightCard(
+                      label: copy.t('决定购买', 'Bought'),
+                      value: insights.bought,
+                    ),
+                    _InsightCard(
+                      label: copy.t('选择等待', 'Waited'),
+                      value: insights.waited,
+                    ),
+                    _InsightCard(
+                      label: copy.t('主动放弃', 'Skipped'),
+                      value: insights.skipped,
+                    ),
+                    _InsightCard(
+                      label: copy.t('买后后悔', 'Regretted'),
+                      value: insights.regretted,
+                    ),
+                  ],
+                ),
             ],
           );
         },
@@ -2085,8 +2267,8 @@ class SettingsPage extends StatelessWidget {
                 title: Text(copy.t('模型分析', 'Model analysis')),
                 subtitle: Text(
                   copy.t(
-                    '商品、价格、购买理由、预算、命中规则和最多 5 条相关历史摘要会直达你配置的模型服务。发送前可以核对并取消。',
-                    'The item, price, reason, budget, matched rules, and up to five related-history summaries go directly to your configured model service. You can review and cancel before sending.',
+                    '商品、价格、购买理由、分类标签、预算、命中规则和最多 5 条相关历史摘要会直达你配置的模型服务。发送前可以核对并取消。',
+                    'The item, price, reason, category, tags, budget, matched rules, and up to five related-history summaries go directly to your configured model service. You can review and cancel before sending.',
                   ),
                 ),
               ),

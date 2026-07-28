@@ -137,6 +137,17 @@ class $DecisionsTable extends Decisions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _riskMeta = const VerificationMeta('risk');
   @override
   late final GeneratedColumn<String> risk = GeneratedColumn<String>(
@@ -182,6 +193,7 @@ class $DecisionsTable extends Decisions
     usageFrequency,
     satisfaction,
     regretReason,
+    category,
     risk,
     confidence,
     budgetImpact,
@@ -290,6 +302,12 @@ class $DecisionsTable extends Decisions
         ),
       );
     }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
+    }
     if (data.containsKey('risk')) {
       context.handle(
         _riskMeta,
@@ -368,6 +386,10 @@ class $DecisionsTable extends Decisions
         DriftSqlType.string,
         data['${effectivePrefix}regret_reason'],
       ),
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      ),
       risk: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}risk'],
@@ -402,6 +424,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
   final String? usageFrequency;
   final int? satisfaction;
   final String? regretReason;
+  final String? category;
   final String? risk;
   final String? confidence;
   final String? budgetImpact;
@@ -418,6 +441,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     this.usageFrequency,
     this.satisfaction,
     this.regretReason,
+    this.category,
     this.risk,
     this.confidence,
     this.budgetImpact,
@@ -446,6 +470,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     }
     if (!nullToAbsent || regretReason != null) {
       map['regret_reason'] = Variable<String>(regretReason);
+    }
+    if (!nullToAbsent || category != null) {
+      map['category'] = Variable<String>(category);
     }
     if (!nullToAbsent || risk != null) {
       map['risk'] = Variable<String>(risk);
@@ -483,6 +510,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
       regretReason: regretReason == null && nullToAbsent
           ? const Value.absent()
           : Value(regretReason),
+      category: category == null && nullToAbsent
+          ? const Value.absent()
+          : Value(category),
       risk: risk == null && nullToAbsent ? const Value.absent() : Value(risk),
       confidence: confidence == null && nullToAbsent
           ? const Value.absent()
@@ -511,6 +541,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
       usageFrequency: serializer.fromJson<String?>(json['usageFrequency']),
       satisfaction: serializer.fromJson<int?>(json['satisfaction']),
       regretReason: serializer.fromJson<String?>(json['regretReason']),
+      category: serializer.fromJson<String?>(json['category']),
       risk: serializer.fromJson<String?>(json['risk']),
       confidence: serializer.fromJson<String?>(json['confidence']),
       budgetImpact: serializer.fromJson<String?>(json['budgetImpact']),
@@ -532,6 +563,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
       'usageFrequency': serializer.toJson<String?>(usageFrequency),
       'satisfaction': serializer.toJson<int?>(satisfaction),
       'regretReason': serializer.toJson<String?>(regretReason),
+      'category': serializer.toJson<String?>(category),
       'risk': serializer.toJson<String?>(risk),
       'confidence': serializer.toJson<String?>(confidence),
       'budgetImpact': serializer.toJson<String?>(budgetImpact),
@@ -551,6 +583,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     Value<String?> usageFrequency = const Value.absent(),
     Value<int?> satisfaction = const Value.absent(),
     Value<String?> regretReason = const Value.absent(),
+    Value<String?> category = const Value.absent(),
     Value<String?> risk = const Value.absent(),
     Value<String?> confidence = const Value.absent(),
     Value<String?> budgetImpact = const Value.absent(),
@@ -569,6 +602,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
         : this.usageFrequency,
     satisfaction: satisfaction.present ? satisfaction.value : this.satisfaction,
     regretReason: regretReason.present ? regretReason.value : this.regretReason,
+    category: category.present ? category.value : this.category,
     risk: risk.present ? risk.value : this.risk,
     confidence: confidence.present ? confidence.value : this.confidence,
     budgetImpact: budgetImpact.present ? budgetImpact.value : this.budgetImpact,
@@ -595,6 +629,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
       regretReason: data.regretReason.present
           ? data.regretReason.value
           : this.regretReason,
+      category: data.category.present ? data.category.value : this.category,
       risk: data.risk.present ? data.risk.value : this.risk,
       confidence: data.confidence.present
           ? data.confidence.value
@@ -620,6 +655,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
           ..write('usageFrequency: $usageFrequency, ')
           ..write('satisfaction: $satisfaction, ')
           ..write('regretReason: $regretReason, ')
+          ..write('category: $category, ')
           ..write('risk: $risk, ')
           ..write('confidence: $confidence, ')
           ..write('budgetImpact: $budgetImpact')
@@ -641,6 +677,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     usageFrequency,
     satisfaction,
     regretReason,
+    category,
     risk,
     confidence,
     budgetImpact,
@@ -661,6 +698,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
           other.usageFrequency == this.usageFrequency &&
           other.satisfaction == this.satisfaction &&
           other.regretReason == this.regretReason &&
+          other.category == this.category &&
           other.risk == this.risk &&
           other.confidence == this.confidence &&
           other.budgetImpact == this.budgetImpact);
@@ -679,6 +717,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
   final Value<String?> usageFrequency;
   final Value<int?> satisfaction;
   final Value<String?> regretReason;
+  final Value<String?> category;
   final Value<String?> risk;
   final Value<String?> confidence;
   final Value<String?> budgetImpact;
@@ -696,6 +735,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     this.usageFrequency = const Value.absent(),
     this.satisfaction = const Value.absent(),
     this.regretReason = const Value.absent(),
+    this.category = const Value.absent(),
     this.risk = const Value.absent(),
     this.confidence = const Value.absent(),
     this.budgetImpact = const Value.absent(),
@@ -714,6 +754,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     this.usageFrequency = const Value.absent(),
     this.satisfaction = const Value.absent(),
     this.regretReason = const Value.absent(),
+    this.category = const Value.absent(),
     this.risk = const Value.absent(),
     this.confidence = const Value.absent(),
     this.budgetImpact = const Value.absent(),
@@ -738,6 +779,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     Expression<String>? usageFrequency,
     Expression<int>? satisfaction,
     Expression<String>? regretReason,
+    Expression<String>? category,
     Expression<String>? risk,
     Expression<String>? confidence,
     Expression<String>? budgetImpact,
@@ -756,6 +798,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
       if (usageFrequency != null) 'usage_frequency': usageFrequency,
       if (satisfaction != null) 'satisfaction': satisfaction,
       if (regretReason != null) 'regret_reason': regretReason,
+      if (category != null) 'category': category,
       if (risk != null) 'risk': risk,
       if (confidence != null) 'confidence': confidence,
       if (budgetImpact != null) 'budget_impact': budgetImpact,
@@ -776,6 +819,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     Value<String?>? usageFrequency,
     Value<int?>? satisfaction,
     Value<String?>? regretReason,
+    Value<String?>? category,
     Value<String?>? risk,
     Value<String?>? confidence,
     Value<String?>? budgetImpact,
@@ -794,6 +838,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
       usageFrequency: usageFrequency ?? this.usageFrequency,
       satisfaction: satisfaction ?? this.satisfaction,
       regretReason: regretReason ?? this.regretReason,
+      category: category ?? this.category,
       risk: risk ?? this.risk,
       confidence: confidence ?? this.confidence,
       budgetImpact: budgetImpact ?? this.budgetImpact,
@@ -840,6 +885,9 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     if (regretReason.present) {
       map['regret_reason'] = Variable<String>(regretReason.value);
     }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
     if (risk.present) {
       map['risk'] = Variable<String>(risk.value);
     }
@@ -870,6 +918,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
           ..write('usageFrequency: $usageFrequency, ')
           ..write('satisfaction: $satisfaction, ')
           ..write('regretReason: $regretReason, ')
+          ..write('category: $category, ')
           ..write('risk: $risk, ')
           ..write('confidence: $confidence, ')
           ..write('budgetImpact: $budgetImpact, ')
@@ -1764,6 +1813,279 @@ class DecisionAlternativesCompanion
           ..write('decisionId: $decisionId, ')
           ..write('position: $position, ')
           ..write('description: $description, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DecisionTagsTable extends DecisionTags
+    with TableInfo<$DecisionTagsTable, StoredDecisionTag> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DecisionTagsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _decisionIdMeta = const VerificationMeta(
+    'decisionId',
+  );
+  @override
+  late final GeneratedColumn<String> decisionId = GeneratedColumn<String>(
+    'decision_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES decisions (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tagMeta = const VerificationMeta('tag');
+  @override
+  late final GeneratedColumn<String> tag = GeneratedColumn<String>(
+    'tag',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [decisionId, position, tag];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'decision_tags';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StoredDecisionTag> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('decision_id')) {
+      context.handle(
+        _decisionIdMeta,
+        decisionId.isAcceptableOrUnknown(data['decision_id']!, _decisionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_decisionIdMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('tag')) {
+      context.handle(
+        _tagMeta,
+        tag.isAcceptableOrUnknown(data['tag']!, _tagMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tagMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {decisionId, position};
+  @override
+  StoredDecisionTag map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StoredDecisionTag(
+      decisionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decision_id'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      tag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tag'],
+      )!,
+    );
+  }
+
+  @override
+  $DecisionTagsTable createAlias(String alias) {
+    return $DecisionTagsTable(attachedDatabase, alias);
+  }
+}
+
+class StoredDecisionTag extends DataClass
+    implements Insertable<StoredDecisionTag> {
+  final String decisionId;
+  final int position;
+  final String tag;
+  const StoredDecisionTag({
+    required this.decisionId,
+    required this.position,
+    required this.tag,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['decision_id'] = Variable<String>(decisionId);
+    map['position'] = Variable<int>(position);
+    map['tag'] = Variable<String>(tag);
+    return map;
+  }
+
+  DecisionTagsCompanion toCompanion(bool nullToAbsent) {
+    return DecisionTagsCompanion(
+      decisionId: Value(decisionId),
+      position: Value(position),
+      tag: Value(tag),
+    );
+  }
+
+  factory StoredDecisionTag.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StoredDecisionTag(
+      decisionId: serializer.fromJson<String>(json['decisionId']),
+      position: serializer.fromJson<int>(json['position']),
+      tag: serializer.fromJson<String>(json['tag']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'decisionId': serializer.toJson<String>(decisionId),
+      'position': serializer.toJson<int>(position),
+      'tag': serializer.toJson<String>(tag),
+    };
+  }
+
+  StoredDecisionTag copyWith({
+    String? decisionId,
+    int? position,
+    String? tag,
+  }) => StoredDecisionTag(
+    decisionId: decisionId ?? this.decisionId,
+    position: position ?? this.position,
+    tag: tag ?? this.tag,
+  );
+  StoredDecisionTag copyWithCompanion(DecisionTagsCompanion data) {
+    return StoredDecisionTag(
+      decisionId: data.decisionId.present
+          ? data.decisionId.value
+          : this.decisionId,
+      position: data.position.present ? data.position.value : this.position,
+      tag: data.tag.present ? data.tag.value : this.tag,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoredDecisionTag(')
+          ..write('decisionId: $decisionId, ')
+          ..write('position: $position, ')
+          ..write('tag: $tag')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(decisionId, position, tag);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StoredDecisionTag &&
+          other.decisionId == this.decisionId &&
+          other.position == this.position &&
+          other.tag == this.tag);
+}
+
+class DecisionTagsCompanion extends UpdateCompanion<StoredDecisionTag> {
+  final Value<String> decisionId;
+  final Value<int> position;
+  final Value<String> tag;
+  final Value<int> rowid;
+  const DecisionTagsCompanion({
+    this.decisionId = const Value.absent(),
+    this.position = const Value.absent(),
+    this.tag = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DecisionTagsCompanion.insert({
+    required String decisionId,
+    required int position,
+    required String tag,
+    this.rowid = const Value.absent(),
+  }) : decisionId = Value(decisionId),
+       position = Value(position),
+       tag = Value(tag);
+  static Insertable<StoredDecisionTag> custom({
+    Expression<String>? decisionId,
+    Expression<int>? position,
+    Expression<String>? tag,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (decisionId != null) 'decision_id': decisionId,
+      if (position != null) 'position': position,
+      if (tag != null) 'tag': tag,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DecisionTagsCompanion copyWith({
+    Value<String>? decisionId,
+    Value<int>? position,
+    Value<String>? tag,
+    Value<int>? rowid,
+  }) {
+    return DecisionTagsCompanion(
+      decisionId: decisionId ?? this.decisionId,
+      position: position ?? this.position,
+      tag: tag ?? this.tag,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (decisionId.present) {
+      map['decision_id'] = Variable<String>(decisionId.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (tag.present) {
+      map['tag'] = Variable<String>(tag.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DecisionTagsCompanion(')
+          ..write('decisionId: $decisionId, ')
+          ..write('position: $position, ')
+          ..write('tag: $tag, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2771,6 +3093,7 @@ abstract class _$GuardianDatabase extends GeneratedDatabase {
       $DecisionReferencesTable(this);
   late final $DecisionAlternativesTable decisionAlternatives =
       $DecisionAlternativesTable(this);
+  late final $DecisionTagsTable decisionTags = $DecisionTagsTable(this);
   late final $ConsumptionRulesTable consumptionRules = $ConsumptionRulesTable(
     this,
   );
@@ -2786,6 +3109,7 @@ abstract class _$GuardianDatabase extends GeneratedDatabase {
     decisionEvents,
     decisionReferences,
     decisionAlternatives,
+    decisionTags,
     consumptionRules,
     appValues,
     migrationQuarantine,
@@ -2813,6 +3137,13 @@ abstract class _$GuardianDatabase extends GeneratedDatabase {
       ),
       result: [TableUpdate('decision_alternatives', kind: UpdateKind.delete)],
     ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'decisions',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('decision_tags', kind: UpdateKind.delete)],
+    ),
   ]);
 }
 
@@ -2830,6 +3161,7 @@ typedef $$DecisionsTableCreateCompanionBuilder =
       Value<String?> usageFrequency,
       Value<int?> satisfaction,
       Value<String?> regretReason,
+      Value<String?> category,
       Value<String?> risk,
       Value<String?> confidence,
       Value<String?> budgetImpact,
@@ -2849,6 +3181,7 @@ typedef $$DecisionsTableUpdateCompanionBuilder =
       Value<String?> usageFrequency,
       Value<int?> satisfaction,
       Value<String?> regretReason,
+      Value<String?> category,
       Value<String?> risk,
       Value<String?> confidence,
       Value<String?> budgetImpact,
@@ -2927,6 +3260,25 @@ final class $$DecisionsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$DecisionTagsTable, List<StoredDecisionTag>>
+  _decisionTagsRefsTable(_$GuardianDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.decisionTags,
+        aliasName: 'decisions__id__decision_tags__decision_id',
+      );
+
+  $$DecisionTagsTableProcessedTableManager get decisionTagsRefs {
+    final manager = $$DecisionTagsTableTableManager(
+      $_db,
+      $_db.decisionTags,
+    ).filter((f) => f.decisionId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_decisionTagsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$DecisionsTableFilterComposer
@@ -2995,6 +3347,11 @@ class $$DecisionsTableFilterComposer
 
   ColumnFilters<String> get regretReason => $composableBuilder(
     column: $table.regretReason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3087,6 +3444,31 @@ class $$DecisionsTableFilterComposer
     );
     return f(composer);
   }
+
+  Expression<bool> decisionTagsRefs(
+    Expression<bool> Function($$DecisionTagsTableFilterComposer f) f,
+  ) {
+    final $$DecisionTagsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.decisionTags,
+      getReferencedColumn: (t) => t.decisionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DecisionTagsTableFilterComposer(
+            $db: $db,
+            $table: $db.decisionTags,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$DecisionsTableOrderingComposer
@@ -3158,6 +3540,11 @@ class $$DecisionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get risk => $composableBuilder(
     column: $table.risk,
     builder: (column) => ColumnOrderings(column),
@@ -3226,6 +3613,9 @@ class $$DecisionsTableAnnotationComposer
     column: $table.regretReason,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
 
   GeneratedColumn<String> get risk =>
       $composableBuilder(column: $table.risk, builder: (column) => column);
@@ -3316,6 +3706,31 @@ class $$DecisionsTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> decisionTagsRefs<T extends Object>(
+    Expression<T> Function($$DecisionTagsTableAnnotationComposer a) f,
+  ) {
+    final $$DecisionTagsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.decisionTags,
+      getReferencedColumn: (t) => t.decisionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DecisionTagsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.decisionTags,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$DecisionsTableTableManager
@@ -3335,6 +3750,7 @@ class $$DecisionsTableTableManager
             bool decisionEventsRefs,
             bool decisionReferencesRefs,
             bool decisionAlternativesRefs,
+            bool decisionTagsRefs,
           })
         > {
   $$DecisionsTableTableManager(_$GuardianDatabase db, $DecisionsTable table)
@@ -3362,6 +3778,7 @@ class $$DecisionsTableTableManager
                 Value<String?> usageFrequency = const Value.absent(),
                 Value<int?> satisfaction = const Value.absent(),
                 Value<String?> regretReason = const Value.absent(),
+                Value<String?> category = const Value.absent(),
                 Value<String?> risk = const Value.absent(),
                 Value<String?> confidence = const Value.absent(),
                 Value<String?> budgetImpact = const Value.absent(),
@@ -3379,6 +3796,7 @@ class $$DecisionsTableTableManager
                 usageFrequency: usageFrequency,
                 satisfaction: satisfaction,
                 regretReason: regretReason,
+                category: category,
                 risk: risk,
                 confidence: confidence,
                 budgetImpact: budgetImpact,
@@ -3398,6 +3816,7 @@ class $$DecisionsTableTableManager
                 Value<String?> usageFrequency = const Value.absent(),
                 Value<int?> satisfaction = const Value.absent(),
                 Value<String?> regretReason = const Value.absent(),
+                Value<String?> category = const Value.absent(),
                 Value<String?> risk = const Value.absent(),
                 Value<String?> confidence = const Value.absent(),
                 Value<String?> budgetImpact = const Value.absent(),
@@ -3415,6 +3834,7 @@ class $$DecisionsTableTableManager
                 usageFrequency: usageFrequency,
                 satisfaction: satisfaction,
                 regretReason: regretReason,
+                category: category,
                 risk: risk,
                 confidence: confidence,
                 budgetImpact: budgetImpact,
@@ -3433,6 +3853,7 @@ class $$DecisionsTableTableManager
                 decisionEventsRefs = false,
                 decisionReferencesRefs = false,
                 decisionAlternativesRefs = false,
+                decisionTagsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -3440,6 +3861,7 @@ class $$DecisionsTableTableManager
                     if (decisionEventsRefs) db.decisionEvents,
                     if (decisionReferencesRefs) db.decisionReferences,
                     if (decisionAlternativesRefs) db.decisionAlternatives,
+                    if (decisionTagsRefs) db.decisionTags,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -3507,6 +3929,27 @@ class $$DecisionsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (decisionTagsRefs)
+                        await $_getPrefetchedData<
+                          StoredDecision,
+                          $DecisionsTable,
+                          StoredDecisionTag
+                        >(
+                          currentTable: table,
+                          referencedTable: $$DecisionsTableReferences
+                              ._decisionTagsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$DecisionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).decisionTagsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.decisionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -3531,6 +3974,7 @@ typedef $$DecisionsTableProcessedTableManager =
         bool decisionEventsRefs,
         bool decisionReferencesRefs,
         bool decisionAlternativesRefs,
+        bool decisionTagsRefs,
       })
     >;
 typedef $$DecisionEventsTableCreateCompanionBuilder =
@@ -4440,6 +4884,292 @@ typedef $$DecisionAlternativesTableProcessedTableManager =
       StoredDecisionAlternative,
       PrefetchHooks Function({bool decisionId})
     >;
+typedef $$DecisionTagsTableCreateCompanionBuilder =
+    DecisionTagsCompanion Function({
+      required String decisionId,
+      required int position,
+      required String tag,
+      Value<int> rowid,
+    });
+typedef $$DecisionTagsTableUpdateCompanionBuilder =
+    DecisionTagsCompanion Function({
+      Value<String> decisionId,
+      Value<int> position,
+      Value<String> tag,
+      Value<int> rowid,
+    });
+
+final class $$DecisionTagsTableReferences
+    extends
+        BaseReferences<
+          _$GuardianDatabase,
+          $DecisionTagsTable,
+          StoredDecisionTag
+        > {
+  $$DecisionTagsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $DecisionsTable _decisionIdTable(_$GuardianDatabase db) =>
+      db.decisions.createAlias('decision_tags__decision_id__decisions__id');
+
+  $$DecisionsTableProcessedTableManager get decisionId {
+    final $_column = $_itemColumn<String>('decision_id')!;
+
+    final manager = $$DecisionsTableTableManager(
+      $_db,
+      $_db.decisions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_decisionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$DecisionTagsTableFilterComposer
+    extends Composer<_$GuardianDatabase, $DecisionTagsTable> {
+  $$DecisionTagsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tag => $composableBuilder(
+    column: $table.tag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$DecisionsTableFilterComposer get decisionId {
+    final $$DecisionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.decisionId,
+      referencedTable: $db.decisions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DecisionsTableFilterComposer(
+            $db: $db,
+            $table: $db.decisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DecisionTagsTableOrderingComposer
+    extends Composer<_$GuardianDatabase, $DecisionTagsTable> {
+  $$DecisionTagsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tag => $composableBuilder(
+    column: $table.tag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$DecisionsTableOrderingComposer get decisionId {
+    final $$DecisionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.decisionId,
+      referencedTable: $db.decisions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DecisionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.decisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DecisionTagsTableAnnotationComposer
+    extends Composer<_$GuardianDatabase, $DecisionTagsTable> {
+  $$DecisionTagsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get tag =>
+      $composableBuilder(column: $table.tag, builder: (column) => column);
+
+  $$DecisionsTableAnnotationComposer get decisionId {
+    final $$DecisionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.decisionId,
+      referencedTable: $db.decisions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DecisionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.decisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DecisionTagsTableTableManager
+    extends
+        RootTableManager<
+          _$GuardianDatabase,
+          $DecisionTagsTable,
+          StoredDecisionTag,
+          $$DecisionTagsTableFilterComposer,
+          $$DecisionTagsTableOrderingComposer,
+          $$DecisionTagsTableAnnotationComposer,
+          $$DecisionTagsTableCreateCompanionBuilder,
+          $$DecisionTagsTableUpdateCompanionBuilder,
+          (StoredDecisionTag, $$DecisionTagsTableReferences),
+          StoredDecisionTag,
+          PrefetchHooks Function({bool decisionId})
+        > {
+  $$DecisionTagsTableTableManager(
+    _$GuardianDatabase db,
+    $DecisionTagsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DecisionTagsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DecisionTagsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DecisionTagsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> decisionId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<String> tag = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DecisionTagsCompanion(
+                decisionId: decisionId,
+                position: position,
+                tag: tag,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String decisionId,
+                required int position,
+                required String tag,
+                Value<int> rowid = const Value.absent(),
+              }) => DecisionTagsCompanion.insert(
+                decisionId: decisionId,
+                position: position,
+                tag: tag,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$DecisionTagsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({decisionId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (decisionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.decisionId,
+                                referencedTable: $$DecisionTagsTableReferences
+                                    ._decisionIdTable(db),
+                                referencedColumn: $$DecisionTagsTableReferences
+                                    ._decisionIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$DecisionTagsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GuardianDatabase,
+      $DecisionTagsTable,
+      StoredDecisionTag,
+      $$DecisionTagsTableFilterComposer,
+      $$DecisionTagsTableOrderingComposer,
+      $$DecisionTagsTableAnnotationComposer,
+      $$DecisionTagsTableCreateCompanionBuilder,
+      $$DecisionTagsTableUpdateCompanionBuilder,
+      (StoredDecisionTag, $$DecisionTagsTableReferences),
+      StoredDecisionTag,
+      PrefetchHooks Function({bool decisionId})
+    >;
 typedef $$ConsumptionRulesTableCreateCompanionBuilder =
     ConsumptionRulesCompanion Function({
       required String id,
@@ -5033,6 +5763,8 @@ class $GuardianDatabaseManager {
       $$DecisionReferencesTableTableManager(_db, _db.decisionReferences);
   $$DecisionAlternativesTableTableManager get decisionAlternatives =>
       $$DecisionAlternativesTableTableManager(_db, _db.decisionAlternatives);
+  $$DecisionTagsTableTableManager get decisionTags =>
+      $$DecisionTagsTableTableManager(_db, _db.decisionTags);
   $$ConsumptionRulesTableTableManager get consumptionRules =>
       $$ConsumptionRulesTableTableManager(_db, _db.consumptionRules);
   $$AppValuesTableTableManager get appValues =>

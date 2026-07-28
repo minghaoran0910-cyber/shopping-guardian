@@ -90,7 +90,7 @@ class DataImporter {
     }
     final document = Map<String, dynamic>.from(decoded);
     final version = document['schema_version'];
-    if (version is! int || (version != 1 && version != 2)) {
+    if (version is! int || version < 1 || version > 3) {
       throw const DataImportException('不支持这个数据版本，请先升级应用');
     }
 
@@ -229,6 +229,8 @@ class DataImporter {
             !_isNullableString(json['usageFrequency']) ||
             (json['satisfaction'] != null && json['satisfaction'] is! int) ||
             !_isNullableString(json['regretReason']) ||
+            !_isNullableString(json['category']) ||
+            (json['tags'] != null && json['tags'] is! List) ||
             !_isNullableString(json['risk']) ||
             !_isNullableString(json['confidence']) ||
             !_isNullableString(json['budgetImpact'])) {
@@ -237,6 +239,7 @@ class DataImporter {
         final events = json['events'] as List?;
         final references = json['referencedHistory'] as List?;
         final alternatives = json['alternatives'] as List?;
+        final tags = json['tags'] as List?;
         if (events != null &&
                 events.any(
                   (event) =>
@@ -247,7 +250,10 @@ class DataImporter {
             references != null &&
                 references.any((reference) => reference is! String) ||
             alternatives != null &&
-                alternatives.any((alternative) => alternative is! String)) {
+                alternatives.any((alternative) => alternative is! String) ||
+            tags != null &&
+                (tags.length > 10 ||
+                    tags.any((tag) => tag is! String || tag.trim().isEmpty))) {
           throw const FormatException();
         }
         final record = DecisionRecord.fromJson(json);
@@ -341,6 +347,7 @@ class DataImporter {
             usageFrequency: Value(record.usageFrequency),
             satisfaction: Value(record.satisfaction),
             regretReason: Value(record.regretReason),
+            category: Value(record.category),
             risk: Value(record.risk),
             confidence: Value(record.confidence),
             budgetImpact: Value(record.budgetImpact),
@@ -355,6 +362,17 @@ class DataImporter {
               position: position,
               status: event.status,
               occurredAt: event.occurredAt,
+            ),
+          );
+    }
+    for (final (position, tag) in record.tags.indexed) {
+      await _database
+          .into(_database.decisionTags)
+          .insert(
+            DecisionTagsCompanion.insert(
+              decisionId: record.id,
+              position: position,
+              tag: tag,
             ),
           );
     }

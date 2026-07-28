@@ -274,6 +274,36 @@ void main() {
     );
   });
 
+  test('stores normalized category and unique tags', () async {
+    SharedPreferences.setMockInitialValues({});
+    const store = DecisionStore();
+    await store.add(
+      DecisionRecord(
+        id: 'metadata',
+        itemName: '键盘',
+        total: 699,
+        verdict: 'wait',
+        userChoice: 'wait',
+        summary: '',
+        createdAt: DateTime(2026, 7, 28),
+      ),
+    );
+
+    await store.setMetadata(
+      'metadata',
+      category: ' 数码 ',
+      tags: const ['办公', '机械键盘', '办公', ''],
+    );
+    final record = (await store.readAll()).single;
+    expect(record.category, '数码');
+    expect(record.tags, ['办公', '机械键盘']);
+
+    await store.setMetadata('metadata', category: '', tags: const []);
+    final cleared = (await store.readAll()).single;
+    expect(cleared.category, isNull);
+    expect(cleared.tags, isEmpty);
+  });
+
   test('rejects unsupported decision statuses', () async {
     SharedPreferences.setMockInitialValues({});
     expect(

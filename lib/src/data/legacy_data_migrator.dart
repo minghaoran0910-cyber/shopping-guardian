@@ -101,6 +101,7 @@ class LegacyDataMigrator {
             usageFrequency: Value(record.usageFrequency),
             satisfaction: Value(record.satisfaction),
             regretReason: Value(record.regretReason),
+            category: Value(record.category),
             risk: Value(record.risk),
             confidence: Value(record.confidence),
             budgetImpact: Value(record.budgetImpact),
@@ -126,6 +127,17 @@ class LegacyDataMigrator {
               decisionId: id,
               position: position,
               summary: summary,
+            ),
+          );
+    }
+    for (final (position, tag) in record.tags.indexed) {
+      await database
+          .into(database.decisionTags)
+          .insert(
+            DecisionTagsCompanion.insert(
+              decisionId: id,
+              position: position,
+              tag: tag,
             ),
           );
     }

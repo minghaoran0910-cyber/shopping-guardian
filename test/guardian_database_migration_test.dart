@@ -3,14 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shopping_guardian/src/data/guardian_database.dart';
 
 void main() {
-  test(
-    'migrates a v1 decisions table to structured feedback columns',
-    () async {
-      await GuardianDatabase.resetAfterTesting();
-      final database = GuardianDatabase(
-        NativeDatabase.memory(
-          setup: (raw) {
-            raw.execute('''
+  test('migrates a v1 decisions table through category schema v3', () async {
+    await GuardianDatabase.resetAfterTesting();
+    final database = GuardianDatabase(
+      NativeDatabase.memory(
+        setup: (raw) {
+          raw.execute('''
             CREATE TABLE decisions (
               id TEXT NOT NULL PRIMARY KEY,
               item_name TEXT NOT NULL,
@@ -26,22 +24,33 @@ void main() {
               budget_impact TEXT
             )
           ''');
-            raw.execute('PRAGMA user_version = 1');
-          },
-        ),
-      );
-      addTearDown(database.close);
+          raw.execute('PRAGMA user_version = 1');
+        },
+      ),
+    );
+    addTearDown(database.close);
 
-      final columns = await database
-          .customSelect("PRAGMA table_info('decisions')")
-          .get();
-      final names = columns.map((row) => row.read<String>('name')).toSet();
+    final columns = await database
+        .customSelect("PRAGMA table_info('decisions')")
+        .get();
+    final names = columns.map((row) => row.read<String>('name')).toSet();
 
-      expect(database.schemaVersion, 2);
-      expect(
-        names,
-        containsAll(['usage_frequency', 'satisfaction', 'regret_reason']),
-      );
-    },
-  );
+    expect(database.schemaVersion, 3);
+    expect(
+      names,
+      containsAll([
+        'usage_frequency',
+        'satisfaction',
+        'regret_reason',
+        'category',
+      ]),
+    );
+    final tables = await database
+        .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
+        .get();
+    expect(
+      tables.map((row) => row.read<String>('name')),
+      contains('decision_tags'),
+    );
+  });
 }

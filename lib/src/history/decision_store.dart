@@ -26,6 +26,9 @@ class DecisionStore {
     final alternativeRows = await (_database.select(
       _database.decisionAlternatives,
     )..orderBy([(row) => OrderingTerm.asc(row.position)])).get();
+    final tagRows = await (_database.select(
+      _database.decisionTags,
+    )..orderBy([(row) => OrderingTerm.asc(row.position)])).get();
 
     final eventsByDecision = <String, List<StoredDecisionEvent>>{};
     for (final event in eventRows) {
@@ -43,6 +46,10 @@ class DecisionStore {
           .putIfAbsent(alternative.decisionId, () => [])
           .add(alternative);
     }
+    final tagsByDecision = <String, List<StoredDecisionTag>>{};
+    for (final tag in tagRows) {
+      tagsByDecision.putIfAbsent(tag.decisionId, () => []).add(tag);
+    }
 
     return rows
         .map(
@@ -51,6 +58,7 @@ class DecisionStore {
             eventsByDecision[row.id] ?? const [],
             referencesByDecision[row.id] ?? const [],
             alternativesByDecision[row.id] ?? const [],
+            tagsByDecision[row.id] ?? const [],
           ),
         )
         .toList();
@@ -67,6 +75,7 @@ class DecisionStore {
       await _database.delete(_database.decisionEvents).go();
       await _database.delete(_database.decisionReferences).go();
       await _database.delete(_database.decisionAlternatives).go();
+      await _database.delete(_database.decisionTags).go();
       await _database.delete(_database.decisions).go();
     });
   }
@@ -139,6 +148,28 @@ class DecisionStore {
     );
   }
 
+  Future<void> setMetadata(
+    String id, {
+    required String? category,
+    required List<String> tags,
+  }) async {
+    final record = await _find(id);
+    if (record == null) return;
+    final normalizedTags = tags
+        .map((tag) => tag.trim())
+        .where((tag) => tag.isNotEmpty)
+        .toSet()
+        .take(10)
+        .toList();
+    await _replace(
+      record.copyWith(
+        category: category?.trim().isEmpty == true ? null : category?.trim(),
+        tags: normalizedTags,
+        replaceMetadata: true,
+      ),
+    );
+  }
+
   Future<void> delete(String id) async {
     await LegacyDataMigrator(_database).migrate();
     await (_database.delete(
@@ -181,6 +212,7 @@ class DecisionStore {
             usageFrequency: Value(record.usageFrequency),
             satisfaction: Value(record.satisfaction),
             regretReason: Value(record.regretReason),
+            category: Value(record.category),
             risk: Value(record.risk),
             confidence: Value(record.confidence),
             budgetImpact: Value(record.budgetImpact),
@@ -220,6 +252,17 @@ class DecisionStore {
             ),
           );
     }
+    for (final (position, tag) in record.tags.indexed) {
+      await _database
+          .into(_database.decisionTags)
+          .insert(
+            DecisionTagsCompanion.insert(
+              decisionId: id,
+              position: position,
+              tag: tag,
+            ),
+          );
+    }
   }
 
   DecisionRecord _readRecord(
@@ -227,6 +270,7 @@ class DecisionStore {
     List<StoredDecisionEvent> events,
     List<StoredDecisionReference> references,
     List<StoredDecisionAlternative> alternatives,
+    List<StoredDecisionTag> tags,
   ) {
     return DecisionRecord(
       id: row.id,
@@ -241,6 +285,8 @@ class DecisionStore {
       usageFrequency: row.usageFrequency,
       satisfaction: row.satisfaction,
       regretReason: row.regretReason,
+      category: row.category,
+      tags: tags.map((item) => item.tag).toList(),
       referencedHistory: references.map((item) => item.summary).toList(),
       risk: row.risk,
       confidence: row.confidence,
