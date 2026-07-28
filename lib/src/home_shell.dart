@@ -25,6 +25,8 @@ import 'import/import_diagnostic_exporter.dart';
 import 'import/justoneapi_client.dart';
 import 'import/share_parser.dart';
 import 'settings/model_config_store.dart';
+import 'widgets/empty_state.dart';
+import 'widgets/page_frame.dart';
 
 enum GuardianDestination {
   analyze(
@@ -217,58 +219,6 @@ class _Wordmark extends StatelessWidget {
   }
 }
 
-class _PageFrame extends StatelessWidget {
-  const _PageFrame({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final horizontal = constraints.maxWidth < 600 ? 16.0 : 32.0;
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(horizontal, 28, horizontal, 48),
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1120),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        subtitle,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-                  child,
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
 class AnalyzePage extends StatefulWidget {
   const AnalyzePage({
     super.key,
@@ -327,7 +277,7 @@ class _AnalyzePageState extends State<AnalyzePage> {
   @override
   Widget build(BuildContext context) {
     final copy = GuardianCopy.of(context);
-    return _PageFrame(
+    return GuardianPageFrame(
       title: copy.t('想买什么？', 'What are you considering?'),
       subtitle: copy.t('贴个链接，或者直接写下来。', 'Paste a link or type it in.'),
       child: Column(
@@ -1421,7 +1371,7 @@ class _CooldownPageState extends State<CooldownPage> {
   @override
   Widget build(BuildContext context) {
     final copy = GuardianCopy.of(context);
-    return _PageFrame(
+    return GuardianPageFrame(
       title: copy.t('稍后再看', 'Later'),
       subtitle: copy.t('到时间了，我们再问一次。', 'We will check in when the time is up.'),
       child: FutureBuilder<List<DecisionRecord>>(
@@ -1435,7 +1385,7 @@ class _CooldownPageState extends State<CooldownPage> {
               )
               .toList();
           if (items.isEmpty) {
-            return _EmptyState(
+            return GuardianEmptyState(
               icon: Icons.hourglass_empty_rounded,
               title: copy.t('这里还空着', 'Nothing here yet'),
               description: copy.t(
@@ -1824,7 +1774,7 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     final copy = GuardianCopy.of(context);
-    return _PageFrame(
+    return GuardianPageFrame(
       title: copy.t('记录', 'History'),
       subtitle: copy.t(
         '看过什么，最后买没买。',
@@ -1878,7 +1828,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   )
                   .toList();
               if (items.isEmpty) {
-                return _EmptyState(
+                return GuardianEmptyState(
                   icon: Icons.history_rounded,
                   title: copy.t('还没有记录', 'No history yet'),
                   description: copy.t(
@@ -2028,7 +1978,7 @@ class _InsightsPageState extends State<InsightsPage> {
   @override
   Widget build(BuildContext context) {
     final copy = GuardianCopy.of(context);
-    return _PageFrame(
+    return GuardianPageFrame(
       title: copy.t('你的习惯', 'Your patterns'),
       subtitle: copy.t('用过一阵子，这里才会有东西。', 'This fills in as you use the app.'),
       child: FutureBuilder<(List<DecisionRecord>, List<PersonalPattern>)>(
@@ -2287,7 +2237,7 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final copy = GuardianCopy.of(context);
-    return _PageFrame(
+    return GuardianPageFrame(
       title: copy.t('设置', 'Settings'),
       subtitle: copy.t('按你习惯的方式来。', 'Set things up your way.'),
       child: Column(
@@ -3301,50 +3251,6 @@ class _SettingsSection extends StatelessWidget {
               .expand((child) => [child, const SizedBox(height: 16)])
               .toList()
             ..removeLast(),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
-  final IconData icon;
-  final String title;
-  final String description;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 64),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 40, color: scheme.primary),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
-            child: Text(
-              description,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: scheme.onSurfaceVariant, height: 1.5),
-            ),
-          ),
         ],
       ),
     );

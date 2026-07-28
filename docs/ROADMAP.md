@@ -37,9 +37,9 @@
 - [x] IMPORT-01 淘宝/京东 HTML fixture 测试集
 - [x] IMPORT-02 自动解析失败的分级降级策略
 - [x] IMPORT-03 可导出的脱敏诊断
-- [ ] ARCH-01 拆分 `home_shell.dart`
-- [ ] CI-01 Android CI
-- [ ] CI-02 macOS 与 iOS Simulator CI
+- [x] ARCH-01 拆分 `home_shell.dart`
+- [x] CI-01 Android CI
+- [x] CI-02 macOS 与 iOS Simulator CI
 
 ## P2：体验与分发
 
