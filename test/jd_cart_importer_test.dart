@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -5,6 +8,27 @@ import 'package:shopping_guardian/src/import/jd_cart_importer.dart';
 import 'package:shopping_guardian/src/import/justoneapi_client.dart';
 
 void main() {
+  test('parses sanitized JD HTML fixtures for two known layouts', () async {
+    for (final fixture in [
+      'test/fixtures/jd_cart_classic.html',
+      'test/fixtures/jd_cart_data_sku.html',
+    ]) {
+      final html = await File(fixture).readAsString();
+      final items = await JdCartImporter(
+        client: MockClient(
+          (_) async => http.Response.bytes(
+            utf8.encode(html),
+            200,
+            headers: {'content-type': 'text/html; charset=utf-8'},
+          ),
+        ),
+      ).load(Uri.parse('https://3.cn/fixture'));
+      expect(items, hasLength(1), reason: fixture);
+      expect(items.single.price, isNotNull, reason: fixture);
+      expect(items.single.imageUrl, isNotNull, reason: fixture);
+    }
+  });
+
   test('extracts JD cart products from the share page', () async {
     final client = MockClient((request) async {
       return http.Response(

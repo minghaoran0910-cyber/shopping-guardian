@@ -19,12 +19,11 @@ import 'patterns/pattern_store.dart';
 import 'patterns/personal_pattern.dart';
 import 'rules/consumption_rule_store.dart';
 import 'copy.dart';
-import 'import/jd_cart_importer.dart';
 import 'import/cart_screenshot_importer.dart';
-import 'import/jd_product_importer.dart';
+import 'import/import_coordinator.dart';
+import 'import/import_diagnostic_exporter.dart';
 import 'import/justoneapi_client.dart';
 import 'import/share_parser.dart';
-import 'import/taobao_product_importer.dart';
 import 'settings/model_config_store.dart';
 
 enum GuardianDestination {
@@ -499,125 +498,39 @@ class _AnalyzePageState extends State<AnalyzePage> {
                       final details = widget.justOneApiToken.isEmpty
                           ? null
                           : JustOneApiClient(token: widget.justOneApiToken);
-                      final jdCollections = parsed.where(
-                        (item) =>
-                            item.platform == ShoppingPlatform.jd &&
-                            item.kind == ShareKind.collection,
-                      );
-                      if (jdCollections.isNotEmpty) {
-                        setState(() => isImporting = true);
-                        try {
-                          final imported = <SharedShoppingItem>[];
-                          for (final collection in jdCollections) {
-                            imported.addAll(
-                              await JdCartImporter(
-                                productDetails: details,
-                              ).load(collection.url),
-                            );
-                          }
-                          previewItems = [
-                            ...parsed.where(
-                              (item) =>
-                                  !(item.platform == ShoppingPlatform.jd &&
-                                      item.kind == ShareKind.collection),
-                            ),
-                            ...imported,
-                          ];
-                        } on JdCartImportException catch (error) {
-                          if (!context.mounted) return;
+                      setState(() => isImporting = true);
+                      try {
+                        final result = await ImportCoordinator(
+                          details: details,
+                        ).enrich(parsed);
+                        previewItems = result.items;
+                        if (context.mounted && result.warnings.isNotEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                copy.t(
-                                  '京东清单没读出来，${error.message}',
-                                  'Could not read the JD collection: ${error.message}',
-                                ),
+                                result.warnings
+                                    .map(
+                                      (warning) => switch (warning) {
+                                        ImportWarning
+                                            .taobaoCollectionNeedsScreenshot =>
+                                          copy.t(
+                                            '淘宝购物车暂时不能从链接自动读取，请改用购物车截图。',
+                                            'Taobao carts cannot be read from a link yet. Use a cart screenshot instead.',
+                                          ),
+                                        ImportWarning.enrichmentFailed => copy.t(
+                                          '部分商品没能自动补全，已保留分享文字里的信息，请在下一步手动核对。',
+                                          'Some items could not be enriched. Their shared details were kept; review them manually in the next step.',
+                                        ),
+                                      },
+                                    )
+                                    .join('\n'),
                               ),
+                              duration: const Duration(seconds: 6),
                             ),
                           );
-                        } finally {
-                          if (mounted) setState(() => isImporting = false);
                         }
-                      }
-                      final jdProducts = parsed.where(
-                        (item) =>
-                            item.platform == ShoppingPlatform.jd &&
-                            item.kind == ShareKind.product,
-                      );
-                      if (jdProducts.isNotEmpty && details != null) {
-                        setState(() => isImporting = true);
-                        final imported = <SharedShoppingItem>[];
-                        try {
-                          for (final item in jdProducts) {
-                            imported.add(
-                              await JdProductImporter(
-                                productDetails: details,
-                              ).load(item.url),
-                            );
-                          }
-                          previewItems = [
-                            ...previewItems.where(
-                              (item) =>
-                                  !(item.platform == ShoppingPlatform.jd &&
-                                      item.kind == ShareKind.product),
-                            ),
-                            ...imported,
-                          ];
-                        } on Object catch (error) {
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                copy.t(
-                                  '京东商品没读出来：$error',
-                                  'Could not read the JD item: $error',
-                                ),
-                              ),
-                            ),
-                          );
-                        } finally {
-                          if (mounted) setState(() => isImporting = false);
-                        }
-                      }
-                      final taobaoProducts = parsed.where(
-                        (item) =>
-                            item.platform == ShoppingPlatform.taobao &&
-                            item.kind == ShareKind.product,
-                      );
-                      if (taobaoProducts.isNotEmpty && details != null) {
-                        setState(() => isImporting = true);
-                        final imported = <SharedShoppingItem>[];
-                        try {
-                          for (final item in taobaoProducts) {
-                            imported.add(
-                              await TaobaoProductImporter(
-                                productDetails: details,
-                              ).load(item.url),
-                            );
-                          }
-                          previewItems = [
-                            ...previewItems.where(
-                              (item) =>
-                                  !(item.platform == ShoppingPlatform.taobao &&
-                                      item.kind == ShareKind.product),
-                            ),
-                            ...imported,
-                          ];
-                        } on Object catch (error) {
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                copy.t(
-                                  '淘宝商品没读出来：$error',
-                                  'Could not read the Taobao item: $error',
-                                ),
-                              ),
-                            ),
-                          );
-                        } finally {
-                          if (mounted) setState(() => isImporting = false);
-                        }
+                      } finally {
+                        if (mounted) setState(() => isImporting = false);
                       }
                       if (!context.mounted) return;
                       showDialog<void>(
@@ -2452,6 +2365,38 @@ class SettingsPage extends StatelessWidget {
                     '商品、价格、购买理由、分类标签、预算、命中规则、最多 5 条相关历史摘要和你确认的个人规律会直达你配置的模型服务。发送前可以核对并取消。',
                     'The item, price, reason, category, tags, budget, matched rules, up to five related-history summaries, and personal patterns you confirmed go directly to your configured model service. You can review and cancel before sending.',
                   ),
+                ),
+              ),
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.bug_report_outlined),
+                  title: Text(copy.t('导出导入诊断', 'Export import diagnostics')),
+                  subtitle: Text(
+                    copy.t(
+                      '只包含平台、失败阶段、错误类别和时间，不含链接、商品名、分享原文或密钥。',
+                      'Contains only platform, failed stage, error category, and time—never links, item names, shared text, or keys.',
+                    ),
+                  ),
+                  trailing: const Icon(Icons.download_outlined),
+                  onTap: () async {
+                    final saved = await const ImportDiagnosticExporter()
+                        .export();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          saved
+                              ? copy.t('诊断文件已保存。', 'Diagnostic file saved.')
+                              : copy.t(
+                                  '没有保存诊断文件。',
+                                  'Diagnostic file was not saved.',
+                                ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
               const Divider(),

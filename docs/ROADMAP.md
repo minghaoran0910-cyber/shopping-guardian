@@ -34,9 +34,9 @@
 - [x] MEMORY-05 带证据的候选规律
 - [x] MEMORY-06 规律确认、编辑、忽略和删除
 - [x] MEMORY-07 历史、物品和规律的引用追溯
-- [ ] IMPORT-01 淘宝/京东 HTML fixture 测试集
-- [ ] IMPORT-02 自动解析失败的分级降级策略
-- [ ] IMPORT-03 可导出的脱敏诊断
+- [x] IMPORT-01 淘宝/京东 HTML fixture 测试集
+- [x] IMPORT-02 自动解析失败的分级降级策略
+- [x] IMPORT-03 可导出的脱敏诊断
 - [ ] ARCH-01 拆分 `home_shell.dart`
 - [ ] CI-01 Android CI
 - [ ] CI-02 macOS 与 iOS Simulator CI

@@ -30,16 +30,30 @@ class JdCartImporter {
       final document = html_parser.parse(response.body);
       final items = <SharedShoppingItem>[];
 
-      for (final row in document.querySelectorAll('li.bdr-b')) {
-        final title = row.querySelector('h4 span')?.text.trim();
-        final priceText = row.querySelector('.price')?.text;
+      for (final row in document.querySelectorAll(
+        'li.bdr-b, [data-sku], [data-skuid]',
+      )) {
+        final title =
+            row
+                .querySelector('h4 span, .item-name, [data-role="title"]')
+                ?.text
+                .trim() ??
+            row.attributes['data-title']?.trim();
+        final priceText =
+            row
+                .querySelector('.price, .item-price, [data-role="price"]')
+                ?.text ??
+            row.attributes['data-price'];
         final quantityText = row
-            .querySelector('input.num_input')
+            .querySelector('input.num_input, input.quantity')
             ?.attributes['value'];
-        final productId = row.querySelector('.cart-checkbox')?.id;
-        final imageSource = row
-            .querySelector('.product-thumb img')
-            ?.attributes['src'];
+        final productId =
+            row.querySelector('.cart-checkbox')?.id ??
+            row.attributes['data-sku'] ??
+            row.attributes['data-skuid'];
+        final image = row.querySelector('.product-thumb img, .item-image, img');
+        final imageSource =
+            image?.attributes['src'] ?? image?.attributes['data-src'];
 
         if (title == null ||
             title.isEmpty ||

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -5,6 +7,25 @@ import 'package:shopping_guardian/src/import/justoneapi_client.dart';
 import 'package:shopping_guardian/src/import/taobao_product_importer.dart';
 
 void main() {
+  test('extracts ids from sanitized Taobao HTML fixtures', () async {
+    final expected = {
+      'test/fixtures/taobao_item_script.html': '692813957349',
+      'test/fixtures/taobao_item_redirect.html': '812345678901',
+    };
+    for (final entry in expected.entries) {
+      final html = await File(entry.key).readAsString();
+      final importer = TaobaoProductImporter(
+        client: MockClient((_) async => http.Response(html, 200)),
+        productDetails: JustOneApiClient(token: 'test'),
+      );
+      expect(
+        await importer.resolveItemId(Uri.parse('https://e.tb.cn/h/fixture')),
+        entry.value,
+        reason: entry.key,
+      );
+    }
+  });
+
   test('extracts a Taobao item id from a resolved share page', () async {
     final shareClient = MockClient(
       (_) async => http.Response(
