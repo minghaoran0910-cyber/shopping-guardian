@@ -220,6 +220,10 @@ build/macos/Build/Products/Release/购物守护者.app
 - 自动化测试覆盖 200% 字号、桌面键盘焦点、可点击控件标签和 Android 触控尺寸
 - 发布前仍需在真实设备上分别使用 TalkBack 与 VoiceOver 走查主要流程；自动化语义检查不能替代真人读屏体验
 
+## 更新
+
+设置页可以手动检查 GitHub Releases。应用不会后台轮询、自动下载或自动执行更新；检查结果会展示升级说明和可复制的官方下载链接。
+
 ## License
 
 Apache License 2.0

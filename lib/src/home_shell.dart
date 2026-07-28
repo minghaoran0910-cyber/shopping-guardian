@@ -17,6 +17,8 @@ import 'notifications/feedback_reminder_service.dart';
 import 'patterns/pattern_generator.dart';
 import 'patterns/pattern_store.dart';
 import 'patterns/personal_pattern.dart';
+import 'release/app_version.dart';
+import 'release/version_checker.dart';
 import 'rules/consumption_rule_store.dart';
 import 'copy.dart';
 import 'import/cart_screenshot_importer.dart';
@@ -2287,6 +2289,34 @@ class SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _SettingsSection(
+            title: copy.t('关于', 'About'),
+            icon: Icons.info_outline,
+            children: [
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.system_update_alt_outlined),
+                  title: Text(
+                    copy.t(
+                      '当前版本 ${AppVersion.current}',
+                      'Version ${AppVersion.current}',
+                    ),
+                  ),
+                  subtitle: Text(
+                    copy.t(
+                      '仅在点击时直连 GitHub 检查，不会后台轮询或自动下载。',
+                      'Checks GitHub only when tapped; no background polling or automatic downloads.',
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _checkVersion(context, copy),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SettingsSection(
             title: copy.t('外观', 'Appearance'),
             icon: Icons.palette_outlined,
             children: [
@@ -2519,6 +2549,51 @@ class SettingsPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _checkVersion(BuildContext context, GuardianCopy copy) async {
+    try {
+      final release = await const VersionChecker().check();
+      if (!context.mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(
+            release.updateAvailable
+                ? copy.t(
+                    '发现新版本 ${release.latestVersion}',
+                    'Version ${release.latestVersion} is available',
+                  )
+                : copy.t('已经是最新版', 'You are up to date'),
+          ),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (release.notes.isNotEmpty) SelectableText(release.notes),
+                  if (release.notes.isNotEmpty) const SizedBox(height: 16),
+                  Text(copy.t('下载页面', 'Download page')),
+                  SelectableText(release.url.toString()),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(copy.t('关闭', 'Close')),
+            ),
+          ],
+        ),
+      );
+    } on VersionCheckException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
+    }
   }
 
   Future<void> _importData(BuildContext context, GuardianCopy copy) async {

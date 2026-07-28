@@ -52,4 +52,4 @@
 - [ ] RELEASE-01 macOS 签名与公证
 - [ ] RELEASE-02 Windows 代码签名
 - [ ] RELEASE-03 iOS TestFlight 或维持源码自签的长期决策
-- [ ] RELEASE-04 版本检查与升级说明
+- [x] RELEASE-04 版本检查与升级说明
