@@ -331,18 +331,38 @@ class _AnalyzePageState extends State<AnalyzePage> {
                     : () async {
                         setState(() => isImporting = true);
                         try {
-                          final items = await const CartScreenshotImporter()
-                              .pickAndRecognize();
+                          final recognition =
+                              await const CartScreenshotImporter()
+                                  .pickAndRecognizeDetailed();
                           if (!context.mounted) return;
-                          if (items.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
+                          if (recognition.wasCancelled) return;
+                          if (recognition.items.isEmpty) {
+                            await showDialog<void>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: Text(
                                   copy.t(
-                                    '这张图里没认出商品。可以换张更清楚的截图，或手动填写。',
-                                    'No items were found in this image. Try a clearer screenshot or enter the item manually.',
+                                    '没有整理出商品',
+                                    'No items could be prepared',
                                   ),
                                 ),
+                                content: Text(
+                                  recognition.recognizedLineCount == 0
+                                      ? copy.t(
+                                          '这张图里的文字没有读出来。请换一张更清楚、没有遮挡的截图。',
+                                          'No text could be read from this image. Try a clearer image without overlays.',
+                                        )
+                                      : copy.t(
+                                          '已经读到 ${recognition.recognizedLineCount} 行文字，但没能确定商品名称和价格。可以换一张完整截图，或先手动填写。',
+                                          '${recognition.recognizedLineCount} text lines were read, but the item name and price could not be determined. Try a complete screenshot or enter them manually.',
+                                        ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: Text(copy.t('知道了', 'OK')),
+                                  ),
+                                ],
                               ),
                             );
                             return;
@@ -350,7 +370,7 @@ class _AnalyzePageState extends State<AnalyzePage> {
                           showDialog<void>(
                             context: context,
                             builder: (context) =>
-                                _ImportPreviewDialog(items: items),
+                                _ImportPreviewDialog(items: recognition.items),
                           );
                         } on PlatformException catch (error) {
                           if (!context.mounted) return;

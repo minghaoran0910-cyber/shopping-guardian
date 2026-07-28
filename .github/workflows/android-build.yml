@@ -54,6 +54,9 @@ jobs:
       - name: Build Android release
         run: flutter build apk --release
 
+      - name: Verify release OCR registrars
+        run: bash tool/check_android_mlkit_r8.sh
+
       - uses: actions/upload-artifact@v4
         with:
           name: shopping-guardian-android-ci

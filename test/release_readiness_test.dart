@@ -51,4 +51,20 @@ void main() {
     expect(workflow, contains('Get-AuthenticodeSignature'));
     expect(workflow, contains('if: always()'));
   });
+
+  test('Android release 保留 ML Kit 反射注册器的构造函数', () {
+    final gradle = File('android/app/build.gradle.kts').readAsStringSync();
+    final rules = File('android/app/proguard-rules.pro').readAsStringSync();
+    final workflow = File(
+      '.github/workflows/android-build.yml',
+    ).readAsStringSync();
+
+    expect(gradle, contains('"proguard-rules.pro"'));
+    expect(
+      rules,
+      contains('implements com.google.firebase.components.ComponentRegistrar'),
+    );
+    expect(rules, contains('public <init>();'));
+    expect(workflow, contains('bash tool/check_android_mlkit_r8.sh'));
+  });
 }

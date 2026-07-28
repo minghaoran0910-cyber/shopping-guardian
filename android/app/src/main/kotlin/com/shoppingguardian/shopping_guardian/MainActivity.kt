@@ -125,7 +125,7 @@ class MainActivity : FlutterActivity() {
         val pending = ocrResult ?: return
         val uri = data?.data
         if (resultCode != Activity.RESULT_OK || uri == null) {
-            pending.success(emptyList<String>())
+            pending.success(null)
             ocrResult = null
             return
         }
