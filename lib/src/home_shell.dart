@@ -542,6 +542,9 @@ class _AnalyzePageState extends State<AnalyzePage> {
     if (text.contains('淘宝') || text.contains('天猫') || text.contains('taobao')) {
       return ShoppingPlatform.taobao;
     }
+    if (text.contains('拼多多') || text.contains('pinduoduo')) {
+      return ShoppingPlatform.pinduoduo;
+    }
     return ShoppingPlatform.unknown;
   }
 }
@@ -839,6 +842,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
               final platform = switch (item.platform) {
                 ShoppingPlatform.taobao => copy.t('淘宝', 'Taobao'),
                 ShoppingPlatform.jd => copy.t('京东', 'JD'),
+                ShoppingPlatform.pinduoduo => copy.t('拼多多', 'Pinduoduo'),
                 ShoppingPlatform.unknown => copy.t('其他', 'Other'),
               };
               final kind = item.kind == ShareKind.collection

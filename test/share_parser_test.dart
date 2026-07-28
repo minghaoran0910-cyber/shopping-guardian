@@ -71,5 +71,40 @@ void main() {
     test('ignores unrelated links', () {
       expect(ShoppingShareParser.parse('https://example.com/item'), isEmpty);
     });
+
+    test('recognizes a Pinduoduo product share', () {
+      final result = ShoppingShareParser.parse(
+        'https://mobile.yangkeduo.com/goods1.html?ps=V0sd2Y2prr',
+      ).single;
+
+      expect(result.platform, ShoppingPlatform.pinduoduo);
+      expect(result.kind, ShareKind.product);
+    });
+
+    test('recognizes the supplied cross-platform share batch', () {
+      const input = '''
+【淘宝】假一赔四 https://e.tb.cn/h.8eNAad7TEGhJXHF?tk=sRSBgEXLvxF CZ356 「披头士专辑 THE BEATLES Abbey Road Anniversary 绿胶LP黑胶唱片」
+【京东】https://3.cn/-2XbITJP?jkl=@MF1KwCSN9YR MF3390 「五模多用途HiFi音响高保真家用」
+【京东】https://3.cn/2-XbJ0Ak 「漠城中人的购物清单」
+37💲G5UWgEXKUxm₤ https://m.tb.cn/h.83lmxwv CZ028 快来看我购物车里的好宝贝~
+https://mobile.yangkeduo.com/goods1.html?ps=V0sd2Y2prr
+''';
+
+      final items = ShoppingShareParser.parse(input);
+
+      expect(items, hasLength(5));
+      expect(items.map((item) => item.platform), [
+        ShoppingPlatform.taobao,
+        ShoppingPlatform.jd,
+        ShoppingPlatform.jd,
+        ShoppingPlatform.taobao,
+        ShoppingPlatform.pinduoduo,
+      ]);
+      expect(items[2].kind, ShareKind.collection);
+      expect(items[3].kind, ShareKind.collection);
+      expect(items.first.shareCode, 'CZ356');
+      expect(items[1].shareCode, 'MF3390');
+      expect(items[3].shareCode, 'CZ028');
+    });
   });
 }

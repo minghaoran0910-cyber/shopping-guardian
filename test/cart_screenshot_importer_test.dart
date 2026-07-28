@@ -183,6 +183,217 @@ void main() {
     expect(items.single.title, '测试商品完整名称');
   });
 
+  test('extracts products from the supplied Taobao cart OCR', () {
+    final items = CartScreenshotParser.parse([
+      '购物车（32）',
+      '国际 天猫国际自营全球超级店＞',
+      '狂暑季【自营】正版 披头士 Th',
+      '官方立减71元',
+      '88VIP 9.5折',
+      '退货宝',
+      '平台加补后¥490.2 ¥587',
+      '×1',
+      '明细＞',
+      '天猫 天风音像专营店〉',
+      '披头士专辑 THE BEATLES Abb',
+      '官方立减59元 退货宝 假一赔四',
+      '店铺优惠后¥431 ¥490',
+      '×1',
+      '超级立减正版 威肯专辑 盆栽哥',
+      '超级立减32元',
+      '退货宝',
+      '店铺优惠后¥288',
+      '¥320',
+      '×1',
+      '狂暑季星际牛仔 COWBOY BEB',
+      '消费券',
+      '官方立减48元 退货宝',
+      '平台加补后¥326 ¥399比加购降33',
+      '×1',
+      '合计：¥0',
+      '结算',
+    ]);
+
+    expect(items, hasLength(4));
+    expect(items.map((item) => item.price), [490.2, 431, 288, 326]);
+    expect(items[1].title, contains('THE BEATLES'));
+    expect(items[2].title, contains('威肯专辑'));
+    expect(items[3].title, contains('COWBOY BEB'));
+  });
+
+  test('extracts products from the supplied JD cart OCR', () {
+    final items = CartScreenshotParser.parse([
+      '购物车（2）',
+      '水月雨旗舰店〉',
+      'MOONDROP',
+      'MM3A',
+      '多用途有源HFi音箱',
+      '水月雨MM3A 桌面音箱五模',
+      'MM3A~',
+      '3期免息 7天价保险',
+      '¥699.9',
+      '松下影像京东自营旗舰店＞',
+      '松下（Panasonic）有线耳机',
+      '墨黑色～',
+      '7天价保',
+      '¥79',
+      '全选',
+      '¥778.90',
+      '去结算（2）',
+    ]);
+
+    expect(items, hasLength(2));
+    expect(items.first.platform, ShoppingPlatform.jd);
+    expect(items.first.title, '水月雨MM3A 桌面音箱五模');
+    expect(items.first.price, 699.9);
+    expect(items.last.title, '松下（Panasonic）有线耳机');
+    expect(items.last.price, 79);
+  });
+
+  test('extracts the supplied JD detail screenshot', () {
+    final items = CartScreenshotParser.parse([
+      '图集1/5',
+      '¥79',
+      '已售1万+',
+      '单品购买',
+      '【京补合约】',
+      '自营',
+      '松下（Panasonic）有线耳机“重低音“耳挂式',
+      '耳机 RP-HS47GK-K1防滑“跑步运动游戏耳~',
+      '7天价保',
+      '加入购物车',
+      '立即购买',
+    ]);
+
+    expect(items.single.platform, ShoppingPlatform.jd);
+    expect(items.single.price, 79);
+    expect(items.single.title, contains('RP-HS47GK-K1'));
+  });
+
+  test('extracts the supplied Pinduoduo detail screenshot', () {
+    final items = CartScreenshotParser.parse([
+      '1/5',
+      '大促价￥16.83 ¥39',
+      '大促直降22.17元',
+      '已拼1284件',
+      '季末优惠',
+      '唱针清洁用品唱针清洗器黑胶唱机唱头配',
+      '件清洁工具唱针清洁凝固胶 退货包运费',
+      '手机五星好店',
+      '1127人好评',
+      '近15天112人已享补贴，1245人已拼',
+      '直接拼成',
+      '免拼购买',
+    ]);
+
+    expect(items.single.platform, ShoppingPlatform.pinduoduo);
+    expect(items.single.price, 16.83);
+    expect(items.single.title, contains('唱针清洁用品'));
+    expect(items.single.title, contains('唱针清洁凝固胶'));
+  });
+
+  test('handles Android OCR merged Taobao current and original prices', () {
+    final items = CartScreenshotParser.parse([
+      '购物车(32)',
+      '国际 天猫国际自营全球超级店>',
+      'Real Folk BIues',
+      '狂暑季【自营】正版披头士Th x1',
+      '官方立减71元88VIP9.5折退货宝',
+      '平台加补后490.2587',
+      '天猫天风音像专营店>',
+      '披头士专辑 THE BEATLES Abb x1',
+      '店鋪优惠后¥431¥490',
+      '合计:¥0',
+      '结算',
+    ]);
+
+    expect(items, hasLength(2));
+    expect(items.first.price, 490.2);
+    expect(items.first.title, contains('披头士'));
+    expect(items.last.price, 431);
+  });
+
+  test('handles Android OCR Taobao detail block order and separators', () {
+    final items = CartScreenshotParser.parse([
+      '店铺优惠后4311优惠前¥490',
+      '已亨受:官方立减12%省59元',
+      'Anniversary 绿胶LP果胶唱片',
+      'G预计明夭发货|承诺48小时內发货',
+      '民猫披头士专辑 THE BEATLES Abbey Road',
+      '店铺一年回头客4千> 店铺评分超过95%同行>',
+      '已售0',
+      '加入购物车',
+      '领券购买',
+    ]);
+
+    expect(items.single.platform, ShoppingPlatform.taobao);
+    expect(items.single.price, 431);
+    expect(items.single.title, contains('THE BEATLES Abbey Road'));
+    expect(items.single.title, contains('Anniversary'));
+  });
+
+  test('pairs an Android OCR cart price that appears before its title', () {
+    final items = CartScreenshotParser.parse([
+      '购物车(2)',
+      '水月雨旗舰店',
+      '水月雨MM3A 桌面音箱五模',
+      '¥699.9',
+      '国松下影像京东自营旗舰店>',
+      '墨黑色',
+      '*79',
+      '松下(Panasonic)有线耳机',
+      'PLUS连续包年,本单即可用补贴 ¥99/年',
+      '778.90',
+      '去结算(2)',
+    ]);
+
+    expect(items, hasLength(2));
+    expect(items.first.price, 699.9);
+    expect(items.last.title, '松下(Panasonic)有线耳机');
+    expect(items.last.price, 79);
+  });
+
+  test('prefers the branded Android OCR title on JD details', () {
+    final items = CartScreenshotParser.parse([
+      '79',
+      '取边长短线设计/减少墟绕',
+      '线材牢固/绕颈佩戴舒适',
+      '网课自习必备',
+      '已售1万+',
+      '自當松下(Panasonic)有线耳机重低音耳挂式',
+      '耳机RP-HS47GK-K1防滑跑步运动游戏耳',
+      '可再享:小金库支付减2元 白条減1.07元 最高>',
+      '【京补合约】',
+      '加入购物车',
+      '立即购买',
+    ]);
+
+    expect(items.single.price, 79);
+    expect(items.single.title, contains('松下(Panasonic)'));
+    expect(items.single.title, contains('RP-HS47GK-K1'));
+    expect(items.single.title, isNot(contains('减少墟绕')));
+  });
+
+  test('reorders split Android OCR title parts on Pinduoduo details', () {
+    final items = CartScreenshotParser.parse([
+      '大促价¥16.83 *39',
+      '已拼1284件',
+      '正品发票正品保障,承诺可开具正品发票',
+      '件清洁工具唱针清洁凝固胶 退货包运费|',
+      '季末优惠唱针漬洁用品唱针清洗器黑胶唱机唱头配',
+      '季未优惠',
+      '拼单即将结束',
+      '退货包运费·7天无理由退货·末发货可秒退等 >',
+      '直接拼成',
+      '免拼购买',
+    ]);
+
+    expect(items.single.price, 16.83);
+    expect(items.single.title, startsWith('唱针漬洁用品'));
+    expect(items.single.title, contains('唱针清洁凝固胶'));
+    expect(items.single.title, isNot(contains('正品发票')));
+  });
+
   test(
     'detailed import reports OCR line count without retaining raw text',
     () async {

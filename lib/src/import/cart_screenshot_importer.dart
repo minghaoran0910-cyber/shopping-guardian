@@ -41,7 +41,7 @@ class ScreenshotImportResult {
 
 abstract final class CartScreenshotParser {
   static final _pricePattern = RegExp(
-    r'(?:[¥￥Yy$]|RMB)\s*(\d+(?:\.\d{1,2})?)',
+    r'(?:[¥￥Yy$*]|RMB)\s*(\d+(?:\.\d{1,2})?)',
     caseSensitive: false,
   );
   static final _barePricePattern = RegExp(r'^\s*(\d{2,7}(?:\.\d{1,2})?)\s*$');
@@ -50,40 +50,90 @@ abstract final class CartScreenshotParser {
   static List<SharedShoppingItem> parse(List<String> lines) {
     final platform = _platform(lines);
     if (_looksLikeProductDetail(lines)) {
-      final detail = _parseProductDetail(lines, platform);
+      final detail = platform == ShoppingPlatform.pinduoduo
+          ? _parsePinduoduoDetail(lines)
+          : _parseProductDetail(lines, platform);
       if (detail != null) return [detail];
     }
 
     final items = <SharedShoppingItem>[];
     final candidates = <String>[];
+    double? pendingPrice;
+    var previousPriceWasPaired = false;
 
     for (final source in lines) {
       final line = source.trim();
       if (line.isEmpty || _ignored(line)) continue;
 
-      final prices = _pricePattern.allMatches(line).toList();
-      if (prices.isEmpty) {
-        if (!_shop(line) && !_promotion(line)) candidates.add(line);
+      final prices = _prices(line);
+      if (_shop(line)) {
+        if (pendingPrice == null) candidates.clear();
+        previousPriceWasPaired = false;
         continue;
+      }
+      if (prices.isEmpty) {
+        previousPriceWasPaired = false;
+        final candidate = _cleanCartCandidate(line);
+        if (candidate != null) {
+          candidates.add(candidate);
+        }
+        continue;
+      }
+
+      if (pendingPrice != null) {
+        final pendingTitle = _bestTitle(candidates);
+        if (pendingTitle != null) {
+          _addItem(items, platform, pendingTitle, pendingPrice);
+        }
+        pendingPrice = null;
+        candidates.clear();
       }
 
       final title = _bestTitle(candidates);
       candidates.clear();
-      if (title == null) continue;
-      final price = double.tryParse(prices.first.group(1)!);
+      final price = prices.first;
+      if (title == null) {
+        if (previousPriceWasPaired) {
+          previousPriceWasPaired = false;
+          continue;
+        }
+        pendingPrice = price;
+        continue;
+      }
       final quantity = _quantityPattern.firstMatch(line)?.group(1);
-      items.add(
-        SharedShoppingItem(
-          platform: platform,
-          kind: ShareKind.product,
-          url: Uri.parse('local://cart-screenshot/${items.length + 1}'),
-          title: title,
-          price: price,
-          quantity: int.tryParse(quantity ?? '') ?? 1,
-        ),
+      _addItem(
+        items,
+        platform,
+        title,
+        price,
+        quantity: int.tryParse(quantity ?? '') ?? 1,
       );
+      previousPriceWasPaired = true;
+    }
+    if (pendingPrice != null) {
+      final title = _bestTitle(candidates);
+      if (title != null) _addItem(items, platform, title, pendingPrice);
     }
     return items;
+  }
+
+  static void _addItem(
+    List<SharedShoppingItem> items,
+    ShoppingPlatform platform,
+    String title,
+    double price, {
+    int quantity = 1,
+  }) {
+    items.add(
+      SharedShoppingItem(
+        platform: platform,
+        kind: ShareKind.product,
+        url: Uri.parse('local://cart-screenshot/${items.length + 1}'),
+        title: title,
+        price: price,
+        quantity: quantity,
+      ),
+    );
   }
 
   static bool _looksLikeProductDetail(List<String> lines) {
@@ -93,10 +143,65 @@ abstract final class CartScreenshotParser {
     final hasPurchaseAction =
         text.contains('加入购物车') ||
         text.contains('立即购买') ||
-        text.contains('马上购买');
+        text.contains('马上购买') ||
+        text.contains('免拼购买') ||
+        text.contains('直接拼成');
     final hasDetailMetadata =
         text.contains('店铺评分') || text.contains('无理由退货') || text.contains('快递');
     return hasSales || (hasPurchaseAction && hasDetailMetadata);
+  }
+
+  static SharedShoppingItem? _parsePinduoduoDetail(List<String> source) {
+    final lines = source.map((line) => line.trim()).toList();
+    double? price;
+    for (final line in lines) {
+      final parsed = _prices(line).firstOrNull;
+      if (parsed != null && parsed > 0) {
+        price = parsed;
+        break;
+      }
+    }
+    if (price == null) return null;
+
+    final titleStarts = <String>[];
+    final titleEnds = <String>[];
+    for (var index = 0; index < lines.length; index++) {
+      final source = lines[index];
+      final compact = _compact(source);
+      final containsTitleSuffix = compact.contains('退货包运费');
+      final containsPromoTitle =
+          compact.startsWith('季末优惠') || compact.startsWith('季未优惠');
+      final standalonePromo = compact == '季末优惠' || compact == '季未优惠';
+      if (standalonePromo && index + 1 < lines.length) {
+        final next = lines[index + 1].trim();
+        if (next.length >= 10 && _titleCandidate(next)) titleStarts.add(next);
+        continue;
+      }
+      if (!containsTitleSuffix && !containsPromoTitle) continue;
+      final line = source
+          .replaceAll('退货包运费', '')
+          .replaceFirst(RegExp(r'^[\]］】\s]+'), '')
+          .replaceFirst(RegExp(r'^季[末未]优惠\s*'), '')
+          .replaceAll('|', '')
+          .trim();
+      if (line.length >= 6 &&
+          !RegExp(r'^[·•\d]').hasMatch(line) &&
+          !_detailNoise(line) &&
+          _titleCandidate(line)) {
+        (containsPromoTitle ? titleStarts : titleEnds).add(line);
+      }
+    }
+    final titleParts = [...titleStarts, ...titleEnds];
+    if (titleParts.isEmpty) return null;
+    final title = titleParts.join().trim();
+    if (title.length < 4) return null;
+    return SharedShoppingItem(
+      platform: ShoppingPlatform.pinduoduo,
+      kind: ShareKind.product,
+      url: Uri.parse('local://product-screenshot/1'),
+      title: title,
+      price: price,
+    );
   }
 
   static SharedShoppingItem? _parseProductDetail(
@@ -112,9 +217,9 @@ abstract final class CartScreenshotParser {
     // of assuming it must sit immediately before the sales count.
     for (var index = 0; index < lines.length; index++) {
       if (_detailNoise(lines[index])) break;
-      final explicit = _pricePattern.firstMatch(lines[index]);
-      if (explicit == null) continue;
-      price = double.tryParse(explicit.group(1) ?? '');
+      final explicit = _prices(lines[index]);
+      if (explicit.isEmpty) continue;
+      price = explicit.first;
       if (price != null && price > 0) {
         priceIndex = index;
         break;
@@ -136,6 +241,39 @@ abstract final class CartScreenshotParser {
       }
     }
     if (price == null || priceIndex < 0) return null;
+
+    final branded = <String>[];
+    final supplements = <String>[];
+    for (final source in lines) {
+      final compact = _compact(source);
+      final hasBrandPrefix = RegExp(r'^(?:天猫|民猫|自营|自當)').hasMatch(compact);
+      final cleaned = source
+          .replaceFirst(RegExp(r'^(?:天猫|民猫|自营|自當)\s*'), '')
+          .trim();
+      if (_detailNoise(cleaned) ||
+          _promotionOnly(cleaned) ||
+          _prices(cleaned).isNotEmpty ||
+          !_titleCandidate(cleaned)) {
+        continue;
+      }
+      if (hasBrandPrefix) {
+        branded.add(cleaned);
+      } else if (cleaned.length >= 10) {
+        supplements.add(cleaned);
+      }
+    }
+    if (branded.isNotEmpty) {
+      final anchor = _bestTitle(branded)!;
+      final supplement = _bestTitle(supplements);
+      final title = supplement == null ? anchor : '$anchor $supplement';
+      return SharedShoppingItem(
+        platform: platform,
+        kind: ShareKind.product,
+        url: Uri.parse('local://product-screenshot/1'),
+        title: title,
+        price: price,
+      );
+    }
 
     final candidates = <({int index, String line})>[];
     for (var index = priceIndex + 1; index < lines.length; index++) {
@@ -178,6 +316,11 @@ abstract final class CartScreenshotParser {
       _compact(line).contains('极速退款') ||
       _compact(line).contains('亮点总结') ||
       _compact(line).contains('进一步了解') ||
+      _compact(line).contains('可再享') ||
+      _compact(line).contains('小金库') ||
+      _compact(line).contains('白条') ||
+      _compact(line).contains('人浏览') ||
+      _compact(line).contains('热卖榜') ||
       _compact(line).contains('加入购物车') ||
       _compact(line).contains('立即购买') ||
       _compact(line) == '店铺' ||
@@ -186,7 +329,8 @@ abstract final class CartScreenshotParser {
   static bool _salesMarker(String compactLine) =>
       compactLine.contains('已售') ||
       compactLine.contains('销量') ||
-      compactLine.contains('售出');
+      compactLine.contains('售出') ||
+      compactLine.contains('已拼');
 
   static String _compact(String value) => value.replaceAll(RegExp(r'\s+'), '');
 
@@ -210,8 +354,13 @@ abstract final class CartScreenshotParser {
 
   static ShoppingPlatform _platform(List<String> lines) {
     final text = lines.join(' ');
-    if (text.contains('京东') || text.contains('JD')) return ShoppingPlatform.jd;
-    if (text.contains('淘宝') || text.contains('天猫')) {
+    if (text.contains('已拼') || text.contains('拼单') || text.contains('免拼购买')) {
+      return ShoppingPlatform.pinduoduo;
+    }
+    if (text.contains('京东') || text.contains('京补') || text.contains('JD')) {
+      return ShoppingPlatform.jd;
+    }
+    if (text.contains('淘宝') || text.contains('天猫') || text.contains('民猫')) {
       return ShoppingPlatform.taobao;
     }
     return ShoppingPlatform.unknown;
@@ -219,11 +368,62 @@ abstract final class CartScreenshotParser {
 
   static String? _bestTitle(List<String> candidates) {
     if (candidates.isEmpty) return null;
-    return candidates.reversed.firstWhere(
-      (line) => line.length >= 4,
-      orElse: () => candidates.last,
+    return candidates.reduce(
+      (best, candidate) =>
+          _titleScore(candidate) >= _titleScore(best) ? candidate : best,
     );
   }
+
+  static int _titleScore(String value) {
+    final hasCjk = RegExp(r'[\u3400-\u9fff]').hasMatch(value);
+    final hasLatin = RegExp(r'[A-Za-z]').hasMatch(value);
+    final hasQuantity = _quantityPattern.hasMatch(value);
+    return value.length + (hasCjk && hasLatin ? 12 : 0) + (hasQuantity ? 8 : 0);
+  }
+
+  static List<double> _prices(String line) {
+    if (line.toUpperCase().contains('PLUS') || line.contains('/年')) {
+      return const [];
+    }
+    final beforePrice = RegExp(
+      r'(?:优惠后|加补后|到手价)\s*[¥￥Yy$*]?\s*(\d+?)(?:[|lI1])?优惠前',
+      caseSensitive: false,
+    ).firstMatch(line);
+    final beforeParsed = double.tryParse(beforePrice?.group(1) ?? '');
+    if (beforeParsed != null) return [beforeParsed];
+
+    final concatenated = RegExp(
+      r'(?:优惠后|加补后|到手价)\s*[¥￥Yy$*]?\s*(\d+\.\d)(?=\d{2,7}(?:\D|$))',
+      caseSensitive: false,
+    ).firstMatch(line);
+    final concatenatedParsed = double.tryParse(concatenated?.group(1) ?? '');
+    if (concatenatedParsed != null) return [concatenatedParsed];
+
+    return _pricePattern
+        .allMatches(line)
+        .map((match) => double.tryParse(match.group(1) ?? ''))
+        .whereType<double>()
+        .toList();
+  }
+
+  static String? _cleanCartCandidate(String line) {
+    if (_promotionOnly(line) || _ignored(line)) return null;
+    final cleaned = line
+        .replaceFirst(RegExp(r'^(?:狂暑季|超级立减|百亿补贴)\s*'), '')
+        .trim();
+    if (!_titleCandidate(cleaned)) return null;
+    return cleaned;
+  }
+
+  static bool _promotionOnly(String line) =>
+      _promotion(line) ||
+      line.contains('官方立减') ||
+      line.contains('消费券') ||
+      line.contains('免息') ||
+      line.contains('保险') ||
+      line.contains('换购') ||
+      line.contains('已免运费') ||
+      line.contains('88VIP');
 
   static bool _shop(String line) =>
       line.contains('旗舰店') || line.contains('专营店') || line.startsWith('天猫');

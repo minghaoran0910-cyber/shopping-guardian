@@ -1,4 +1,4 @@
-enum ShoppingPlatform { taobao, jd, unknown }
+enum ShoppingPlatform { taobao, jd, pinduoduo, unknown }
 
 enum ShareKind { product, collection }
 
@@ -101,6 +101,9 @@ abstract final class ShoppingShareParser {
     }
     if (host == '3.cn' || host.endsWith('.jd.com')) {
       return ShoppingPlatform.jd;
+    }
+    if (host == 'mobile.yangkeduo.com' || host.endsWith('.pinduoduo.com')) {
+      return ShoppingPlatform.pinduoduo;
     }
     return ShoppingPlatform.unknown;
   }
