@@ -212,7 +212,8 @@ abstract final class CartScreenshotParser {
       if (candidates.isEmpty) return null;
       titleParts = _bestTitleRun(candidates);
     }
-    final title = titleParts.join().trim();
+    final title = _stripPinduoduoNavigationPrefix(titleParts.join().trim());
+    if (title.isEmpty) return null;
     if (title.length < 4) return null;
     return SharedShoppingItem(
       platform: ShoppingPlatform.pinduoduo,
@@ -402,6 +403,15 @@ abstract final class CartScreenshotParser {
         compact.contains('近7天') ||
         compact.contains('同类畅销') ||
         compact.contains('正品保障');
+  }
+
+  static String _stripPinduoduoNavigationPrefix(String title) {
+    return title
+        .replaceFirst(
+          RegExp(r'^店铺\s*(?:收藏\s*)?(?:客服\s*)?.{0,12}?品牌\s*'),
+          '',
+        )
+        .trim();
   }
 
   static bool _detailNoise(String line) =>

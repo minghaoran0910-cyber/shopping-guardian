@@ -38,6 +38,26 @@ void main() {
       expect(item.title, isNot(contains('店铺')));
     });
 
+    test('Pinduoduo drops a split navigation block from the final title', () {
+      final item = _single([
+        '券后¥12',
+        '秒杀价¥12.7',
+        '已拼833件',
+        '百亿补贴',
+        '店铺 收藏 客服百A贴品牌',
+        '三只松鼠]【三只松鼠】烤椰子味压缩饼干420g',
+        '代餐饱腹粗粮干粮户外充饥抗饿零食',
+        '全店1566人在拼，同类畅销第2名',
+        '直接拼成',
+      ]);
+
+      expect(item.price, 12);
+      expect(item.title, contains('三只松鼠'));
+      expect(item.title, contains('抗饿零食'));
+      expect(item.title, isNot(contains('店铺')));
+      expect(item.title, isNot(contains('客服')));
+    });
+
     test('Pinduoduo regular-price chips', () {
       final item = _single([
         '¥29.9',
