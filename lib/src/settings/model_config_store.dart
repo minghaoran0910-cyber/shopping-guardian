@@ -59,9 +59,10 @@ class ModelConfigStore {
     final savedEndpoint = preferences.getString('model_endpoint');
     final legacyBaseUrl = preferences.getString('model_base_url');
     return ModelConfig(
-      endpoint:
-          savedEndpoint ??
-          (legacyBaseUrl == null ? '' : _legacyEndpoint(legacyBaseUrl)),
+      endpoint: normalizeEndpoint(
+        savedEndpoint ??
+            (legacyBaseUrl == null ? '' : _legacyEndpoint(legacyBaseUrl)),
+      ),
       model: preferences.getString('model_name') ?? '',
       apiKey: await keyStore.readModelApiKey(),
       structuredOutput: preferences.getBool('model_structured_output') ?? true,
@@ -73,7 +74,10 @@ class ModelConfigStore {
 
   Future<void> write(ModelConfig config) async {
     final preferences = await SharedPreferences.getInstance();
-    await preferences.setString('model_endpoint', config.endpoint.trim());
+    await preferences.setString(
+      'model_endpoint',
+      normalizeEndpoint(config.endpoint),
+    );
     await preferences.setString('model_name', config.model.trim());
     await preferences.setBool(
       'model_structured_output',
@@ -95,8 +99,16 @@ class ModelConfigStore {
   }
 
   static String _legacyEndpoint(String baseUrl) {
-    final normalized = baseUrl.trim().replaceFirst(RegExp(r'/$'), '');
-    if (normalized.endsWith('/chat/completions')) return normalized;
+    return normalizeEndpoint(baseUrl);
+  }
+
+  static String normalizeEndpoint(String value) {
+    final normalized = value.trim().replaceFirst(RegExp(r'/$'), '');
+    if (normalized.isEmpty ||
+        normalized.endsWith('/chat/completions') ||
+        !normalized.endsWith('/v1')) {
+      return normalized;
+    }
     return '$normalized/chat/completions';
   }
 }

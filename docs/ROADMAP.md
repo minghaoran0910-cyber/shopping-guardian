@@ -37,7 +37,9 @@
 - [x] IMPORT-01 淘宝/京东 HTML fixture 测试集
 - [x] IMPORT-02 自动解析失败的分级降级策略
 - [x] IMPORT-03 可导出的脱敏诊断
-- [x] ARCH-01 拆分 `home_shell.dart`
+- [x] ARCH-01 拆分 `home_shell.dart`（2026-07-29 复审后继续拆分，主文件由 3404 行降至 1428 行）
+- [x] UX-URL-01 兼容 OpenAI 风格 Base URL，自动补全 `/v1/chat/completions`
+- [x] UX-DRAFT-01 决策成功落库后清空首页草稿，取消或失败时保留
 - [x] CI-01 Android CI
 - [x] CI-02 macOS 与 iOS Simulator CI
 

@@ -16,6 +16,23 @@ class MemoryApiKeyStore extends ApiKeyStore {
 }
 
 void main() {
+  test('normalizes common OpenAI-compatible base URLs', () {
+    expect(
+      ModelConfigStore.normalizeEndpoint('https://example.com/v1'),
+      'https://example.com/v1/chat/completions',
+    );
+    expect(
+      ModelConfigStore.normalizeEndpoint(
+        'https://example.com/v1/chat/completions',
+      ),
+      'https://example.com/v1/chat/completions',
+    );
+    expect(
+      ModelConfigStore.normalizeEndpoint('http://localhost:11434/api/chat'),
+      'http://localhost:11434/api/chat',
+    );
+  });
+
   test('reads a legacy base URL as a complete chat endpoint', () async {
     SharedPreferences.setMockInitialValues({
       'model_base_url': 'https://legacy.example/v1/',
