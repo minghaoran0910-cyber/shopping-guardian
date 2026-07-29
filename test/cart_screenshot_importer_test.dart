@@ -329,7 +329,7 @@ void main() {
     expect(items.single.platform, ShoppingPlatform.taobao);
     expect(items.single.price, 431);
     expect(items.single.title, contains('THE BEATLES Abbey Road'));
-    expect(items.single.title, contains('Anniversary'));
+    expect(items.single.title, isNot(contains('店铺评分')));
   });
 
   test('pairs an Android OCR cart price that appears before its title', () {

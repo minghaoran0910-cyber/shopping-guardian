@@ -45,13 +45,11 @@ import UserNotifications
     )
     ocrChannel.setMethodCallHandler { [weak self] call, result in
       guard call.method == "pickAndRecognize",
-            let presenter = self?.window?.rootViewController else {
+            let presenter = self?.activePresenter() else {
         result(FlutterMethodNotImplemented)
         return
       }
-      if self?.cartOCRPicker == nil {
-        self?.cartOCRPicker = CartOCRPicker(presenter: presenter)
-      }
+      self?.cartOCRPicker = CartOCRPicker(presenter: presenter)
       self?.cartOCRPicker?.pick(result: result)
     }
     let notificationChannel = FlutterMethodChannel(
@@ -72,5 +70,18 @@ import UserNotifications
     guard let channel = sharedTextChannel else { return }
     guard let text = sharedTextStore.consume() else { return }
     channel.invokeMethod("onSharedText", arguments: text)
+  }
+
+  private func activePresenter() -> UIViewController? {
+    let sceneRoot = UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .flatMap(\.windows)
+      .first(where: \.isKeyWindow)?
+      .rootViewController
+    var presenter = window?.rootViewController ?? sceneRoot
+    while let presented = presenter?.presentedViewController {
+      presenter = presented
+    }
+    return presenter
   }
 }
