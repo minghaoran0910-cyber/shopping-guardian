@@ -204,9 +204,7 @@ class ModelClient {
       confidence: _level(data['confidence']),
       budgetImpact: '${data['budget_impact'] ?? ''}'.trim(),
       alternatives: _strings(data['alternatives']),
-      waitDays: data['wait_days'] is num
-          ? (data['wait_days'] as num).toInt()
-          : null,
+      waitDays: _positiveWaitDays(data['wait_days']),
     );
   }
 
@@ -232,6 +230,12 @@ class ModelClient {
             .where((item) => item.isNotEmpty)
             .toList()
       : const [];
+
+  static int? _positiveWaitDays(Object? value) {
+    if (value is! num) return null;
+    final days = value.toInt();
+    return days > 0 ? days : null;
+  }
 }
 
 class ModelClientException implements Exception {

@@ -878,6 +878,10 @@ class _ModelSettingsState extends State<_ModelSettings> {
         TextField(
           controller: endpoint,
           enabled: !loading,
+          autocorrect: false,
+          enableSuggestions: false,
+          keyboardType: TextInputType.url,
+          textCapitalization: TextCapitalization.none,
           onChanged: (value) {
             if (preset != ModelServicePreset.custom &&
                 value.trim() != preset.endpoint) {
@@ -885,10 +889,7 @@ class _ModelSettingsState extends State<_ModelSettings> {
             }
           },
           decoration: InputDecoration(
-            labelText: copy.t(
-              'Base URL 或完整接口地址',
-              'Base URL or full endpoint',
-            ),
+            labelText: copy.t('Base URL 或完整接口地址', 'Base URL or full endpoint'),
             hintText: 'https://api.example.com/v1',
             helperText: copy.t(
               '以 /v1 结尾时会自动补全 /chat/completions。',
@@ -900,6 +901,9 @@ class _ModelSettingsState extends State<_ModelSettings> {
           controller: apiKey,
           enabled: !loading,
           obscureText: true,
+          autocorrect: false,
+          enableSuggestions: false,
+          textCapitalization: TextCapitalization.none,
           decoration: InputDecoration(
             labelText: copy.t('API Key（选填）', 'API Key (optional)'),
             hintText: '••••••••••••',
@@ -908,6 +912,9 @@ class _ModelSettingsState extends State<_ModelSettings> {
         TextField(
           controller: model,
           enabled: !loading,
+          autocorrect: false,
+          enableSuggestions: false,
+          textCapitalization: TextCapitalization.none,
           decoration: InputDecoration(
             labelText: copy.t('模型名称', 'Model name'),
             hintText: copy.t('填写服务中的模型名', 'Model name from your service'),
@@ -1103,33 +1110,34 @@ class _SettingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge,
+    return Material(
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      color: Theme.of(context).colorScheme.surfaceContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          ...children
-              .expand((child) => [child, const SizedBox(height: 16)])
-              .toList()
-            ..removeLast(),
-        ],
+              ],
+            ),
+            const SizedBox(height: 20),
+            ...children
+                .expand((child) => [child, const SizedBox(height: 16)])
+                .toList()
+              ..removeLast(),
+          ],
+        ),
       ),
     );
   }

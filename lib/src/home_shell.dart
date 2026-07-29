@@ -575,35 +575,17 @@ class _BudgetStripState extends State<_BudgetStrip> {
   late Future<BudgetSnapshot> snapshot = const BudgetStore().snapshot();
 
   Future<void> _edit() async {
-    final controller = TextEditingController();
-    final copy = GuardianCopy.of(context);
     final value = await showDialog<double>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(copy.t('设置本月预算', 'Set monthly budget')),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(prefixText: '¥ '),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(copy.t('取消', 'Cancel')),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.pop(context, double.tryParse(controller.text)),
-            child: Text(copy.t('保存', 'Save')),
-          ),
-        ],
-      ),
+      builder: (context) => const _BudgetEditorDialog(),
     );
-    controller.dispose();
     if (value == null) return;
     await const BudgetStore().setLimit(value);
-    if (mounted) setState(() => snapshot = const BudgetStore().snapshot());
+    if (mounted) {
+      setState(() {
+        snapshot = const BudgetStore().snapshot();
+      });
+    }
   }
 
   @override
@@ -649,6 +631,50 @@ class _BudgetStripState extends State<_BudgetStrip> {
           ),
         );
       },
+    );
+  }
+}
+
+class _BudgetEditorDialog extends StatefulWidget {
+  const _BudgetEditorDialog();
+
+  @override
+  State<_BudgetEditorDialog> createState() => _BudgetEditorDialogState();
+}
+
+class _BudgetEditorDialogState extends State<_BudgetEditorDialog> {
+  final controller = TextEditingController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = GuardianCopy.of(context);
+    return AlertDialog(
+      title: Text(copy.t('设置本月预算', 'Set monthly budget')),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: const InputDecoration(prefixText: '¥ '),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(copy.t('取消', 'Cancel')),
+        ),
+        FilledButton(
+          onPressed: () {
+            final value = double.tryParse(controller.text.trim());
+            if (value != null) Navigator.pop(context, value);
+          },
+          child: Text(copy.t('保存', 'Save')),
+        ),
+      ],
     );
   }
 }

@@ -180,6 +180,29 @@ void main() {
     expect(delays, [const Duration(seconds: 1), const Duration(seconds: 1)]);
   });
 
+  test('treats a non-positive model wait period as unspecified', () async {
+    final client = MockClient(
+      (_) async => http.Response(
+        '{"choices":[{"message":{"content":"{\\"verdict\\":\\"skip\\",'
+        '\\"risk\\":\\"low\\",\\"confidence\\":\\"high\\",'
+        '\\"summary\\":\\"无需等待\\",\\"reasons\\":[],'
+        '\\"budget_impact\\":\\"低\\",\\"alternatives\\":[],'
+        '\\"missing_information\\":[],\\"wait_days\\":0}"}}]}',
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      ),
+    );
+
+    final advice = await ModelClient(
+      endpoint: 'https://example.com/chat/completions',
+      apiKey: 'key',
+      model: 'model',
+      client: client,
+    ).analyze(itemName: '商品', price: 1);
+
+    expect(advice.waitDays, isNull);
+  });
+
   test('stops after the configured retry limit', () async {
     var calls = 0;
     final client = MockClient((_) async {

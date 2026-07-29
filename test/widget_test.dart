@@ -50,6 +50,30 @@ void main() {
     expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
   });
 
+  testWidgets('saves a monthly budget without breaking dialog teardown', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('改预算'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '1000');
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('¥ 1000'), findsWidgets);
+    await tester.tap(find.text('改预算'));
+    await tester.pumpAndSettle();
+    expect(find.text('设置本月预算'), findsOneWidget);
+  });
+
   testWidgets('switches to the cooldown destination', (tester) async {
     SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     tester.view.physicalSize = const Size(390, 844);
@@ -82,6 +106,14 @@ void main() {
     expect(find.text('隐私与外部请求'), findsOneWidget);
     expect(find.textContaining('最多 5 条相关历史摘要'), findsOneWidget);
     expect(find.textContaining('JSON 导出没有额外加密'), findsOneWidget);
+    for (final label in ['Base URL 或完整接口地址', 'API Key（选填）', '模型名称']) {
+      final field = tester.widget<TextField>(
+        find.widgetWithText(TextField, label),
+      );
+      expect(field.autocorrect, isFalse);
+      expect(field.enableSuggestions, isFalse);
+      expect(field.textCapitalization, TextCapitalization.none);
+    }
     await tester.tap(find.text('English'));
     await tester.pumpAndSettle();
     expect(find.text('Appearance'), findsOneWidget);

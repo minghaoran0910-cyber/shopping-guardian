@@ -26,6 +26,17 @@ void main() {
       expect(result.title, '原装正版 山下达郎专辑 BIG WAVE LP黑胶唱片 完全生産限定 日版');
     });
 
+    test('keeps an unquoted title after a share code', () {
+      final result = ShoppingShareParser.parse(
+        'https://e.tb.cn/h.8eNAad7TEGhJXHF?tk=sRSBgEXLvxF '
+        'CZ356. THE BEATLES Abbey Road Anniversary LP',
+      ).single;
+
+      expect(result.platform, ShoppingPlatform.taobao);
+      expect(result.shareCode, 'CZ356');
+      expect(result.title, 'THE BEATLES Abbey Road Anniversary LP');
+    });
+
     test('recognizes JD collection and product shares together', () {
       const input = '''
 【京东】https://3.cn/2V-chbKX 「漠城中人的购物清单」

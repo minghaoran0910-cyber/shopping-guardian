@@ -70,8 +70,7 @@ abstract final class ShoppingShareParser {
 
       if (platform == ShoppingPlatform.unknown) continue;
 
-      final titleMatch = _quotedTitlePattern.firstMatch(context);
-      final title = titleMatch?.group(1)?.trim();
+      final title = _extractTitle(context);
       final collection =
           context.contains('购物车') ||
           context.contains('购物清单') ||
@@ -106,6 +105,28 @@ abstract final class ShoppingShareParser {
       return ShoppingPlatform.pinduoduo;
     }
     return ShoppingPlatform.unknown;
+  }
+
+  static String? _extractTitle(String context) {
+    final quoted = _quotedTitlePattern.firstMatch(context)?.group(1)?.trim();
+    if (quoted?.isNotEmpty == true) return quoted;
+
+    final codeMatch = _shareCodePattern.firstMatch(context);
+    if (codeMatch == null) return null;
+    final remainder = context
+        .substring(codeMatch.end)
+        .replaceFirst(RegExp(r'^[\s，。；、:：.!！?？\-—]+'), '')
+        .split(RegExp(r'\r?\n'))
+        .first
+        .trim();
+    if (remainder.length < 2 ||
+        remainder.startsWith('点击链接') ||
+        remainder.startsWith('复制文案') ||
+        remainder.contains('http://') ||
+        remainder.contains('https://')) {
+      return null;
+    }
+    return remainder;
   }
 
   static String _trimUrl(String value) =>
