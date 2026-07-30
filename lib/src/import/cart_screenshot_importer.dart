@@ -13,13 +13,16 @@ class CartScreenshotImporter {
   }
 
   Future<ScreenshotImportResult> pickAndRecognizeDetailed() async {
-    final raw = await channel.invokeListMethod<String>('pickAndRecognize');
+    final raw = await recognizeLines();
     if (raw == null) return const ScreenshotImportResult.cancelled();
     return ScreenshotImportResult(
       items: CartScreenshotParser.parse(raw),
       recognizedLineCount: raw.where((line) => line.trim().isNotEmpty).length,
     );
   }
+
+  Future<List<String>?> recognizeLines() =>
+      channel.invokeListMethod<String>('pickAndRecognize');
 }
 
 class ScreenshotImportResult {
@@ -407,10 +410,7 @@ abstract final class CartScreenshotParser {
 
   static String _stripPinduoduoNavigationPrefix(String title) {
     return title
-        .replaceFirst(
-          RegExp(r'^店铺\s*(?:收藏\s*)?(?:客服\s*)?.{0,12}?品牌\s*'),
-          '',
-        )
+        .replaceFirst(RegExp(r'^店铺\s*(?:收藏\s*)?(?:客服\s*)?.{0,12}?品牌\s*'), '')
         .trim();
   }
 

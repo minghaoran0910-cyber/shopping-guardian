@@ -272,66 +272,279 @@ class _InsightsPageState extends State<InsightsPage> {
     }
   }
 
-  Future<void> _importPurchaseList(List<OwnedItem> existingItems) async {
+  Future<PurchaseListDraft?> _editPurchaseDraft(PurchaseListDraft draft) async {
     final copy = GuardianCopy.of(context);
-    final controller = TextEditingController();
-    final input = await showDialog<String>(
+    final name = TextEditingController(text: draft.name);
+    final price = TextEditingController(
+      text: draft.purchasePrice?.toString() ?? '',
+    );
+    final date = TextEditingController(
+      text: draft.acquiredAt?.toIso8601String().substring(0, 10) ?? '',
+    );
+    final notes = TextEditingController(text: draft.notes);
+    var category = draft.category;
+    var status = draft.status;
+    String? validationError;
+    return showDialog<PurchaseListDraft>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(copy.t('导入历史购买清单', 'Import purchase history')),
-        content: SizedBox(
-          width: 560,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  copy.t(
-                    '每行一件，用“|”分隔：名称 | 分类 | 当前状态 | 当时价格 | 日期 | 备注',
-                    'One item per line, separated by “|”: name | category | current status | price | date | notes',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  copy.t(
-                    '状态可填：仍在使用、备用、已淘汰、已转卖、已退货。留空会按“买过，现状不确定”处理。',
-                    'Status: in_use, backup, retired, returned. Blank means previously bought, current status unknown.',
-                  ),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  key: const Key('purchase-list-input'),
-                  controller: controller,
-                  autofocus: true,
-                  minLines: 7,
-                  maxLines: 14,
-                  decoration: InputDecoration(
-                    hintText: copy.t(
-                      'AirPods Pro | 数码 | 仍在使用 | 1499 | 2024-06-18 | 通勤\n'
-                          '旧键盘 | 数码 | 已转卖 | 399 | 2022-03-01',
-                      'AirPods Pro | 数码 | in_use | 1499 | 2024-06-18 | commute\n'
-                          'Old keyboard | 数码 | retired | 399 | 2022-03-01',
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(copy.t('修改识别结果', 'Edit recognized item')),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    key: const Key('purchase-draft-name'),
+                    controller: name,
+                    autofocus: true,
+                    maxLength: 160,
+                    onChanged: (_) => setDialogState(() {}),
+                    decoration: InputDecoration(
+                      labelText: copy.t('商品名称 *', 'Item name *'),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: category,
+                    decoration: InputDecoration(
+                      labelText: copy.t('分类', 'Category'),
+                    ),
+                    items: OwnedItemTemplates.categories
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(_categoryLabel(copy, value)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setDialogState(() => category = value ?? category),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: status,
+                    decoration: InputDecoration(
+                      labelText: copy.t('当前状态', 'Current status'),
+                    ),
+                    items: OwnedItemTemplates.statuses
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(_statusLabel(copy, value)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setDialogState(() => status = value ?? status),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: price,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: copy.t(
+                        '当时价格（选填）',
+                        'Purchase price (optional)',
+                      ),
+                      prefixText: '¥ ',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: date,
+                    keyboardType: TextInputType.datetime,
+                    decoration: InputDecoration(
+                      labelText: copy.t('购买日期（选填）', 'Purchase date (optional)'),
+                      hintText: 'YYYY-MM-DD',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: notes,
+                    minLines: 2,
+                    maxLines: 4,
+                    maxLength: 300,
+                    decoration: InputDecoration(
+                      labelText: copy.t('备注（选填）', 'Notes (optional)'),
+                    ),
+                  ),
+                  if (validationError != null)
+                    Text(
+                      validationError!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(copy.t('取消', 'Cancel')),
+            ),
+            FilledButton(
+              onPressed: name.text.trim().isEmpty
+                  ? null
+                  : () {
+                      final safeNotes = notes.text.replaceAll('|', '／');
+                      final parsed = const PurchaseListParser().parse(
+                        '${name.text.replaceAll('|', '／')} | $category | '
+                        '$status | ${price.text} | ${date.text} | $safeNotes',
+                      );
+                      if (parsed.isEmpty || !parsed.single.isValid) {
+                        setDialogState(() {
+                          validationError = copy.t(
+                            '请检查价格和日期格式。',
+                            'Check the price and date formats.',
+                          );
+                        });
+                        return;
+                      }
+                      Navigator.pop(
+                        dialogContext,
+                        parsed.single.copyWith(included: draft.included),
+                      );
+                    },
+              child: Text(copy.t('保存修改', 'Save changes')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _importOrderScreenshot(List<OwnedItem> existingItems) async {
+    final copy = GuardianCopy.of(context);
+    try {
+      final result = await const OrderScreenshotImporter().pickAndRecognize();
+      if (!mounted || result.wasCancelled) return;
+      if (result.drafts.isEmpty) {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(copy.t('没有整理出订单商品', 'No order items found')),
+            content: Text(
+              result.recognizedLineCount == 0
+                  ? copy.t(
+                      '这张图里的文字没有读出来。请换一张更清楚的订单截图。',
+                      'No text could be read. Try a clearer order screenshot.',
+                    )
+                  : copy.t(
+                      '读到了 ${result.recognizedLineCount} 行文字，但无法可靠配对商品名称和价格。可以换一张包含完整商品卡片的订单截图，或使用“导入购买清单”。',
+                      '${result.recognizedLineCount} lines were read, but item names and prices could not be paired reliably. Try a complete order screenshot or use “Import purchases”.',
+                    ),
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(copy.t('知道了', 'OK')),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+      String safe(String? value) => (value ?? '').replaceAll('|', '／');
+      final text = result.drafts
+          .map(
+            (draft) => [
+              safe(draft.name),
+              draft.category,
+              draft.status,
+              draft.purchasePrice?.toString() ?? '',
+              '',
+              safe(draft.notes),
+            ].join(' | '),
+          )
+          .join('\n');
+      await _importPurchaseList(existingItems, initialInput: text);
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            copy.t(
+              '订单截图没读出来：${error.message ?? error.code}',
+              'Could not read the order screenshot: ${error.message ?? error.code}',
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(copy.t('取消', 'Cancel')),
+      );
+    }
+  }
+
+  Future<void> _importPurchaseList(
+    List<OwnedItem> existingItems, {
+    String? initialInput,
+  }) async {
+    final copy = GuardianCopy.of(context);
+    final controller = TextEditingController(text: initialInput);
+    final input =
+        initialInput ??
+        await showDialog<String>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(copy.t('导入历史购买清单', 'Import purchase history')),
+            content: SizedBox(
+              width: 560,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      copy.t(
+                        '每行一件，用“|”分隔：名称 | 分类 | 当前状态 | 当时价格 | 日期 | 备注',
+                        'One item per line, separated by “|”: name | category | current status | price | date | notes',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      copy.t(
+                        '状态可填：仍在使用、备用、已淘汰、已转卖、已退货。留空会按“买过，现状不确定”处理。',
+                        'Status: in_use, backup, retired, returned. Blank means previously bought, current status unknown.',
+                      ),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      key: const Key('purchase-list-input'),
+                      controller: controller,
+                      autofocus: true,
+                      minLines: 7,
+                      maxLines: 14,
+                      decoration: InputDecoration(
+                        hintText: copy.t(
+                          'AirPods Pro | 数码 | 仍在使用 | 1499 | 2024-06-18 | 通勤\n'
+                              '旧键盘 | 数码 | 已转卖 | 399 | 2022-03-01',
+                          'AirPods Pro | 数码 | in_use | 1499 | 2024-06-18 | commute\n'
+                              'Old keyboard | 数码 | retired | 399 | 2022-03-01',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(copy.t('取消', 'Cancel')),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, controller.text),
+                child: Text(copy.t('解析并预览', 'Parse and preview')),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: Text(copy.t('解析并预览', 'Parse and preview')),
-          ),
-        ],
-      ),
-    );
+        );
     if (input == null || input.trim().isEmpty || !mounted) return;
     final parsed = const PurchaseListParser().parse(input);
     if (parsed.isEmpty) {
@@ -425,6 +638,20 @@ class _InsightsPageState extends State<InsightsPage> {
                                       if (draft.notes?.isNotEmpty == true)
                                         draft.notes!,
                                     ].join(' · '),
+                            ),
+                            secondary: IconButton(
+                              tooltip: copy.t('修改这一项', 'Edit this item'),
+                              onPressed: () async {
+                                final edited = await _editPurchaseDraft(draft);
+                                if (edited != null) {
+                                  setDialogState(() {
+                                    drafts[index] = edited.copyWith(
+                                      included: edited.isValid,
+                                    );
+                                  });
+                                }
+                              },
+                              icon: const Icon(Icons.edit_outlined),
                             ),
                           ),
                           Row(
@@ -601,6 +828,11 @@ class _InsightsPageState extends State<InsightsPage> {
                     onPressed: () => _importPurchaseList(manualItems),
                     icon: const Icon(Icons.playlist_add),
                     label: Text(copy.t('导入购买清单', 'Import purchases')),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _importOrderScreenshot(manualItems),
+                    icon: const Icon(Icons.receipt_long_outlined),
+                    label: Text(copy.t('订单截图', 'Order screenshot')),
                   ),
                   FilledButton.tonalIcon(
                     onPressed: _editOwnedItem,

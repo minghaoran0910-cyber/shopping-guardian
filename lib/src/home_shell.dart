@@ -31,6 +31,7 @@ import 'import/cart_screenshot_importer.dart';
 import 'import/import_coordinator.dart';
 import 'import/import_diagnostic_exporter.dart';
 import 'import/justoneapi_client.dart';
+import 'import/order_screenshot_importer.dart';
 import 'import/share_parser.dart';
 import 'settings/model_config_store.dart';
 import 'widgets/empty_state.dart';

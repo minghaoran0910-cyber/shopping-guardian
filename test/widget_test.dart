@@ -467,4 +467,49 @@ void main() {
       'returned',
     );
   });
+
+  testWidgets('reviews and edits a locally OCRed order screenshot', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    const channel = MethodChannel('shopping_guardian/cart_ocr');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          expect(call.method, 'pickAndRecognize');
+          return ['交易成功', 'OCR错字耳机', '¥899', '实付款 ¥899'];
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.tap(find.text('习惯'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('订单截图'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('核对后再导入'), findsOneWidget);
+    expect(find.text('OCR错字耳机'), findsOneWidget);
+    await tester.tap(find.byTooltip('修改这一项'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('purchase-draft-name')),
+      '修正后的耳机',
+    );
+    await tester.tap(find.text('保存修改'));
+    await tester.pumpAndSettle();
+    expect(find.text('修正后的耳机'), findsOneWidget);
+    await tester.tap(find.text('导入 1 件'));
+    await tester.pumpAndSettle();
+
+    final items = await const OwnedItemStore().readAll();
+    final imported = items.singleWhere((item) => item.name == '修正后的耳机');
+    expect(imported.status, 'unknown');
+    expect(imported.purchasePrice, 899);
+  });
 }
