@@ -27,6 +27,7 @@ void main() {
       price: 699,
       relatedHistory: const ['过去买过同类键盘，后来很少使用'],
       confirmedPatterns: const ['我确认：买键盘前先检查已有设备'],
+      ownedItems: const ['旧键盘 ×1（仍在使用；办公）'],
     );
 
     final messages = requestBody['messages'] as List;
@@ -35,6 +36,7 @@ void main() {
             as Map<String, dynamic>;
     expect(input['related_history'], ['过去买过同类键盘，后来很少使用']);
     expect(input['confirmed_patterns'], ['我确认：买键盘前先检查已有设备']);
+    expect(input['owned_items_same_category'], ['旧键盘 ×1（仍在使用；办公）']);
     expect(jsonEncode(requestBody), isNot(contains('secret-key')));
   });
 

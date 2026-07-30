@@ -126,8 +126,8 @@ class SettingsPage extends StatelessWidget {
                 title: Text(copy.t('模型分析', 'Model analysis')),
                 subtitle: Text(
                   copy.t(
-                    '商品、价格、购买理由、分类标签、预算、命中规则、最多 5 条相关历史摘要和你确认的个人规律会直达你配置的模型服务。发送前可以核对并取消。',
-                    'The item, price, reason, category, tags, budget, matched rules, up to five related-history summaries, and personal patterns you confirmed go directly to your configured model service. You can review and cancel before sending.',
+                    '商品、价格、购买理由、分类标签、预算、命中规则、同类已有物品、最多 5 条相关历史摘要和你确认的个人规律会直达你配置的模型服务。发送前可以核对并取消。',
+                    'The item, price, reason, category, tags, budget, matched rules, owned items in the same category, up to five related-history summaries, and personal patterns you confirmed go directly to your configured model service. You can review and cancel before sending.',
                   ),
                 ),
               ),
@@ -363,8 +363,10 @@ class SettingsPage extends StatelessWidget {
                     Text(
                       copy.t(
                         '${preview.decisions.length} 条决策记录 · ${preview.rules.length} 条消费规则'
+                            '${preview.ownedItems.isEmpty ? '' : ' · ${preview.ownedItems.length} 件已有物品'}'
                             '${preview.priceWatches.isEmpty ? '' : ' · ${preview.priceWatches.length} 个价格监测'}',
                         '${preview.decisions.length} decisions · ${preview.rules.length} rules'
+                            '${preview.ownedItems.isEmpty ? '' : ' · ${preview.ownedItems.length} owned items'}'
                             '${preview.priceWatches.isEmpty ? '' : ' · ${preview.priceWatches.length} price watches'}',
                       ),
                     ),
@@ -379,14 +381,15 @@ class SettingsPage extends StatelessWidget {
                     ),
                     if (preview.decisionConflicts +
                             preview.ruleConflicts +
-                            preview.priceWatchConflicts >
+                            preview.priceWatchConflicts +
+                            preview.ownedItemConflicts >
                         0)
                       Padding(
                         padding: const EdgeInsets.only(top: 10),
                         child: Text(
                           copy.t(
-                            '${preview.decisionConflicts + preview.ruleConflicts + preview.priceWatchConflicts} 条内容与本机 ID 重复。合并时会保留本机版本。',
-                            '${preview.decisionConflicts + preview.ruleConflicts + preview.priceWatchConflicts} items share IDs with local data. Merge keeps the local versions.',
+                            '${preview.decisionConflicts + preview.ruleConflicts + preview.priceWatchConflicts + preview.ownedItemConflicts} 条内容与本机 ID 重复。合并时会保留本机版本。',
+                            '${preview.decisionConflicts + preview.ruleConflicts + preview.priceWatchConflicts + preview.ownedItemConflicts} items share IDs with local data. Merge keeps the local versions.',
                           ),
                         ),
                       ),
@@ -460,9 +463,11 @@ class SettingsPage extends StatelessWidget {
           content: Text(
             copy.t(
               '已导入 ${result.importedDecisions} 条决策和 ${result.importedRules} 条规则'
+                  '${result.importedOwnedItems == 0 ? '' : '，${result.importedOwnedItems} 件已有物品'}'
                   '${result.importedPriceWatches == 0 ? '' : '，${result.importedPriceWatches} 个价格监测'}'
                   '${result.skippedConflicts > 0 ? '，跳过 ${result.skippedConflicts} 条重复内容' : ''}。',
               'Imported ${result.importedDecisions} decisions and ${result.importedRules} rules'
+                  '${result.importedOwnedItems == 0 ? '' : '; ${result.importedOwnedItems} owned items'}'
                   '${result.importedPriceWatches == 0 ? '' : '; ${result.importedPriceWatches} price watches'}'
                   '${result.skippedConflicts > 0 ? '; skipped ${result.skippedConflicts} duplicates' : ''}.',
             ),

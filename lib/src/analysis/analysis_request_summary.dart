@@ -10,6 +10,7 @@ class AnalysisRequestSummary {
     required this.matchedRules,
     required this.relatedHistory,
     this.confirmedPatterns = const [],
+    this.ownedItems = const [],
   });
 
   final String endpoint;
@@ -22,6 +23,7 @@ class AnalysisRequestSummary {
   final List<String> matchedRules;
   final List<String> relatedHistory;
   final List<String> confirmedPatterns;
+  final List<String> ownedItems;
 
   String get destination {
     final uri = Uri.tryParse(endpoint);
@@ -38,5 +40,6 @@ class AnalysisRequestSummary {
     'matched_rules': matchedRules,
     'related_history': relatedHistory,
     'confirmed_patterns': confirmedPatterns,
+    'owned_items_same_category': ownedItems,
   };
 }

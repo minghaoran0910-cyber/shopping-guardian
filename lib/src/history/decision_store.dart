@@ -29,6 +29,9 @@ class DecisionStore {
     final patternReferenceRows = await (_database.select(
       _database.decisionPatternReferences,
     )..orderBy([(row) => OrderingTerm.asc(row.position)])).get();
+    final ownedReferenceRows = await (_database.select(
+      _database.decisionOwnedReferences,
+    )..orderBy([(row) => OrderingTerm.asc(row.position)])).get();
     final tagRows = await (_database.select(
       _database.decisionTags,
     )..orderBy([(row) => OrderingTerm.asc(row.position)])).get();
@@ -46,8 +49,15 @@ class DecisionStore {
     final alternativesByDecision = <String, List<StoredDecisionAlternative>>{};
     final patternReferencesByDecision =
         <String, List<StoredDecisionPatternReference>>{};
+    final ownedReferencesByDecision =
+        <String, List<StoredDecisionOwnedReference>>{};
     for (final reference in patternReferenceRows) {
       patternReferencesByDecision
+          .putIfAbsent(reference.decisionId, () => [])
+          .add(reference);
+    }
+    for (final reference in ownedReferenceRows) {
+      ownedReferencesByDecision
           .putIfAbsent(reference.decisionId, () => [])
           .add(reference);
     }
@@ -68,6 +78,7 @@ class DecisionStore {
             eventsByDecision[row.id] ?? const [],
             referencesByDecision[row.id] ?? const [],
             patternReferencesByDecision[row.id] ?? const [],
+            ownedReferencesByDecision[row.id] ?? const [],
             alternativesByDecision[row.id] ?? const [],
             tagsByDecision[row.id] ?? const [],
           ),
@@ -86,6 +97,7 @@ class DecisionStore {
       await _database.delete(_database.decisionEvents).go();
       await _database.delete(_database.decisionReferences).go();
       await _database.delete(_database.decisionPatternReferences).go();
+      await _database.delete(_database.decisionOwnedReferences).go();
       await _database.delete(_database.decisionAlternatives).go();
       await _database.delete(_database.decisionTags).go();
       await _database.delete(_database.decisions).go();
@@ -264,6 +276,17 @@ class DecisionStore {
             ),
           );
     }
+    for (final (position, summary) in record.referencedOwnedItems.indexed) {
+      await _database
+          .into(_database.decisionOwnedReferences)
+          .insert(
+            DecisionOwnedReferencesCompanion.insert(
+              decisionId: id,
+              position: position,
+              summary: summary,
+            ),
+          );
+    }
     for (final (position, description) in record.alternatives.indexed) {
       await _database
           .into(_database.decisionAlternatives)
@@ -293,6 +316,7 @@ class DecisionStore {
     List<StoredDecisionEvent> events,
     List<StoredDecisionReference> references,
     List<StoredDecisionPatternReference> patternReferences,
+    List<StoredDecisionOwnedReference> ownedReferences,
     List<StoredDecisionAlternative> alternatives,
     List<StoredDecisionTag> tags,
   ) {
@@ -313,6 +337,9 @@ class DecisionStore {
       tags: tags.map((item) => item.tag).toList(),
       referencedHistory: references.map((item) => item.summary).toList(),
       referencedPatterns: patternReferences
+          .map((item) => item.summary)
+          .toList(),
+      referencedOwnedItems: ownedReferences
           .map((item) => item.summary)
           .toList(),
       risk: row.risk,

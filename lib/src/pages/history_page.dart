@@ -290,6 +290,19 @@ class _HistoryPageState extends State<HistoryPage> {
                     ),
                   ),
                 ],
+                if (record.referencedOwnedItems.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    copy.t('本次对照的已有物品', 'Owned items compared'),
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  ...record.referencedOwnedItems.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text('• $item'),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

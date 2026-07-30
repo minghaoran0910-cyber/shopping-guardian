@@ -70,6 +70,12 @@ class AnalysisRequestReviewDialog extends StatelessWidget {
                     : summary.relatedHistory.join('\n'),
               ),
               _SummaryRow(
+                label: copy.t('同类已有物品', 'Owned items in this category'),
+                value: summary.ownedItems.isEmpty
+                    ? copy.t('无', 'None')
+                    : summary.ownedItems.join('\n'),
+              ),
+              _SummaryRow(
                 label: copy.t('已确认的个人规律', 'Confirmed personal patterns'),
                 value: summary.confirmedPatterns.isEmpty
                     ? copy.t('无', 'None')

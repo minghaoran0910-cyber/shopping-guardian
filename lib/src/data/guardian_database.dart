@@ -61,6 +61,17 @@ class DecisionPatternReferences extends Table {
   Set<Column<Object>> get primaryKey => {decisionId, position};
 }
 
+@DataClassName('StoredDecisionOwnedReference')
+class DecisionOwnedReferences extends Table {
+  TextColumn get decisionId =>
+      text().references(Decisions, #id, onDelete: KeyAction.cascade)();
+  IntColumn get position => integer()();
+  TextColumn get summary => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {decisionId, position};
+}
+
 @DataClassName('StoredDecisionAlternative')
 class DecisionAlternatives extends Table {
   TextColumn get decisionId =>
@@ -102,6 +113,23 @@ class AppValues extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {key};
+}
+
+@DataClassName('StoredOwnedItem')
+class OwnedItems extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get category => text()();
+  TextColumn get status => text()();
+  IntColumn get quantity => integer().withDefault(const Constant(1))();
+  TextColumn get notes => text().nullable()();
+  RealColumn get purchasePrice => real().nullable()();
+  DateTimeColumn get acquiredAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
 }
 
 @DataClassName('StoredPriceWatch')
@@ -147,10 +175,12 @@ class MigrationQuarantine extends Table {
     DecisionEvents,
     DecisionReferences,
     DecisionPatternReferences,
+    DecisionOwnedReferences,
     DecisionAlternatives,
     DecisionTags,
     ConsumptionRules,
     AppValues,
+    OwnedItems,
     PriceWatches,
     PriceObservations,
     MigrationQuarantine,
@@ -179,7 +209,7 @@ class GuardianDatabase extends _$GuardianDatabase {
   }
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -203,6 +233,10 @@ class GuardianDatabase extends _$GuardianDatabase {
         await migrator.createTable(priceWatches);
         await migrator.createTable(priceObservations);
       }
+      if (from < 6) {
+        await migrator.createTable(ownedItems);
+        await migrator.createTable(decisionOwnedReferences);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -213,12 +247,14 @@ class GuardianDatabase extends _$GuardianDatabase {
     await delete(decisionEvents).go();
     await delete(decisionReferences).go();
     await delete(decisionPatternReferences).go();
+    await delete(decisionOwnedReferences).go();
     await delete(decisionAlternatives).go();
     await delete(decisionTags).go();
     await delete(decisions).go();
     await delete(consumptionRules).go();
     await delete(priceObservations).go();
     await delete(priceWatches).go();
+    await delete(ownedItems).go();
     await delete(appValues).go();
     await delete(migrationQuarantine).go();
   });

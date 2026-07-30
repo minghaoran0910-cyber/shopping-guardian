@@ -27,6 +27,7 @@ void main() {
       'matched_rules': ['大额商品：至少等两天'],
       'related_history': ['上次买键盘后使用频率很低'],
       'confirmed_patterns': ['我买唱片后通常很少播放'],
+      'owned_items_same_category': [],
     });
     expect(summary.requestBody.toString(), isNot(contains('api_key')));
     expect(summary.requestBody.toString(), isNot(contains('secret')));

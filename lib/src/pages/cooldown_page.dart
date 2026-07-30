@@ -58,13 +58,21 @@ class _CooldownPageState extends State<CooldownPage> {
 
   Future<void> _toggle(PriceWatch watch, bool enabled) async {
     await const PriceWatchStore().save(watch.copyWith(enabled: enabled));
-    if (mounted) setState(() => data = _load());
+    if (mounted) {
+      setState(() {
+        data = _load();
+      });
+    }
   }
 
   Future<void> _deleteWatch(PriceWatch watch) async {
     await const PriceWatchStore().delete(watch.id);
     await const LocalNotificationService().cancel('${watch.id}_price');
-    if (mounted) setState(() => data = _load());
+    if (mounted) {
+      setState(() {
+        data = _load();
+      });
+    }
   }
 
   @override

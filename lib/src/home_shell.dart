@@ -14,6 +14,8 @@ import 'history/purchase_feedback_dialog.dart';
 import 'insights/decision_insights.dart';
 import 'notifications/local_notification_service.dart';
 import 'notifications/feedback_reminder_service.dart';
+import 'owned/owned_item.dart';
+import 'owned/owned_item_store.dart';
 import 'patterns/pattern_generator.dart';
 import 'patterns/pattern_store.dart';
 import 'patterns/personal_pattern.dart';
@@ -1108,10 +1110,11 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
       final config = await const ModelConfigStore().read();
       if (!config.isComplete) throw const ModelClientException('请先在设置里配置并测试模型');
       final matchedRules = await const ConsumptionRuleStore().matching(total);
+      final decisionRecords = await const DecisionStore().readAll();
       final history = const DecisionHistoryRetriever().findRelevant(
         itemName: widget.items.map((item) => item.title ?? '未命名商品').join('、'),
         price: total,
-        records: await const DecisionStore().readAll(),
+        records: decisionRecords,
       );
       final itemName = widget.items
           .map((item) => item.title ?? copy.t('未命名商品', 'Unnamed item'))
@@ -1120,6 +1123,31 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
           .map((rule) => '${rule.name}：${rule.description}')
           .toList();
       final historySummaries = history.map((item) => item.summary).toList();
+      final selectedCategory = category.text.trim().isEmpty
+          ? null
+          : category.text.trim();
+      final ownedItems = await const OwnedItemStore().activeInCategory(
+        selectedCategory,
+      );
+      final ownedSummariesByName = <String, String>{
+        for (final item in ownedItems)
+          item.name.trim().toLowerCase():
+              '${item.name} ×${item.quantity}（${_InsightsPageState._statusLabel(copy, item.status)}'
+              '${item.notes?.isNotEmpty == true ? '；${item.notes}' : ''}）',
+      };
+      for (final record in decisionRecords.where(
+        (record) =>
+            record.countsAsPurchased &&
+            selectedCategory != null &&
+            record.category?.trim() == selectedCategory,
+      )) {
+        ownedSummariesByName.putIfAbsent(
+          record.itemName.trim().toLowerCase(),
+          () =>
+              '${record.itemName}（${copy.t('来自已确认购买记录', 'confirmed purchase')}）',
+        );
+      }
+      final ownedSummaries = ownedSummariesByName.values.take(10).toList();
       final confirmedPatterns = (await const PatternStore().readAll())
           .where((pattern) => pattern.status == 'confirmed')
           .map((pattern) => pattern.text)
@@ -1137,12 +1165,13 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
         itemName: itemName,
         price: total,
         reason: reason.text.trim(),
-        category: category.text.trim().isEmpty ? null : category.text.trim(),
+        category: selectedCategory,
         tags: tagValues,
         monthlyBudget: double.tryParse(budget.text.trim()),
         matchedRules: ruleSummaries,
         relatedHistory: historySummaries,
         confirmedPatterns: confirmedPatterns,
+        ownedItems: ownedSummaries,
       );
       final confirmed = await _confirmAnalysisRequest(requestSummary);
       if (!confirmed || !mounted) return;
@@ -1156,14 +1185,13 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
             itemName: itemName,
             price: total,
             reason: reason.text.trim(),
-            category: category.text.trim().isEmpty
-                ? null
-                : category.text.trim(),
+            category: selectedCategory,
             tags: tagValues,
             monthlyBudget: double.tryParse(budget.text.trim()),
             matchedRules: ruleSummaries,
             relatedHistory: historySummaries,
             confirmedPatterns: confirmedPatterns,
+            ownedItems: ownedSummaries,
           );
       if (!mounted) return;
       final saved = await showDialog<bool>(
@@ -1176,7 +1204,8 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
           justOneApiToken: widget.justOneApiToken,
           referencedHistory: historySummaries,
           referencedPatterns: confirmedPatterns,
-          category: category.text.trim().isEmpty ? null : category.text.trim(),
+          referencedOwnedItems: ownedSummaries,
+          category: selectedCategory,
           tags: tagValues,
         ),
       );
@@ -1262,6 +1291,39 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
                 hintText: copy.t('例如：数码、唱片、家居', 'e.g. Tech, Music, Home'),
               ),
             ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    copy.t(
+                      '选择与“我的物品”相同的分类，才能进行同类对照。',
+                      'Use the same category as My items to compare them.',
+                    ),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: OwnedItemTemplates.categories
+                        .map(
+                          (value) => ActionChip(
+                            label: Text(
+                              _InsightsPageState._categoryLabel(copy, value),
+                            ),
+                            onPressed: () => setState(() {
+                              category.text = value;
+                            }),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 14),
             TextField(
               controller: tags,
@@ -1319,6 +1381,7 @@ class _DecisionDialog extends StatefulWidget {
     required this.justOneApiToken,
     required this.referencedHistory,
     required this.referencedPatterns,
+    required this.referencedOwnedItems,
     required this.category,
     required this.tags,
   });
@@ -1329,6 +1392,7 @@ class _DecisionDialog extends StatefulWidget {
   final String justOneApiToken;
   final List<String> referencedHistory;
   final List<String> referencedPatterns;
+  final List<String> referencedOwnedItems;
   final String? category;
   final List<String> tags;
 
@@ -1378,6 +1442,7 @@ class _DecisionDialogState extends State<_DecisionDialog> {
         waitUntil: waitUntil,
         referencedHistory: widget.referencedHistory,
         referencedPatterns: widget.referencedPatterns,
+        referencedOwnedItems: widget.referencedOwnedItems,
         category: widget.category,
         tags: widget.tags,
         risk: widget.advice.risk.name,
@@ -1565,6 +1630,19 @@ class _DecisionDialogState extends State<_DecisionDialog> {
                   ),
                   children: widget.referencedPatterns
                       .map((pattern) => ListTile(title: Text(pattern)))
+                      .toList(),
+                ),
+              if (widget.referencedOwnedItems.isNotEmpty)
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: Text(
+                    copy.t(
+                      '对照了 ${widget.referencedOwnedItems.length} 件同类物品',
+                      'Compared ${widget.referencedOwnedItems.length} owned items',
+                    ),
+                  ),
+                  children: widget.referencedOwnedItems
+                      .map((item) => ListTile(title: Text(item)))
                       .toList(),
                 ),
               const SizedBox(height: 12),

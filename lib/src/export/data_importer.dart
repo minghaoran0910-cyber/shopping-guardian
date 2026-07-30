@@ -9,6 +9,7 @@ import '../history/decision_record.dart';
 import '../import/share_parser.dart';
 import '../patterns/pattern_store.dart';
 import '../patterns/personal_pattern.dart';
+import '../owned/owned_item.dart';
 import '../prices/price_watch.dart';
 import '../rules/consumption_rule.dart';
 
@@ -37,6 +38,8 @@ class DataImportPreview {
     this.personalPatterns = const [],
     this.priceWatches = const [],
     this.priceHistory = const {},
+    this.ownedItems = const [],
+    this.ownedItemConflicts = 0,
   });
 
   final int schemaVersion;
@@ -51,6 +54,8 @@ class DataImportPreview {
   final List<PersonalPattern> personalPatterns;
   final List<PriceWatch> priceWatches;
   final Map<String, List<PriceSnapshot>> priceHistory;
+  final List<OwnedItem> ownedItems;
+  final int ownedItemConflicts;
 }
 
 class DataImportResult {
@@ -58,6 +63,7 @@ class DataImportResult {
     required this.importedDecisions,
     required this.importedRules,
     this.importedPriceWatches = 0,
+    this.importedOwnedItems = 0,
     required this.skippedConflicts,
     required this.budgetImported,
   });
@@ -65,6 +71,7 @@ class DataImportResult {
   final int importedDecisions;
   final int importedRules;
   final int importedPriceWatches;
+  final int importedOwnedItems;
   final int skippedConflicts;
   final bool budgetImported;
 }
@@ -104,7 +111,7 @@ class DataImporter {
     }
     final document = Map<String, dynamic>.from(decoded);
     final version = document['schema_version'];
-    if (version is! int || version < 1 || version > 5) {
+    if (version is! int || version < 1 || version > 6) {
       throw const DataImportException('不支持这个数据版本，请先升级应用');
     }
 
@@ -118,6 +125,7 @@ class DataImporter {
       version,
       priceWatches,
     );
+    final ownedItems = _parseOwnedItems(document['owned_items'], version);
     await LegacyDataMigrator(_database).migrate();
 
     final existingDecisionIds =
@@ -130,6 +138,10 @@ class DataImporter {
             .toSet();
     final existingPriceWatchIds =
         (await _database.select(_database.priceWatches).get())
+            .map((row) => row.id)
+            .toSet();
+    final existingOwnedItemIds =
+        (await _database.select(_database.ownedItems).get())
             .map((row) => row.id)
             .toSet();
 
@@ -152,6 +164,10 @@ class DataImporter {
       personalPatterns: patterns,
       priceWatches: priceWatches,
       priceHistory: priceHistory,
+      ownedItems: ownedItems,
+      ownedItemConflicts: ownedItems
+          .where((item) => existingOwnedItemIds.contains(item.id))
+          .length,
     );
   }
 
@@ -167,8 +183,10 @@ class DataImporter {
         await _database.delete(_database.decisionEvents).go();
         await _database.delete(_database.decisionReferences).go();
         await _database.delete(_database.decisionPatternReferences).go();
+        await _database.delete(_database.decisionOwnedReferences).go();
         await _database.delete(_database.decisionAlternatives).go();
         await _database.delete(_database.decisions).go();
+        await _database.delete(_database.ownedItems).go();
         if (preview.containsRules) {
           await _database.delete(_database.consumptionRules).go();
         }
@@ -191,6 +209,7 @@ class DataImporter {
       var importedDecisions = 0;
       var importedRules = 0;
       var importedPriceWatches = 0;
+      var importedOwnedItems = 0;
       var skippedConflicts = 0;
 
       for (final record in preview.decisions) {
@@ -255,6 +274,34 @@ class DataImporter {
         existingWatchIds.add(watch.id);
         importedPriceWatches++;
       }
+      final existingOwnedItemIds =
+          (await _database.select(_database.ownedItems).get())
+              .map((row) => row.id)
+              .toSet();
+      for (final item in preview.ownedItems) {
+        if (existingOwnedItemIds.contains(item.id)) {
+          skippedConflicts++;
+          continue;
+        }
+        await _database
+            .into(_database.ownedItems)
+            .insert(
+              OwnedItemsCompanion.insert(
+                id: item.id,
+                name: item.name,
+                category: item.category,
+                status: item.status,
+                quantity: Value(item.quantity),
+                notes: Value(item.notes),
+                purchasePrice: Value(item.purchasePrice),
+                acquiredAt: Value(item.acquiredAt),
+                createdAt: item.createdAt,
+                updatedAt: item.updatedAt,
+              ),
+            );
+        existingOwnedItemIds.add(item.id);
+        importedOwnedItems++;
+      }
 
       var budgetImported = false;
       if (preview.monthlyBudget != null) {
@@ -299,6 +346,7 @@ class DataImporter {
         importedDecisions: importedDecisions,
         importedRules: importedRules,
         importedPriceWatches: importedPriceWatches,
+        importedOwnedItems: importedOwnedItems,
         skippedConflicts: skippedConflicts,
         budgetImported: budgetImported,
       );
@@ -329,6 +377,8 @@ class DataImporter {
                 json['referencedHistory'] is! List) ||
             (json['referencedPatterns'] != null &&
                 json['referencedPatterns'] is! List) ||
+            (json['referencedOwnedItems'] != null &&
+                json['referencedOwnedItems'] is! List) ||
             (json['alternatives'] != null && json['alternatives'] is! List) ||
             !_isNullableString(json['feedback']) ||
             !_isNullableString(json['usageFrequency']) ||
@@ -344,6 +394,7 @@ class DataImporter {
         final events = json['events'] as List?;
         final references = json['referencedHistory'] as List?;
         final patternReferences = json['referencedPatterns'] as List?;
+        final ownedReferences = json['referencedOwnedItems'] as List?;
         final alternatives = json['alternatives'] as List?;
         final tags = json['tags'] as List?;
         if (events != null &&
@@ -357,6 +408,8 @@ class DataImporter {
                 references.any((reference) => reference is! String) ||
             patternReferences != null &&
                 patternReferences.any((reference) => reference is! String) ||
+            ownedReferences != null &&
+                ownedReferences.any((reference) => reference is! String) ||
             alternatives != null &&
                 alternatives.any((alternative) => alternative is! String) ||
             tags != null &&
@@ -491,6 +544,37 @@ class DataImporter {
     return watches;
   }
 
+  List<OwnedItem> _parseOwnedItems(Object? value, int version) {
+    if (value == null && version < 6) return const [];
+    if (value is! List) {
+      throw const DataImportException('owned_items 必须是数组');
+    }
+    final items = <OwnedItem>[];
+    final ids = <String>{};
+    for (var index = 0; index < value.length; index++) {
+      try {
+        final raw = value[index];
+        if (raw is! Map) throw const FormatException();
+        final item = OwnedItem.fromJson(Map<String, dynamic>.from(raw));
+        if (item.id.trim().isEmpty ||
+            item.name.trim().isEmpty ||
+            item.category.trim().isEmpty ||
+            !OwnedItemTemplates.statuses.contains(item.status) ||
+            item.quantity < 1 ||
+            item.quantity > 999 ||
+            (item.purchasePrice != null &&
+                (!item.purchasePrice!.isFinite || item.purchasePrice! < 0)) ||
+            !ids.add(item.id)) {
+          throw const FormatException();
+        }
+        items.add(item);
+      } on Object {
+        throw DataImportException('第 ${index + 1} 条已有物品格式有误');
+      }
+    }
+    return items;
+  }
+
   Map<String, List<PriceSnapshot>> _parsePriceHistory(
     Object? value,
     int version,
@@ -598,6 +682,17 @@ class DataImporter {
           .into(_database.decisionPatternReferences)
           .insert(
             DecisionPatternReferencesCompanion.insert(
+              decisionId: record.id,
+              position: position,
+              summary: summary,
+            ),
+          );
+    }
+    for (final (position, summary) in record.referencedOwnedItems.indexed) {
+      await _database
+          .into(_database.decisionOwnedReferences)
+          .insert(
+            DecisionOwnedReferencesCompanion.insert(
               decisionId: record.id,
               position: position,
               summary: summary,

@@ -64,6 +64,7 @@ class ModelClient {
     List<String> matchedRules = const [],
     List<String> relatedHistory = const [],
     List<String> confirmedPatterns = const [],
+    List<String> ownedItems = const [],
   }) async {
     final requestClient = client ?? http.Client();
     try {
@@ -79,13 +80,14 @@ class ModelClient {
           matchedRules: matchedRules,
           relatedHistory: relatedHistory,
           confirmedPatterns: confirmedPatterns,
+          ownedItems: ownedItems,
         ).requestBody,
       );
       final content = await _complete(requestClient, [
         {
           'role': 'system',
           'content':
-              '你是站在用户利益一边的消费决策助手。只返回 JSON，字段为 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high。不要替用户购买。',
+              '你是站在用户利益一边的消费决策助手。若提供了同类已有物品，必须说明候选商品是在替代、补充还是重复购买；没有可靠信息时不要猜。只返回 JSON，字段为 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high。不要替用户购买。',
         },
         {'role': 'user', 'content': input},
       ]);

@@ -14,6 +14,7 @@ void main() {
       monthlyBudget: 2000,
       matchedRules: ['大额商品：至少等两天'],
       relatedHistory: ['上次买键盘后使用频率很低'],
+      ownedItems: ['旧键盘｜仍在使用｜数量 1'],
     );
     bool? result;
 
@@ -45,6 +46,8 @@ void main() {
     expect(find.text('宁芝键盘'), findsOneWidget);
     expect(find.text('工作需要'), findsOneWidget);
     expect(find.text('上次买键盘后使用频率很低'), findsOneWidget);
+    expect(find.text('同类已有物品'), findsOneWidget);
+    expect(find.text('旧键盘｜仍在使用｜数量 1'), findsOneWidget);
     expect(find.textContaining('API Key 只用于请求头'), findsOneWidget);
     expect(find.textContaining('secret'), findsNothing);
 

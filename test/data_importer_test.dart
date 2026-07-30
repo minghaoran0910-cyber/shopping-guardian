@@ -6,6 +6,7 @@ import 'package:shopping_guardian/src/budget/budget_store.dart';
 import 'package:shopping_guardian/src/data/guardian_database.dart';
 import 'package:shopping_guardian/src/export/data_importer.dart';
 import 'package:shopping_guardian/src/history/decision_store.dart';
+import 'package:shopping_guardian/src/owned/owned_item_store.dart';
 import 'package:shopping_guardian/src/prices/price_watch_store.dart';
 import 'package:shopping_guardian/src/rules/consumption_rule_store.dart';
 
@@ -13,6 +14,7 @@ Map<String, Object?> decisionJson({
   String id = 'imported-1',
   String itemName = '导入的唱片',
   List<String> alternatives = const [],
+  List<String> referencedOwnedItems = const [],
 }) => {
   'id': id,
   'itemName': itemName,
@@ -24,6 +26,7 @@ Map<String, Object?> decisionJson({
   'waitUntil': null,
   'feedback': null,
   'referencedHistory': ['旧唱片：满意'],
+  'referencedOwnedItems': referencedOwnedItems,
   'risk': 'medium',
   'confidence': 'high',
   'budgetImpact': '本月预算充足',
@@ -41,6 +44,7 @@ String importJson({
   bool includeModel = true,
   List<Map<String, Object?>>? priceWatches,
   Map<String, Object?>? priceHistory,
+  List<Map<String, Object?>>? ownedItems,
 }) => jsonEncode({
   'schema_version': version,
   'monthly_budget': budget,
@@ -63,6 +67,7 @@ String importJson({
   if (version >= 3) 'personal_patterns': [],
   if (version >= 5) 'price_watches': priceWatches ?? [],
   if (version >= 5) 'price_history': priceHistory ?? {},
+  if (version >= 6) 'owned_items': ownedItems ?? [],
 });
 
 void main() {
@@ -111,7 +116,7 @@ void main() {
     final importer = DataImporter();
 
     await expectLater(
-      importer.preview(importJson(version: 6)),
+      importer.preview(importJson(version: 7)),
       throwsA(
         isA<DataImportException>().having(
           (error) => error.message,
@@ -153,7 +158,11 @@ void main() {
       importJson(
         decisions: [
           decisionJson(),
-          decisionJson(id: 'imported-2', itemName: '新记录'),
+          decisionJson(
+            id: 'imported-2',
+            itemName: '新记录',
+            referencedOwnedItems: ['旧键盘｜仍在使用｜数量 1'],
+          ),
         ],
       ),
     );
@@ -170,6 +179,12 @@ void main() {
     expect(
       records.singleWhere((record) => record.id == 'imported-1').itemName,
       '本机记录',
+    );
+    expect(
+      records
+          .singleWhere((record) => record.id == 'imported-2')
+          .referencedOwnedItems,
+      ['旧键盘｜仍在使用｜数量 1'],
     );
     expect((await const BudgetStore().snapshot()).limit, 888);
   });
@@ -221,6 +236,37 @@ void main() {
       await const PriceWatchStore().history('watch-imported'),
       hasLength(1),
     );
+  });
+
+  test('imports manually owned items with their current status', () async {
+    SharedPreferences.setMockInitialValues({});
+    final timestamp = '2026-07-30T10:00:00.000';
+    final importer = DataImporter();
+    final preview = await importer.preview(
+      importJson(
+        version: 6,
+        ownedItems: [
+          {
+            'id': 'owned-imported',
+            'name': '旧耳机',
+            'category': '数码',
+            'status': 'in_use',
+            'quantity': 1,
+            'notes': '通勤使用',
+            'purchasePrice': 699,
+            'acquiredAt': timestamp,
+            'createdAt': timestamp,
+            'updatedAt': timestamp,
+          },
+        ],
+      ),
+    );
+
+    expect(preview.ownedItems.single.name, '旧耳机');
+    final result = await importer.apply(preview, DataImportMode.merge);
+
+    expect(result.importedOwnedItems, 1);
+    expect((await const OwnedItemStore().readAll()).single.status, 'in_use');
   });
 
   test('replace swaps decisions, rules, and budget in one operation', () async {

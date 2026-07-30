@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shopping_guardian/src/export/data_exporter.dart';
 import 'package:shopping_guardian/src/history/decision_store.dart';
 import 'package:shopping_guardian/src/import/share_parser.dart';
+import 'package:shopping_guardian/src/owned/owned_item.dart';
+import 'package:shopping_guardian/src/owned/owned_item_store.dart';
 import 'package:shopping_guardian/src/prices/price_watch.dart';
 import 'package:shopping_guardian/src/prices/price_watch_store.dart';
 import 'package:shopping_guardian/src/rules/consumption_rule_store.dart';
@@ -59,6 +61,17 @@ void main() {
         source: 'justoneapi',
       ),
     );
+    await const OwnedItemStore().save(
+      OwnedItem(
+        id: 'owned-export',
+        name: '旧耳机',
+        category: '数码',
+        status: 'in_use',
+        quantity: 1,
+        createdAt: createdAt,
+        updatedAt: createdAt,
+      ),
+    );
     await const ConsumptionRuleStore().saveAll([
       const ConsumptionRule(id: 'rule-1', name: '等待', description: '大额消费等两天'),
     ]);
@@ -76,7 +89,7 @@ void main() {
 
     expect(await const DataExporter(channel: channel).export(), isTrue);
     final data = jsonDecode(exported!) as Map<String, dynamic>;
-    expect(data['schema_version'], 5);
+    expect(data['schema_version'], 6);
     expect(data['monthly_budget'], 2000);
     expect(data['decisions'], hasLength(1));
     final decision = (data['decisions'] as List).single as Map<String, dynamic>;
@@ -85,6 +98,7 @@ void main() {
     expect(decision['regretReason'], '使用太少');
     expect(data['rules'], hasLength(1));
     expect(data['price_watches'], hasLength(1));
+    expect(data['owned_items'], hasLength(1));
     final history = data['price_history'] as Map<String, dynamic>;
     expect(history['watch-export'], hasLength(1));
     expect(exported, isNot(contains('must-not-export')));

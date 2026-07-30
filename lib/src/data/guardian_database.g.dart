@@ -1818,6 +1818,288 @@ class DecisionPatternReferencesCompanion
   }
 }
 
+class $DecisionOwnedReferencesTable extends DecisionOwnedReferences
+    with
+        TableInfo<$DecisionOwnedReferencesTable, StoredDecisionOwnedReference> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DecisionOwnedReferencesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _decisionIdMeta = const VerificationMeta(
+    'decisionId',
+  );
+  @override
+  late final GeneratedColumn<String> decisionId = GeneratedColumn<String>(
+    'decision_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES decisions (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _summaryMeta = const VerificationMeta(
+    'summary',
+  );
+  @override
+  late final GeneratedColumn<String> summary = GeneratedColumn<String>(
+    'summary',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [decisionId, position, summary];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'decision_owned_references';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StoredDecisionOwnedReference> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('decision_id')) {
+      context.handle(
+        _decisionIdMeta,
+        decisionId.isAcceptableOrUnknown(data['decision_id']!, _decisionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_decisionIdMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('summary')) {
+      context.handle(
+        _summaryMeta,
+        summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_summaryMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {decisionId, position};
+  @override
+  StoredDecisionOwnedReference map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StoredDecisionOwnedReference(
+      decisionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decision_id'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      summary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}summary'],
+      )!,
+    );
+  }
+
+  @override
+  $DecisionOwnedReferencesTable createAlias(String alias) {
+    return $DecisionOwnedReferencesTable(attachedDatabase, alias);
+  }
+}
+
+class StoredDecisionOwnedReference extends DataClass
+    implements Insertable<StoredDecisionOwnedReference> {
+  final String decisionId;
+  final int position;
+  final String summary;
+  const StoredDecisionOwnedReference({
+    required this.decisionId,
+    required this.position,
+    required this.summary,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['decision_id'] = Variable<String>(decisionId);
+    map['position'] = Variable<int>(position);
+    map['summary'] = Variable<String>(summary);
+    return map;
+  }
+
+  DecisionOwnedReferencesCompanion toCompanion(bool nullToAbsent) {
+    return DecisionOwnedReferencesCompanion(
+      decisionId: Value(decisionId),
+      position: Value(position),
+      summary: Value(summary),
+    );
+  }
+
+  factory StoredDecisionOwnedReference.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StoredDecisionOwnedReference(
+      decisionId: serializer.fromJson<String>(json['decisionId']),
+      position: serializer.fromJson<int>(json['position']),
+      summary: serializer.fromJson<String>(json['summary']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'decisionId': serializer.toJson<String>(decisionId),
+      'position': serializer.toJson<int>(position),
+      'summary': serializer.toJson<String>(summary),
+    };
+  }
+
+  StoredDecisionOwnedReference copyWith({
+    String? decisionId,
+    int? position,
+    String? summary,
+  }) => StoredDecisionOwnedReference(
+    decisionId: decisionId ?? this.decisionId,
+    position: position ?? this.position,
+    summary: summary ?? this.summary,
+  );
+  StoredDecisionOwnedReference copyWithCompanion(
+    DecisionOwnedReferencesCompanion data,
+  ) {
+    return StoredDecisionOwnedReference(
+      decisionId: data.decisionId.present
+          ? data.decisionId.value
+          : this.decisionId,
+      position: data.position.present ? data.position.value : this.position,
+      summary: data.summary.present ? data.summary.value : this.summary,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoredDecisionOwnedReference(')
+          ..write('decisionId: $decisionId, ')
+          ..write('position: $position, ')
+          ..write('summary: $summary')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(decisionId, position, summary);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StoredDecisionOwnedReference &&
+          other.decisionId == this.decisionId &&
+          other.position == this.position &&
+          other.summary == this.summary);
+}
+
+class DecisionOwnedReferencesCompanion
+    extends UpdateCompanion<StoredDecisionOwnedReference> {
+  final Value<String> decisionId;
+  final Value<int> position;
+  final Value<String> summary;
+  final Value<int> rowid;
+  const DecisionOwnedReferencesCompanion({
+    this.decisionId = const Value.absent(),
+    this.position = const Value.absent(),
+    this.summary = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DecisionOwnedReferencesCompanion.insert({
+    required String decisionId,
+    required int position,
+    required String summary,
+    this.rowid = const Value.absent(),
+  }) : decisionId = Value(decisionId),
+       position = Value(position),
+       summary = Value(summary);
+  static Insertable<StoredDecisionOwnedReference> custom({
+    Expression<String>? decisionId,
+    Expression<int>? position,
+    Expression<String>? summary,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (decisionId != null) 'decision_id': decisionId,
+      if (position != null) 'position': position,
+      if (summary != null) 'summary': summary,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DecisionOwnedReferencesCompanion copyWith({
+    Value<String>? decisionId,
+    Value<int>? position,
+    Value<String>? summary,
+    Value<int>? rowid,
+  }) {
+    return DecisionOwnedReferencesCompanion(
+      decisionId: decisionId ?? this.decisionId,
+      position: position ?? this.position,
+      summary: summary ?? this.summary,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (decisionId.present) {
+      map['decision_id'] = Variable<String>(decisionId.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (summary.present) {
+      map['summary'] = Variable<String>(summary.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DecisionOwnedReferencesCompanion(')
+          ..write('decisionId: $decisionId, ')
+          ..write('position: $position, ')
+          ..write('summary: $summary, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $DecisionAlternativesTable extends DecisionAlternatives
     with TableInfo<$DecisionAlternativesTable, StoredDecisionAlternative> {
   @override
@@ -3001,6 +3283,618 @@ class AppValuesCompanion extends UpdateCompanion<AppValue> {
     return (StringBuffer('AppValuesCompanion(')
           ..write('key: $key, ')
           ..write('value: $value, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $OwnedItemsTable extends OwnedItems
+    with TableInfo<$OwnedItemsTable, StoredOwnedItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $OwnedItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+    'quantity',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _purchasePriceMeta = const VerificationMeta(
+    'purchasePrice',
+  );
+  @override
+  late final GeneratedColumn<double> purchasePrice = GeneratedColumn<double>(
+    'purchase_price',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _acquiredAtMeta = const VerificationMeta(
+    'acquiredAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> acquiredAt = GeneratedColumn<DateTime>(
+    'acquired_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    category,
+    status,
+    quantity,
+    notes,
+    purchasePrice,
+    acquiredAt,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'owned_items';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StoredOwnedItem> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('purchase_price')) {
+      context.handle(
+        _purchasePriceMeta,
+        purchasePrice.isAcceptableOrUnknown(
+          data['purchase_price']!,
+          _purchasePriceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('acquired_at')) {
+      context.handle(
+        _acquiredAtMeta,
+        acquiredAt.isAcceptableOrUnknown(data['acquired_at']!, _acquiredAtMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StoredOwnedItem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StoredOwnedItem(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      purchasePrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}purchase_price'],
+      ),
+      acquiredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}acquired_at'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $OwnedItemsTable createAlias(String alias) {
+    return $OwnedItemsTable(attachedDatabase, alias);
+  }
+}
+
+class StoredOwnedItem extends DataClass implements Insertable<StoredOwnedItem> {
+  final String id;
+  final String name;
+  final String category;
+  final String status;
+  final int quantity;
+  final String? notes;
+  final double? purchasePrice;
+  final DateTime? acquiredAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const StoredOwnedItem({
+    required this.id,
+    required this.name,
+    required this.category,
+    required this.status,
+    required this.quantity,
+    this.notes,
+    this.purchasePrice,
+    this.acquiredAt,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['category'] = Variable<String>(category);
+    map['status'] = Variable<String>(status);
+    map['quantity'] = Variable<int>(quantity);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || purchasePrice != null) {
+      map['purchase_price'] = Variable<double>(purchasePrice);
+    }
+    if (!nullToAbsent || acquiredAt != null) {
+      map['acquired_at'] = Variable<DateTime>(acquiredAt);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  OwnedItemsCompanion toCompanion(bool nullToAbsent) {
+    return OwnedItemsCompanion(
+      id: Value(id),
+      name: Value(name),
+      category: Value(category),
+      status: Value(status),
+      quantity: Value(quantity),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      purchasePrice: purchasePrice == null && nullToAbsent
+          ? const Value.absent()
+          : Value(purchasePrice),
+      acquiredAt: acquiredAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(acquiredAt),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory StoredOwnedItem.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StoredOwnedItem(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      category: serializer.fromJson<String>(json['category']),
+      status: serializer.fromJson<String>(json['status']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      purchasePrice: serializer.fromJson<double?>(json['purchasePrice']),
+      acquiredAt: serializer.fromJson<DateTime?>(json['acquiredAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'category': serializer.toJson<String>(category),
+      'status': serializer.toJson<String>(status),
+      'quantity': serializer.toJson<int>(quantity),
+      'notes': serializer.toJson<String?>(notes),
+      'purchasePrice': serializer.toJson<double?>(purchasePrice),
+      'acquiredAt': serializer.toJson<DateTime?>(acquiredAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  StoredOwnedItem copyWith({
+    String? id,
+    String? name,
+    String? category,
+    String? status,
+    int? quantity,
+    Value<String?> notes = const Value.absent(),
+    Value<double?> purchasePrice = const Value.absent(),
+    Value<DateTime?> acquiredAt = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => StoredOwnedItem(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    category: category ?? this.category,
+    status: status ?? this.status,
+    quantity: quantity ?? this.quantity,
+    notes: notes.present ? notes.value : this.notes,
+    purchasePrice: purchasePrice.present
+        ? purchasePrice.value
+        : this.purchasePrice,
+    acquiredAt: acquiredAt.present ? acquiredAt.value : this.acquiredAt,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  StoredOwnedItem copyWithCompanion(OwnedItemsCompanion data) {
+    return StoredOwnedItem(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      category: data.category.present ? data.category.value : this.category,
+      status: data.status.present ? data.status.value : this.status,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      purchasePrice: data.purchasePrice.present
+          ? data.purchasePrice.value
+          : this.purchasePrice,
+      acquiredAt: data.acquiredAt.present
+          ? data.acquiredAt.value
+          : this.acquiredAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoredOwnedItem(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('category: $category, ')
+          ..write('status: $status, ')
+          ..write('quantity: $quantity, ')
+          ..write('notes: $notes, ')
+          ..write('purchasePrice: $purchasePrice, ')
+          ..write('acquiredAt: $acquiredAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    category,
+    status,
+    quantity,
+    notes,
+    purchasePrice,
+    acquiredAt,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StoredOwnedItem &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.category == this.category &&
+          other.status == this.status &&
+          other.quantity == this.quantity &&
+          other.notes == this.notes &&
+          other.purchasePrice == this.purchasePrice &&
+          other.acquiredAt == this.acquiredAt &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class OwnedItemsCompanion extends UpdateCompanion<StoredOwnedItem> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> category;
+  final Value<String> status;
+  final Value<int> quantity;
+  final Value<String?> notes;
+  final Value<double?> purchasePrice;
+  final Value<DateTime?> acquiredAt;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const OwnedItemsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.category = const Value.absent(),
+    this.status = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.purchasePrice = const Value.absent(),
+    this.acquiredAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  OwnedItemsCompanion.insert({
+    required String id,
+    required String name,
+    required String category,
+    required String status,
+    this.quantity = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.purchasePrice = const Value.absent(),
+    this.acquiredAt = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       category = Value(category),
+       status = Value(status),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<StoredOwnedItem> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? category,
+    Expression<String>? status,
+    Expression<int>? quantity,
+    Expression<String>? notes,
+    Expression<double>? purchasePrice,
+    Expression<DateTime>? acquiredAt,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (category != null) 'category': category,
+      if (status != null) 'status': status,
+      if (quantity != null) 'quantity': quantity,
+      if (notes != null) 'notes': notes,
+      if (purchasePrice != null) 'purchase_price': purchasePrice,
+      if (acquiredAt != null) 'acquired_at': acquiredAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  OwnedItemsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? category,
+    Value<String>? status,
+    Value<int>? quantity,
+    Value<String?>? notes,
+    Value<double?>? purchasePrice,
+    Value<DateTime?>? acquiredAt,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return OwnedItemsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      status: status ?? this.status,
+      quantity: quantity ?? this.quantity,
+      notes: notes ?? this.notes,
+      purchasePrice: purchasePrice ?? this.purchasePrice,
+      acquiredAt: acquiredAt ?? this.acquiredAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (purchasePrice.present) {
+      map['purchase_price'] = Variable<double>(purchasePrice.value);
+    }
+    if (acquiredAt.present) {
+      map['acquired_at'] = Variable<DateTime>(acquiredAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('OwnedItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('category: $category, ')
+          ..write('status: $status, ')
+          ..write('quantity: $quantity, ')
+          ..write('notes: $notes, ')
+          ..write('purchasePrice: $purchasePrice, ')
+          ..write('acquiredAt: $acquiredAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4507,6 +5401,8 @@ abstract class _$GuardianDatabase extends GeneratedDatabase {
       $DecisionReferencesTable(this);
   late final $DecisionPatternReferencesTable decisionPatternReferences =
       $DecisionPatternReferencesTable(this);
+  late final $DecisionOwnedReferencesTable decisionOwnedReferences =
+      $DecisionOwnedReferencesTable(this);
   late final $DecisionAlternativesTable decisionAlternatives =
       $DecisionAlternativesTable(this);
   late final $DecisionTagsTable decisionTags = $DecisionTagsTable(this);
@@ -4514,6 +5410,7 @@ abstract class _$GuardianDatabase extends GeneratedDatabase {
     this,
   );
   late final $AppValuesTable appValues = $AppValuesTable(this);
+  late final $OwnedItemsTable ownedItems = $OwnedItemsTable(this);
   late final $PriceWatchesTable priceWatches = $PriceWatchesTable(this);
   late final $PriceObservationsTable priceObservations =
       $PriceObservationsTable(this);
@@ -4528,10 +5425,12 @@ abstract class _$GuardianDatabase extends GeneratedDatabase {
     decisionEvents,
     decisionReferences,
     decisionPatternReferences,
+    decisionOwnedReferences,
     decisionAlternatives,
     decisionTags,
     consumptionRules,
     appValues,
+    ownedItems,
     priceWatches,
     priceObservations,
     migrationQuarantine,
@@ -4559,6 +5458,15 @@ abstract class _$GuardianDatabase extends GeneratedDatabase {
       ),
       result: [
         TableUpdate('decision_pattern_references', kind: UpdateKind.delete),
+      ],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'decisions',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [
+        TableUpdate('decision_owned_references', kind: UpdateKind.delete),
       ],
     ),
     WritePropagation(
@@ -4693,6 +5601,31 @@ final class $$DecisionsTableReferences
 
     final cache = $_typedResult.readTableOrNull(
       _decisionPatternReferencesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $DecisionOwnedReferencesTable,
+    List<StoredDecisionOwnedReference>
+  >
+  _decisionOwnedReferencesRefsTable(_$GuardianDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.decisionOwnedReferences,
+        aliasName: 'decisions__id__decision_owned_references__decision_id',
+      );
+
+  $$DecisionOwnedReferencesTableProcessedTableManager
+  get decisionOwnedReferencesRefs {
+    final manager = $$DecisionOwnedReferencesTableTableManager(
+      $_db,
+      $_db.decisionOwnedReferences,
+    ).filter((f) => f.decisionId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _decisionOwnedReferencesRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -4901,6 +5834,32 @@ class $$DecisionsTableFilterComposer
               }) => $$DecisionPatternReferencesTableFilterComposer(
                 $db: $db,
                 $table: $db.decisionPatternReferences,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> decisionOwnedReferencesRefs(
+    Expression<bool> Function($$DecisionOwnedReferencesTableFilterComposer f) f,
+  ) {
+    final $$DecisionOwnedReferencesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.decisionOwnedReferences,
+          getReferencedColumn: (t) => t.decisionId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$DecisionOwnedReferencesTableFilterComposer(
+                $db: $db,
+                $table: $db.decisionOwnedReferences,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -5198,6 +6157,33 @@ class $$DecisionsTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> decisionOwnedReferencesRefs<T extends Object>(
+    Expression<T> Function($$DecisionOwnedReferencesTableAnnotationComposer a)
+    f,
+  ) {
+    final $$DecisionOwnedReferencesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.decisionOwnedReferences,
+          getReferencedColumn: (t) => t.decisionId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$DecisionOwnedReferencesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.decisionOwnedReferences,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
   Expression<T> decisionAlternativesRefs<T extends Object>(
     Expression<T> Function($$DecisionAlternativesTableAnnotationComposer a) f,
   ) {
@@ -5267,6 +6253,7 @@ class $$DecisionsTableTableManager
             bool decisionEventsRefs,
             bool decisionReferencesRefs,
             bool decisionPatternReferencesRefs,
+            bool decisionOwnedReferencesRefs,
             bool decisionAlternativesRefs,
             bool decisionTagsRefs,
           })
@@ -5371,6 +6358,7 @@ class $$DecisionsTableTableManager
                 decisionEventsRefs = false,
                 decisionReferencesRefs = false,
                 decisionPatternReferencesRefs = false,
+                decisionOwnedReferencesRefs = false,
                 decisionAlternativesRefs = false,
                 decisionTagsRefs = false,
               }) {
@@ -5381,6 +6369,7 @@ class $$DecisionsTableTableManager
                     if (decisionReferencesRefs) db.decisionReferences,
                     if (decisionPatternReferencesRefs)
                       db.decisionPatternReferences,
+                    if (decisionOwnedReferencesRefs) db.decisionOwnedReferences,
                     if (decisionAlternativesRefs) db.decisionAlternatives,
                     if (decisionTagsRefs) db.decisionTags,
                   ],
@@ -5444,6 +6433,27 @@ class $$DecisionsTableTableManager
                                 table,
                                 p0,
                               ).decisionPatternReferencesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.decisionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (decisionOwnedReferencesRefs)
+                        await $_getPrefetchedData<
+                          StoredDecision,
+                          $DecisionsTable,
+                          StoredDecisionOwnedReference
+                        >(
+                          currentTable: table,
+                          referencedTable: $$DecisionsTableReferences
+                              ._decisionOwnedReferencesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$DecisionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).decisionOwnedReferencesRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.decisionId == item.id,
@@ -5516,6 +6526,7 @@ typedef $$DecisionsTableProcessedTableManager =
         bool decisionEventsRefs,
         bool decisionReferencesRefs,
         bool decisionPatternReferencesRefs,
+        bool decisionOwnedReferencesRefs,
         bool decisionAlternativesRefs,
         bool decisionTagsRefs,
       })
@@ -6432,6 +7443,310 @@ typedef $$DecisionPatternReferencesTableProcessedTableManager =
         $$DecisionPatternReferencesTableReferences,
       ),
       StoredDecisionPatternReference,
+      PrefetchHooks Function({bool decisionId})
+    >;
+typedef $$DecisionOwnedReferencesTableCreateCompanionBuilder =
+    DecisionOwnedReferencesCompanion Function({
+      required String decisionId,
+      required int position,
+      required String summary,
+      Value<int> rowid,
+    });
+typedef $$DecisionOwnedReferencesTableUpdateCompanionBuilder =
+    DecisionOwnedReferencesCompanion Function({
+      Value<String> decisionId,
+      Value<int> position,
+      Value<String> summary,
+      Value<int> rowid,
+    });
+
+final class $$DecisionOwnedReferencesTableReferences
+    extends
+        BaseReferences<
+          _$GuardianDatabase,
+          $DecisionOwnedReferencesTable,
+          StoredDecisionOwnedReference
+        > {
+  $$DecisionOwnedReferencesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $DecisionsTable _decisionIdTable(_$GuardianDatabase db) => db.decisions
+      .createAlias('decision_owned_references__decision_id__decisions__id');
+
+  $$DecisionsTableProcessedTableManager get decisionId {
+    final $_column = $_itemColumn<String>('decision_id')!;
+
+    final manager = $$DecisionsTableTableManager(
+      $_db,
+      $_db.decisions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_decisionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$DecisionOwnedReferencesTableFilterComposer
+    extends Composer<_$GuardianDatabase, $DecisionOwnedReferencesTable> {
+  $$DecisionOwnedReferencesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$DecisionsTableFilterComposer get decisionId {
+    final $$DecisionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.decisionId,
+      referencedTable: $db.decisions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DecisionsTableFilterComposer(
+            $db: $db,
+            $table: $db.decisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DecisionOwnedReferencesTableOrderingComposer
+    extends Composer<_$GuardianDatabase, $DecisionOwnedReferencesTable> {
+  $$DecisionOwnedReferencesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get summary => $composableBuilder(
+    column: $table.summary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$DecisionsTableOrderingComposer get decisionId {
+    final $$DecisionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.decisionId,
+      referencedTable: $db.decisions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DecisionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.decisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DecisionOwnedReferencesTableAnnotationComposer
+    extends Composer<_$GuardianDatabase, $DecisionOwnedReferencesTable> {
+  $$DecisionOwnedReferencesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get summary =>
+      $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  $$DecisionsTableAnnotationComposer get decisionId {
+    final $$DecisionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.decisionId,
+      referencedTable: $db.decisions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$DecisionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.decisions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$DecisionOwnedReferencesTableTableManager
+    extends
+        RootTableManager<
+          _$GuardianDatabase,
+          $DecisionOwnedReferencesTable,
+          StoredDecisionOwnedReference,
+          $$DecisionOwnedReferencesTableFilterComposer,
+          $$DecisionOwnedReferencesTableOrderingComposer,
+          $$DecisionOwnedReferencesTableAnnotationComposer,
+          $$DecisionOwnedReferencesTableCreateCompanionBuilder,
+          $$DecisionOwnedReferencesTableUpdateCompanionBuilder,
+          (
+            StoredDecisionOwnedReference,
+            $$DecisionOwnedReferencesTableReferences,
+          ),
+          StoredDecisionOwnedReference,
+          PrefetchHooks Function({bool decisionId})
+        > {
+  $$DecisionOwnedReferencesTableTableManager(
+    _$GuardianDatabase db,
+    $DecisionOwnedReferencesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DecisionOwnedReferencesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$DecisionOwnedReferencesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$DecisionOwnedReferencesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> decisionId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<String> summary = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DecisionOwnedReferencesCompanion(
+                decisionId: decisionId,
+                position: position,
+                summary: summary,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String decisionId,
+                required int position,
+                required String summary,
+                Value<int> rowid = const Value.absent(),
+              }) => DecisionOwnedReferencesCompanion.insert(
+                decisionId: decisionId,
+                position: position,
+                summary: summary,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$DecisionOwnedReferencesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({decisionId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (decisionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.decisionId,
+                                referencedTable:
+                                    $$DecisionOwnedReferencesTableReferences
+                                        ._decisionIdTable(db),
+                                referencedColumn:
+                                    $$DecisionOwnedReferencesTableReferences
+                                        ._decisionIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$DecisionOwnedReferencesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GuardianDatabase,
+      $DecisionOwnedReferencesTable,
+      StoredDecisionOwnedReference,
+      $$DecisionOwnedReferencesTableFilterComposer,
+      $$DecisionOwnedReferencesTableOrderingComposer,
+      $$DecisionOwnedReferencesTableAnnotationComposer,
+      $$DecisionOwnedReferencesTableCreateCompanionBuilder,
+      $$DecisionOwnedReferencesTableUpdateCompanionBuilder,
+      (StoredDecisionOwnedReference, $$DecisionOwnedReferencesTableReferences),
+      StoredDecisionOwnedReference,
       PrefetchHooks Function({bool decisionId})
     >;
 typedef $$DecisionAlternativesTableCreateCompanionBuilder =
@@ -7387,6 +8702,309 @@ typedef $$AppValuesTableProcessedTableManager =
       $$AppValuesTableUpdateCompanionBuilder,
       (AppValue, BaseReferences<_$GuardianDatabase, $AppValuesTable, AppValue>),
       AppValue,
+      PrefetchHooks Function()
+    >;
+typedef $$OwnedItemsTableCreateCompanionBuilder =
+    OwnedItemsCompanion Function({
+      required String id,
+      required String name,
+      required String category,
+      required String status,
+      Value<int> quantity,
+      Value<String?> notes,
+      Value<double?> purchasePrice,
+      Value<DateTime?> acquiredAt,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$OwnedItemsTableUpdateCompanionBuilder =
+    OwnedItemsCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String> category,
+      Value<String> status,
+      Value<int> quantity,
+      Value<String?> notes,
+      Value<double?> purchasePrice,
+      Value<DateTime?> acquiredAt,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$OwnedItemsTableFilterComposer
+    extends Composer<_$GuardianDatabase, $OwnedItemsTable> {
+  $$OwnedItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get purchasePrice => $composableBuilder(
+    column: $table.purchasePrice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get acquiredAt => $composableBuilder(
+    column: $table.acquiredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$OwnedItemsTableOrderingComposer
+    extends Composer<_$GuardianDatabase, $OwnedItemsTable> {
+  $$OwnedItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get purchasePrice => $composableBuilder(
+    column: $table.purchasePrice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get acquiredAt => $composableBuilder(
+    column: $table.acquiredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$OwnedItemsTableAnnotationComposer
+    extends Composer<_$GuardianDatabase, $OwnedItemsTable> {
+  $$OwnedItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<double> get purchasePrice => $composableBuilder(
+    column: $table.purchasePrice,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get acquiredAt => $composableBuilder(
+    column: $table.acquiredAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$OwnedItemsTableTableManager
+    extends
+        RootTableManager<
+          _$GuardianDatabase,
+          $OwnedItemsTable,
+          StoredOwnedItem,
+          $$OwnedItemsTableFilterComposer,
+          $$OwnedItemsTableOrderingComposer,
+          $$OwnedItemsTableAnnotationComposer,
+          $$OwnedItemsTableCreateCompanionBuilder,
+          $$OwnedItemsTableUpdateCompanionBuilder,
+          (
+            StoredOwnedItem,
+            BaseReferences<
+              _$GuardianDatabase,
+              $OwnedItemsTable,
+              StoredOwnedItem
+            >,
+          ),
+          StoredOwnedItem,
+          PrefetchHooks Function()
+        > {
+  $$OwnedItemsTableTableManager(_$GuardianDatabase db, $OwnedItemsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$OwnedItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$OwnedItemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$OwnedItemsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> category = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> quantity = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<double?> purchasePrice = const Value.absent(),
+                Value<DateTime?> acquiredAt = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => OwnedItemsCompanion(
+                id: id,
+                name: name,
+                category: category,
+                status: status,
+                quantity: quantity,
+                notes: notes,
+                purchasePrice: purchasePrice,
+                acquiredAt: acquiredAt,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required String category,
+                required String status,
+                Value<int> quantity = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<double?> purchasePrice = const Value.absent(),
+                Value<DateTime?> acquiredAt = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => OwnedItemsCompanion.insert(
+                id: id,
+                name: name,
+                category: category,
+                status: status,
+                quantity: quantity,
+                notes: notes,
+                purchasePrice: purchasePrice,
+                acquiredAt: acquiredAt,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$OwnedItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GuardianDatabase,
+      $OwnedItemsTable,
+      StoredOwnedItem,
+      $$OwnedItemsTableFilterComposer,
+      $$OwnedItemsTableOrderingComposer,
+      $$OwnedItemsTableAnnotationComposer,
+      $$OwnedItemsTableCreateCompanionBuilder,
+      $$OwnedItemsTableUpdateCompanionBuilder,
+      (
+        StoredOwnedItem,
+        BaseReferences<_$GuardianDatabase, $OwnedItemsTable, StoredOwnedItem>,
+      ),
+      StoredOwnedItem,
       PrefetchHooks Function()
     >;
 typedef $$PriceWatchesTableCreateCompanionBuilder =
@@ -8422,6 +10040,11 @@ class $GuardianDatabaseManager {
         _db,
         _db.decisionPatternReferences,
       );
+  $$DecisionOwnedReferencesTableTableManager get decisionOwnedReferences =>
+      $$DecisionOwnedReferencesTableTableManager(
+        _db,
+        _db.decisionOwnedReferences,
+      );
   $$DecisionAlternativesTableTableManager get decisionAlternatives =>
       $$DecisionAlternativesTableTableManager(_db, _db.decisionAlternatives);
   $$DecisionTagsTableTableManager get decisionTags =>
@@ -8430,6 +10053,8 @@ class $GuardianDatabaseManager {
       $$ConsumptionRulesTableTableManager(_db, _db.consumptionRules);
   $$AppValuesTableTableManager get appValues =>
       $$AppValuesTableTableManager(_db, _db.appValues);
+  $$OwnedItemsTableTableManager get ownedItems =>
+      $$OwnedItemsTableTableManager(_db, _db.ownedItems);
   $$PriceWatchesTableTableManager get priceWatches =>
       $$PriceWatchesTableTableManager(_db, _db.priceWatches);
   $$PriceObservationsTableTableManager get priceObservations =>

@@ -397,4 +397,28 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('来自 2026-07-28 10:00 的决策记录'), findsOneWidget);
   });
+
+  testWidgets('adds a manually owned item from a category template', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.tap(find.text('习惯'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, '物品名称 *'), '我的旧耳机');
+    await tester.pump();
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('我的旧耳机'), findsOneWidget);
+    expect(find.textContaining('数码 · 仍在使用'), findsOneWidget);
+  });
 }

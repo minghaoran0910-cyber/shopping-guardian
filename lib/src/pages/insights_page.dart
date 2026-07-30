@@ -8,21 +8,28 @@ class InsightsPage extends StatefulWidget {
 }
 
 class _InsightsPageState extends State<InsightsPage> {
-  late Future<(List<DecisionRecord>, List<PersonalPattern>)> data = _load();
+  late Future<(List<DecisionRecord>, List<PersonalPattern>, List<OwnedItem>)>
+  data = _load();
 
-  Future<(List<DecisionRecord>, List<PersonalPattern>)> _load() async {
+  Future<(List<DecisionRecord>, List<PersonalPattern>, List<OwnedItem>)>
+  _load() async {
     final records = await const DecisionStore().readAll();
     final stored = await const PatternStore().readAll();
+    final ownedItems = await const OwnedItemStore().readAll();
     final patterns = const PatternGenerator().merge(
       const PatternGenerator().generate(records),
       stored,
     );
-    return (records, patterns);
+    return (records, patterns, ownedItems);
   }
 
   Future<void> _save(PersonalPattern pattern) async {
     await const PatternStore().save(pattern);
-    if (mounted) setState(() => data = _load());
+    if (mounted) {
+      setState(() {
+        data = _load();
+      });
+    }
   }
 
   Future<void> _edit(PersonalPattern pattern) async {
@@ -58,80 +65,360 @@ class _InsightsPageState extends State<InsightsPage> {
     }
   }
 
+  Future<void> _editOwnedItem([OwnedItem? existing]) async {
+    final copy = GuardianCopy.of(context);
+    final name = TextEditingController(text: existing?.name);
+    final notes = TextEditingController(text: existing?.notes);
+    final price = TextEditingController(
+      text: existing?.purchasePrice?.toString(),
+    );
+    var category = existing?.category ?? OwnedItemTemplates.categories.first;
+    var status = existing?.status ?? 'in_use';
+    var quantity = existing?.quantity ?? 1;
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+            existing == null
+                ? copy.t('添加已有物品', 'Add an item')
+                : copy.t('修改已有物品', 'Edit item'),
+          ),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: name,
+                    autofocus: true,
+                    maxLength: 100,
+                    onChanged: (_) => setDialogState(() {}),
+                    decoration: InputDecoration(
+                      labelText: copy.t('物品名称 *', 'Item name *'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    initialValue: category,
+                    decoration: InputDecoration(
+                      labelText: copy.t('分类', 'Category'),
+                    ),
+                    items: OwnedItemTemplates.categories
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(_categoryLabel(copy, value)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setDialogState(() => category = value ?? category),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    initialValue: status,
+                    decoration: InputDecoration(
+                      labelText: copy.t('当前状态', 'Current status'),
+                    ),
+                    items: OwnedItemTemplates.statuses
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(_statusLabel(copy, value)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setDialogState(() => status = value ?? status),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(child: Text(copy.t('数量', 'Quantity'))),
+                      IconButton(
+                        tooltip: copy.t('减少', 'Decrease'),
+                        onPressed: quantity <= 1
+                            ? null
+                            : () => setDialogState(() => quantity--),
+                        icon: const Icon(Icons.remove_circle_outline),
+                      ),
+                      Text('$quantity'),
+                      IconButton(
+                        tooltip: copy.t('增加', 'Increase'),
+                        onPressed: quantity >= 999
+                            ? null
+                            : () => setDialogState(() => quantity++),
+                        icon: const Icon(Icons.add_circle_outline),
+                      ),
+                    ],
+                  ),
+                  TextField(
+                    controller: price,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: copy.t(
+                        '当时价格（选填）',
+                        'Purchase price (optional)',
+                      ),
+                      prefixText: '¥ ',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: notes,
+                    maxLength: 300,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      labelText: copy.t(
+                        '备注（型号、用途等）',
+                        'Notes (model, use, etc.)',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(copy.t('取消', 'Cancel')),
+            ),
+            FilledButton(
+              onPressed: name.text.trim().isEmpty
+                  ? null
+                  : () => Navigator.pop(dialogContext, true),
+              child: Text(copy.t('保存', 'Save')),
+            ),
+          ],
+        ),
+      ),
+    );
+    final parsedPrice = price.text.trim().isEmpty
+        ? null
+        : double.tryParse(price.text.trim());
+    if (saved == true && name.text.trim().isNotEmpty) {
+      if (price.text.trim().isNotEmpty &&
+          (parsedPrice == null || parsedPrice < 0)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(copy.t('价格格式不正确。', 'Invalid price.'))),
+          );
+        }
+      } else {
+        final now = DateTime.now();
+        await const OwnedItemStore().save(
+          OwnedItem(
+            id:
+                existing?.id ??
+                'owned_${now.microsecondsSinceEpoch.toString()}',
+            name: name.text.trim(),
+            category: category,
+            status: status,
+            quantity: quantity,
+            notes: notes.text,
+            purchasePrice: parsedPrice,
+            acquiredAt: existing?.acquiredAt,
+            createdAt: existing?.createdAt ?? now,
+            updatedAt: now,
+          ),
+        );
+        if (mounted) {
+          setState(() {
+            data = _load();
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _deleteOwnedItem(OwnedItem item) async {
+    final copy = GuardianCopy.of(context);
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(copy.t('删除这件物品？', 'Delete this item?')),
+            content: Text(
+              copy.t(
+                '删除后，之后的分析不会再把“${item.name}”当作你已有的物品。',
+                'Future analyses will no longer treat “${item.name}” as something you own.',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(copy.t('取消', 'Cancel')),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(copy.t('删除', 'Delete')),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed) return;
+    await const OwnedItemStore().delete(item.id);
+    if (mounted) {
+      setState(() {
+        data = _load();
+      });
+    }
+  }
+
+  static String _categoryLabel(GuardianCopy copy, String category) =>
+      switch (category) {
+        '数码' => copy.t('数码', 'Tech'),
+        '服饰' => copy.t('服饰', 'Clothing'),
+        '家居' => copy.t('家居', 'Home'),
+        '兴趣收藏' => copy.t('兴趣收藏', 'Hobbies'),
+        '运动' => copy.t('运动', 'Sports'),
+        '美妆护理' => copy.t('美妆护理', 'Beauty'),
+        _ => copy.t('其他', 'Other'),
+      };
+
+  static String _statusLabel(GuardianCopy copy, String status) =>
+      switch (status) {
+        'in_use' => copy.t('仍在使用', 'In use'),
+        'backup' => copy.t('备用 / 收藏', 'Backup / collection'),
+        'retired' => copy.t('已淘汰 / 转卖', 'Retired / sold'),
+        'returned' => copy.t('已退货', 'Returned'),
+        _ => copy.t('买过，现状不确定', 'Owned before, status unknown'),
+      };
+
   @override
   Widget build(BuildContext context) {
     final copy = GuardianCopy.of(context);
     return GuardianPageFrame(
       title: copy.t('你的习惯', 'Your patterns'),
       subtitle: copy.t('用过一阵子，这里才会有东西。', 'This fills in as you use the app.'),
-      child: FutureBuilder<(List<DecisionRecord>, List<PersonalPattern>)>(
+      child: FutureBuilder<(List<DecisionRecord>, List<PersonalPattern>, List<OwnedItem>)>(
         future: data,
         builder: (context, snapshot) {
           final allRecords = snapshot.data?.$1 ?? const <DecisionRecord>[];
           final patterns = snapshot.data?.$2 ?? const <PersonalPattern>[];
+          final manualItems = snapshot.data?.$3 ?? const <OwnedItem>[];
           final insights = DecisionInsights.from(allRecords);
           final owned = allRecords.where((record) => record.countsAsPurchased);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                copy.t('我的物品', 'My items'),
-                style: Theme.of(context).textTheme.titleLarge,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      copy.t('我的物品', 'My items'),
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  FilledButton.tonalIcon(
+                    onPressed: _editOwnedItem,
+                    icon: const Icon(Icons.add),
+                    label: Text(copy.t('添加', 'Add')),
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
-              if (owned.isEmpty)
+              if (manualItems.isEmpty && owned.isEmpty)
                 Text(
                   copy.t(
-                    '确认购买后，物品会出现在这里。',
-                    'Items appear here after you confirm a purchase.',
+                    '手动添加，或确认购买后，物品会出现在这里。',
+                    'Add items manually, or confirm a purchase.',
                   ),
                 )
               else
-                ...owned.map(
-                  (record) => Card(
+                ...manualItems.map(
+                  (item) => Card(
                     child: ListTile(
                       leading: const Icon(Icons.inventory_2_outlined),
-                      title: Text(record.itemName),
+                      title: Text(
+                        item.quantity > 1
+                            ? '${item.name} ×${item.quantity}'
+                            : item.name,
+                      ),
                       subtitle: Text(
                         [
-                          if (record.category?.isNotEmpty == true)
-                            record.category!,
-                          if (record.tags.isNotEmpty) record.tags.join(' · '),
-                          if (record.usageFrequency != null)
-                            _HistoryPageState._usageLabel(
-                              copy,
-                              record.usageFrequency!,
-                            ),
-                          if (record.satisfaction != null)
-                            '${record.satisfaction}/5',
+                          _categoryLabel(copy, item.category),
+                          _statusLabel(copy, item.status),
+                          if (item.notes?.isNotEmpty == true) item.notes!,
                         ].join(' · '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      trailing: Text('¥${record.total.toStringAsFixed(2)}'),
-                      onTap: () => showDialog<void>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: Text(record.itemName),
-                          content: Text(
-                            copy.t(
-                              '来自 ${record.createdAt.toLocal().toString().substring(0, 16)} 的决策记录。\n'
-                                  '决定：${record.userChoice}\n'
-                                  '反馈：${record.feedback == null ? '尚未反馈' : _HistoryPageState._feedbackLabel(copy, record.feedback!)}',
-                              'From the decision recorded at ${record.createdAt.toLocal().toString().substring(0, 16)}.\n'
-                                  'Decision: ${record.userChoice}\n'
-                                  'Feedback: ${record.feedback == null ? 'Not added' : _HistoryPageState._feedbackLabel(copy, record.feedback!)}',
-                            ),
+                      trailing: PopupMenuButton<String>(
+                        tooltip: copy.t('管理物品', 'Manage item'),
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            _editOwnedItem(item);
+                          } else if (value == 'delete') {
+                            _deleteOwnedItem(item);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'edit',
+                            child: Text(copy.t('修改', 'Edit')),
                           ),
-                          actions: [
-                            FilledButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: Text(copy.t('关闭', 'Close')),
-                            ),
-                          ],
-                        ),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text(copy.t('删除', 'Delete')),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
+              ...owned.map(
+                (record) => Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.inventory_2_outlined),
+                    title: Text(record.itemName),
+                    subtitle: Text(
+                      [
+                        if (record.category?.isNotEmpty == true)
+                          record.category!,
+                        if (record.tags.isNotEmpty) record.tags.join(' · '),
+                        if (record.usageFrequency != null)
+                          _HistoryPageState._usageLabel(
+                            copy,
+                            record.usageFrequency!,
+                          ),
+                        if (record.satisfaction != null)
+                          '${record.satisfaction}/5',
+                      ].join(' · '),
+                    ),
+                    trailing: Text('¥${record.total.toStringAsFixed(2)}'),
+                    onTap: () => showDialog<void>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text(record.itemName),
+                        content: Text(
+                          copy.t(
+                            '来自 ${record.createdAt.toLocal().toString().substring(0, 16)} 的决策记录。\n'
+                                '决定：${record.userChoice}\n'
+                                '反馈：${record.feedback == null ? '尚未反馈' : _HistoryPageState._feedbackLabel(copy, record.feedback!)}',
+                            'From the decision recorded at ${record.createdAt.toLocal().toString().substring(0, 16)}.\n'
+                                'Decision: ${record.userChoice}\n'
+                                'Feedback: ${record.feedback == null ? 'Not added' : _HistoryPageState._feedbackLabel(copy, record.feedback!)}',
+                          ),
+                        ),
+                        actions: [
+                          FilledButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(copy.t('关闭', 'Close')),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
               Text(
                 copy.t('你的规律', 'Your patterns'),

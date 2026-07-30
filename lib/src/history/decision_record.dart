@@ -33,6 +33,7 @@ class DecisionRecord {
     this.tags = const [],
     this.referencedHistory = const [],
     this.referencedPatterns = const [],
+    this.referencedOwnedItems = const [],
     this.risk,
     this.confidence,
     this.budgetImpact,
@@ -56,6 +57,7 @@ class DecisionRecord {
   final List<String> tags;
   final List<String> referencedHistory;
   final List<String> referencedPatterns;
+  final List<String> referencedOwnedItems;
   final String? risk;
   final String? confidence;
   final String? budgetImpact;
@@ -104,6 +106,7 @@ class DecisionRecord {
     'tags': tags,
     'referencedHistory': referencedHistory,
     'referencedPatterns': referencedPatterns,
+    'referencedOwnedItems': referencedOwnedItems,
     'risk': risk,
     'confidence': confidence,
     'budgetImpact': budgetImpact,
@@ -133,6 +136,11 @@ class DecisionRecord {
         const [],
     referencedPatterns:
         (json['referencedPatterns'] as List?)
+            ?.map((item) => '$item')
+            .toList() ??
+        const [],
+    referencedOwnedItems:
+        (json['referencedOwnedItems'] as List?)
             ?.map((item) => '$item')
             .toList() ??
         const [],
@@ -186,6 +194,7 @@ class DecisionRecord {
     tags: replaceMetadata ? tags ?? const [] : tags ?? this.tags,
     referencedHistory: referencedHistory,
     referencedPatterns: referencedPatterns,
+    referencedOwnedItems: referencedOwnedItems,
     risk: risk,
     confidence: confidence,
     budgetImpact: budgetImpact,
