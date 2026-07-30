@@ -43,7 +43,7 @@ void main() {
   test('parses structured purchase advice', () async {
     final client = MockClient(
       (request) async => http.Response(
-        '{"choices":[{"message":{"content":"{\\"verdict\\":\\"wait\\",\\"risk\\":\\"medium\\",\\"confidence\\":\\"high\\",\\"summary\\":\\"先等一周\\",\\"reasons\\":[\\"近期有重复购买\\"],\\"budget_impact\\":\\"占预算 20%\\",\\"alternatives\\":[\\"先租用\\"],\\"missing_information\\":[],\\"wait_days\\":7}"}}]}',
+        '{"choices":[{"message":{"content":"{\\"verdict\\":\\"wait\\",\\"risk\\":\\"medium\\",\\"confidence\\":\\"high\\",\\"summary\\":\\"先等一周\\",\\"reasons\\":[\\"近期有重复购买\\"],\\"budget_impact\\":\\"占预算 20%\\",\\"alternatives\\":[\\"先租用\\"],\\"missing_information\\":[],\\"wait_days\\":7,\\"candidate_facts\\":[{\\"text\\":\\"容易重复购买唱片\\",\\"evidence\\":\\"近期有重复购买记录\\"}]}"}}]}',
         200,
         headers: {'content-type': 'application/json; charset=utf-8'},
       ),
@@ -61,7 +61,57 @@ void main() {
     expect(advice.confidence, AdviceLevel.high);
     expect(advice.budgetImpact, '占预算 20%');
     expect(advice.alternatives, ['先租用']);
+    expect(advice.candidateFacts.single.text, '容易重复购买唱片');
+    expect(advice.candidateFacts.single.evidence, '近期有重复购买记录');
   });
+
+  test(
+    'filters unsupported, duplicate, and excessive candidate facts',
+    () async {
+      final tooLong = List.filled(121, '很').join();
+      final content = jsonEncode({
+        'verdict': 'wait',
+        'risk': 'medium',
+        'confidence': 'medium',
+        'summary': '等等',
+        'reasons': [],
+        'budget_impact': '未知',
+        'alternatives': [],
+        'missing_information': [],
+        'candidate_facts': [
+          {'text': '偏好轻便设备', 'evidence': '购买理由提到通勤'},
+          {'text': '偏好轻便设备', 'evidence': '重复'},
+          {'text': '没有依据'},
+          {'text': tooLong, 'evidence': '太长'},
+          {'text': '第二条有效事实', 'evidence': '相关历史直接支持'},
+        ],
+      });
+      final client = MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'content': content},
+              },
+            ],
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        ),
+      );
+
+      final advice = await ModelClient(
+        endpoint: 'https://example.com/v1/chat/completions',
+        apiKey: '',
+        model: 'test',
+        client: client,
+      ).analyze(itemName: '耳机', price: 399);
+      expect(advice.candidateFacts.map((fact) => fact.text), [
+        '偏好轻便设备',
+        '第二条有效事实',
+      ]);
+    },
+  );
 
   test('keeps alternative verdict distinct from insufficient data', () async {
     final client = MockClient(

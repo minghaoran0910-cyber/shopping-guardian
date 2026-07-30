@@ -126,8 +126,8 @@ class SettingsPage extends StatelessWidget {
                 title: Text(copy.t('模型分析', 'Model analysis')),
                 subtitle: Text(
                   copy.t(
-                    '商品、价格、购买理由、分类标签、预算、命中规则、同类已有物品、最多 5 条相关历史摘要和你确认的个人规律会直达你配置的模型服务。发送前可以核对并取消。',
-                    'The item, price, reason, category, tags, budget, matched rules, owned items in the same category, up to five related-history summaries, and personal patterns you confirmed go directly to your configured model service. You can review and cancel before sending.',
+                    '商品、价格、购买理由、分类标签、预算、命中规则、同类已有物品、最多 5 条相关历史摘要和你确认的个人规律会直达你配置的模型服务。模型归纳但未经你确认的候选事实不会发送。发送前可以核对并取消。',
+                    'The item, price, reason, category, tags, budget, matched rules, owned items in the same category, up to five related-history summaries, and personal patterns you confirmed go directly to your configured model service. Model-inferred facts you have not confirmed are not sent. You can review and cancel before sending.',
                   ),
                 ),
               ),

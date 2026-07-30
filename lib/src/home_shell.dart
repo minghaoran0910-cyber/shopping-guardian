@@ -18,6 +18,7 @@ import 'owned/owned_item.dart';
 import 'owned/owned_item_store.dart';
 import 'owned/purchase_list_import.dart';
 import 'patterns/pattern_generator.dart';
+import 'patterns/candidate_fact_recorder.dart';
 import 'patterns/pattern_store.dart';
 import 'patterns/personal_pattern.dart';
 import 'prices/price_monitor_service.dart';
@@ -1150,11 +1151,7 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
         );
       }
       final ownedSummaries = ownedSummariesByName.values.take(10).toList();
-      final confirmedPatterns = (await const PatternStore().readAll())
-          .where((pattern) => pattern.status == 'confirmed')
-          .map((pattern) => pattern.text)
-          .take(10)
-          .toList();
+      final confirmedPatterns = await const PatternStore().readConfirmedTexts();
       final tagValues = tags.text
           .split(RegExp(r'[,，]'))
           .map((tag) => tag.trim())
@@ -1407,6 +1404,7 @@ class _DecisionDialogState extends State<_DecisionDialog> {
     text: (widget.total * 0.9).toStringAsFixed(2),
   );
   bool monitorPrice = false;
+  final Set<int> confirmedFactIndexes = {};
 
   bool get canMonitor =>
       widget.justOneApiToken.trim().isNotEmpty &&
@@ -1466,6 +1464,27 @@ class _DecisionDialogState extends State<_DecisionDialog> {
         ],
       ),
     );
+    try {
+      await const CandidateFactRecorder().record(
+        facts: widget.advice.candidateFacts,
+        confirmedIndexes: confirmedFactIndexes,
+        decisionId: id,
+        at: now,
+      );
+    } on Object {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              GuardianCopy.of(context).t(
+                '购买决定已保存，但候选习惯没有保存成功。',
+                'The decision was saved, but candidate patterns could not be saved.',
+              ),
+            ),
+          ),
+        );
+      }
+    }
     if (monitorPrice && canMonitor) {
       final itemId = PriceWatchIdentity.itemId(widget.item);
       if (target != null && itemId != null) {
@@ -1589,6 +1608,43 @@ class _DecisionDialogState extends State<_DecisionDialog> {
                   (item) => Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text('• $item'),
+                  ),
+                ),
+              ],
+              if (widget.advice.candidateFacts.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Text(
+                  copy.t('这像是你的习惯吗？', 'Does this sound like you?'),
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  copy.t(
+                    '默认不采用。勾选确认后，才会参与之后的分析；未勾选的只会留在“习惯”页等待处理。',
+                    'Not used by default. Checked facts can inform future analyses; unchecked facts remain pending in Patterns.',
+                  ),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                ...widget.advice.candidateFacts.indexed.map(
+                  (entry) => CheckboxListTile(
+                    key: ValueKey('candidate-fact-${entry.$1}'),
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    value: confirmedFactIndexes.contains(entry.$1),
+                    onChanged: (value) => setState(() {
+                      if (value == true) {
+                        confirmedFactIndexes.add(entry.$1);
+                      } else {
+                        confirmedFactIndexes.remove(entry.$1);
+                      }
+                    }),
+                    title: Text(entry.$2.text),
+                    subtitle: Text(
+                      copy.t(
+                        '依据：${entry.$2.evidence}',
+                        'Evidence: ${entry.$2.evidence}',
+                      ),
+                    ),
                   ),
                 ),
               ],

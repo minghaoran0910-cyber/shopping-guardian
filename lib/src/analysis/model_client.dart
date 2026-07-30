@@ -11,6 +11,13 @@ enum PurchaseVerdict { buy, wait, skip, alternative, insufficientData }
 
 enum AdviceLevel { low, medium, high }
 
+class CandidateFact {
+  const CandidateFact({required this.text, required this.evidence});
+
+  final String text;
+  final String evidence;
+}
+
 class PurchaseAdvice {
   const PurchaseAdvice({
     required this.verdict,
@@ -21,6 +28,7 @@ class PurchaseAdvice {
     required this.confidence,
     required this.budgetImpact,
     required this.alternatives,
+    this.candidateFacts = const [],
     this.waitDays,
   });
 
@@ -32,6 +40,7 @@ class PurchaseAdvice {
   final AdviceLevel confidence;
   final String budgetImpact;
   final List<String> alternatives;
+  final List<CandidateFact> candidateFacts;
   final int? waitDays;
 }
 
@@ -87,7 +96,7 @@ class ModelClient {
         {
           'role': 'system',
           'content':
-              '你是站在用户利益一边的消费决策助手。若提供了同类已有物品，必须说明候选商品是在替代、补充还是重复购买；没有可靠信息时不要猜。只返回 JSON，字段为 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high。不要替用户购买。',
+              '你是站在用户利益一边的消费决策助手。若提供了同类已有物品，必须说明候选商品是在替代、补充还是重复购买；没有可靠信息时不要猜。只返回 JSON，字段为 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days、candidate_facts。candidate_facts 最多 3 条，每条格式为 {"text":"可能的个人事实","evidence":"本次输入中的直接依据"}；只能归纳输入直接支持的事实，没有就返回空数组。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high。不要替用户购买。',
         },
         {'role': 'user', 'content': input},
       ]);
@@ -98,7 +107,7 @@ class ModelClient {
           {
             'role': 'system',
             'content':
-                '把下面内容修复成合法 JSON。只返回 JSON，不改变原意。必须包含 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high。',
+                '把下面内容修复成合法 JSON。只返回 JSON，不改变原意。必须包含 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days；candidate_facts 若存在必须是带 text 和 evidence 的数组。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high。',
           },
           {'role': 'user', 'content': content},
         ]);
@@ -206,6 +215,7 @@ class ModelClient {
       confidence: _level(data['confidence']),
       budgetImpact: '${data['budget_impact'] ?? ''}'.trim(),
       alternatives: _strings(data['alternatives']),
+      candidateFacts: _candidateFacts(data['candidate_facts']),
       waitDays: _positiveWaitDays(data['wait_days']),
     );
   }
@@ -237,6 +247,27 @@ class ModelClient {
     if (value is! num) return null;
     final days = value.toInt();
     return days > 0 ? days : null;
+  }
+
+  static List<CandidateFact> _candidateFacts(Object? value) {
+    if (value is! List) return const [];
+    final facts = <CandidateFact>[];
+    final seen = <String>{};
+    for (final item in value) {
+      if (item is! Map) continue;
+      final text = '${item['text'] ?? ''}'.trim();
+      final evidence = '${item['evidence'] ?? ''}'.trim();
+      if (text.isEmpty ||
+          evidence.isEmpty ||
+          text.length > 120 ||
+          evidence.length > 160 ||
+          !seen.add(text.toLowerCase())) {
+        continue;
+      }
+      facts.add(CandidateFact(text: text, evidence: evidence));
+      if (facts.length == 3) break;
+    }
+    return facts;
   }
 }
 

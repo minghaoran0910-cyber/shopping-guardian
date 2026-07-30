@@ -28,9 +28,28 @@ class PatternStore {
     }
   }
 
+  Future<List<String>> readConfirmedTexts({int limit = 10}) async {
+    if (limit <= 0) return const [];
+    return (await readAll())
+        .where((pattern) => pattern.status == 'confirmed')
+        .map((pattern) => pattern.text.trim())
+        .where((text) => text.isNotEmpty)
+        .take(limit)
+        .toList();
+  }
+
   Future<void> save(PersonalPattern pattern) async {
+    await saveAll([pattern]);
+  }
+
+  Future<void> saveAll(List<PersonalPattern> patterns) async {
+    if (patterns.isEmpty) return;
     final values = await readAll();
-    final updated = [...values.where((item) => item.id != pattern.id), pattern];
+    final replacementIds = patterns.map((pattern) => pattern.id).toSet();
+    final updated = [
+      ...values.where((item) => !replacementIds.contains(item.id)),
+      ...patterns,
+    ];
     await _database
         .into(_database.appValues)
         .insertOnConflictUpdate(
