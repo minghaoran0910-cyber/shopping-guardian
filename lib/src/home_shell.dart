@@ -787,6 +787,8 @@ class _ImportPreviewDialog extends StatefulWidget {
 
 class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
   late final List<SharedShoppingItem> items = [...widget.items];
+  int processedItemCount = 0;
+  int? analysisItemCount;
 
   Future<void> _edit(int index) async {
     final item = items[index];
@@ -865,11 +867,46 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
     quantity.dispose();
   }
 
+  Future<void> _analyzeItems() async {
+    analysisItemCount ??= processedItemCount + items.length;
+    while (items.isNotEmpty && mounted) {
+      final current = items.first;
+      final saved = await showDialog<bool>(
+        context: context,
+        builder: (context) => _AnalysisDialog(
+          items: [current],
+          batchPosition: processedItemCount + 1,
+          batchCount: analysisItemCount!,
+        ),
+      );
+      if (saved != true || !mounted) return;
+      setState(() {
+        items.removeAt(0);
+        processedItemCount += 1;
+      });
+    }
+    if (mounted && items.isEmpty) Navigator.pop(context, true);
+  }
+
+  void _remove(int index) {
+    setState(() {
+      items.removeAt(index);
+      if (analysisItemCount != null) analysisItemCount = analysisItemCount! - 1;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final copy = GuardianCopy.of(context);
     return AlertDialog(
-      title: Text(copy.t('认出了 ${items.length} 项', '${items.length} found')),
+      title: Text(
+        processedItemCount == 0
+            ? copy.t('认出了 ${items.length} 项', '${items.length} found')
+            : copy.t(
+                '还剩 ${items.length} 项待分析',
+                '${items.length} left to analyze',
+              ),
+      ),
       content: SizedBox(
         width: 560,
         child: ConstrainedBox(
@@ -981,6 +1018,11 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                       onPressed: () => _edit(index),
                       icon: const Icon(Icons.edit_outlined),
                     ),
+                    IconButton(
+                      tooltip: copy.t('不分析这件', 'Remove from analysis'),
+                      onPressed: () => _remove(index),
+                      icon: const Icon(Icons.close),
+                    ),
                   ],
                 ),
               );
@@ -994,15 +1036,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
           child: Text(copy.t('返回', 'Back')),
         ),
         FilledButton(
-          onPressed: () async {
-            final saved = await showDialog<bool>(
-              context: context,
-              builder: (context) => _AnalysisDialog(items: items),
-            );
-            if (saved == true && context.mounted) {
-              Navigator.pop(context, true);
-            }
-          },
+          onPressed: items.isEmpty ? null : _analyzeItems,
           child: Text(copy.t('继续分析', 'Continue')),
         ),
       ],
@@ -1011,8 +1045,14 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
 }
 
 class _AnalysisDialog extends StatefulWidget {
-  const _AnalysisDialog({required this.items});
+  const _AnalysisDialog({
+    required this.items,
+    this.batchPosition = 1,
+    this.batchCount = 1,
+  });
   final List<SharedShoppingItem> items;
+  final int batchPosition;
+  final int batchCount;
   @override
   State<_AnalysisDialog> createState() => _AnalysisDialogState();
 }
@@ -1147,6 +1187,8 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
   @override
   Widget build(BuildContext context) {
     final copy = GuardianCopy.of(context);
+    final item = widget.items.single;
+    final itemName = item.title ?? copy.t('未命名商品', 'Unnamed item');
     return AlertDialog(
       title: Text(copy.t('买它是为了什么？', 'Why do you want this?')),
       content: SizedBox(
@@ -1154,6 +1196,31 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (widget.batchCount > 1) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  copy.t(
+                    '第 ${widget.batchPosition} 件，共 ${widget.batchCount} 件',
+                    'Item ${widget.batchPosition} of ${widget.batchCount}',
+                  ),
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              const SizedBox(height: 6),
+            ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                [
+                  itemName,
+                  if (item.price != null)
+                    '¥${(item.price! * item.quantity).toStringAsFixed(2)}',
+                ].join(' · '),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ),
+            const SizedBox(height: 14),
             TextField(
               controller: reason,
               minLines: 3,

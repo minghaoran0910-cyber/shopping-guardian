@@ -237,6 +237,45 @@ void main() {
     expect(find.text('认出了 2 项'), findsOneWidget);
     expect(find.text('IZ乐队 - 路过旧天堂书店 12寸2LP半透明棕色胶+画册套盒现货包邮'), findsOneWidget);
     expect(find.text('宁芝静电容轴三模可编程键盘'), findsOneWidget);
+
+    await tester.tap(find.text('继续分析'));
+    await tester.pumpAndSettle();
+    expect(find.text('第 1 件，共 2 件'), findsOneWidget);
+    final analysisDialog = find.byType(AlertDialog).last;
+    expect(
+      find.descendant(
+        of: analysisDialog,
+        matching: find.textContaining('IZ乐队 - 路过旧天堂书店'),
+      ),
+      findsWidgets,
+    );
+    expect(
+      find.descendant(
+        of: analysisDialog,
+        matching: find.textContaining('宁芝静电容轴三模可编程键盘'),
+      ),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('返回').last);
+    await tester.pumpAndSettle();
+    expect(find.text('认出了 2 项'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('不分析这件').first);
+    await tester.pumpAndSettle();
+    expect(find.text('认出了 1 项'), findsOneWidget);
+    final previewDialog = find.byType(AlertDialog).last;
+    expect(
+      find.descendant(
+        of: previewDialog,
+        matching: find.textContaining('IZ乐队 - 路过旧天堂书店'),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: previewDialog, matching: find.text('宁芝静电容轴三模可编程键盘')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('changes a decision status and shows its timeline', (
