@@ -1,7 +1,9 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:shopping_guardian/src/data/guardian_database.dart';
 import 'package:shopping_guardian/src/import/share_parser.dart';
+import 'package:shopping_guardian/src/notifications/local_notification_service.dart';
 import 'package:shopping_guardian/src/prices/price_monitor_service.dart';
 import 'package:shopping_guardian/src/prices/price_provider.dart';
 import 'package:shopping_guardian/src/prices/price_watch.dart';
@@ -37,6 +39,7 @@ class _RecordingPriceProvider implements PriceProvider {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late GuardianDatabase database;
   late PriceWatchStore store;
 
@@ -333,4 +336,50 @@ void main() {
     expect(watch.lastPrice, 900);
     expect(watch.lastError, contains('没有创建价格提醒'));
   });
+
+  test(
+    'marks target alerts as price notifications for the native UI',
+    () async {
+      const channel = MethodChannel('test/price-notification-kind');
+      MethodCall? invocation;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            invocation = call;
+            return true;
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null),
+      );
+      final now = DateTime(2026, 7, 30, 10);
+      await store.save(
+        PriceWatch(
+          id: 'watch-price-kind',
+          decisionId: 'decision-price-kind',
+          itemName: '测试耳机',
+          platform: ShoppingPlatform.jd,
+          itemId: '123456789',
+          productUrl: Uri.parse('https://item.jd.com/123456789.html'),
+          targetPrice: 800,
+          createdAt: now,
+          lastPrice: 900,
+        ),
+      );
+
+      final result = await PriceMonitorService(
+        store: store,
+        notifications: const LocalNotificationService(channel: channel),
+        loader: (_) async => quote(799, now),
+      ).checkAll(token: 'test', now: now);
+
+      expect(result.reachedTarget, 1);
+      expect(invocation?.method, 'schedule');
+      expect(invocation?.arguments, {
+        'id': 'watch-price-kind_price',
+        'title': '测试耳机 已到 ¥799.00',
+        'timestamp': now.add(const Duration(seconds: 1)).millisecondsSinceEpoch,
+        'kind': 'price',
+      });
+    },
+  );
 }

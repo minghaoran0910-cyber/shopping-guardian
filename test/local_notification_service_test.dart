@@ -6,19 +6,34 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test('schedules and cancels by decision id', () async {
     const channel = MethodChannel('test/notifications');
-    final methods = <String>[];
+    final calls = <MethodCall>[];
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
-          methods.add(call.method);
+          calls.add(call);
           return call.method == 'schedule';
         });
     const service = LocalNotificationService(channel: channel);
     expect(
-      await service.schedule(id: 'one', title: '唱片', at: DateTime(2026)),
+      await service.schedule(
+        id: 'one',
+        title: '唱片已到 ¥199.00',
+        at: DateTime(2026),
+        kind: LocalNotificationKind.price,
+      ),
       isTrue,
     );
     await service.cancel('one');
     await service.cancelAll();
-    expect(methods, ['schedule', 'cancel', 'cancelAll']);
+    expect(calls.map((call) => call.method), [
+      'schedule',
+      'cancel',
+      'cancelAll',
+    ]);
+    expect(calls.first.arguments, {
+      'id': 'one',
+      'title': '唱片已到 ¥199.00',
+      'timestamp': DateTime(2026).millisecondsSinceEpoch,
+      'kind': 'price',
+    });
   });
 }

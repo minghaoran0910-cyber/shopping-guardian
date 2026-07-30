@@ -18,6 +18,7 @@ class FeedbackReminderService {
     id: notificationId(decisionId),
     title: title,
     at: (purchasedAt ?? DateTime.now()).add(defaultDelay),
+    kind: LocalNotificationKind.feedback,
   );
 
   Future<void> cancel(String decisionId) =>

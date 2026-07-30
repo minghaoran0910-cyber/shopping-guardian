@@ -17,7 +17,8 @@ class ShoppingGuardianApp extends StatefulWidget {
   State<ShoppingGuardianApp> createState() => _ShoppingGuardianAppState();
 }
 
-class _ShoppingGuardianAppState extends State<ShoppingGuardianApp> {
+class _ShoppingGuardianAppState extends State<ShoppingGuardianApp>
+    with WidgetsBindingObserver {
   final navigatorKey = GlobalKey<NavigatorState>();
   ThemeMode themeMode = ThemeMode.system;
   Locale locale = const Locale('zh');
@@ -25,10 +26,12 @@ class _ShoppingGuardianAppState extends State<ShoppingGuardianApp> {
   late final SharedTextReceiver sharedTextReceiver;
   String? sharedText;
   int openSettingsRevision = 0;
+  bool checkingWatchedPrices = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     sharedTextReceiver = widget.sharedTextReceiver ?? SharedTextReceiver();
     sharedTextReceiver.start(_receiveSharedText);
     _loadPreferences();
@@ -45,8 +48,16 @@ class _ShoppingGuardianAppState extends State<ShoppingGuardianApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     sharedTextReceiver.stop();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkWatchedPrices();
+    }
   }
 
   Future<void> _loadApiKey() async {
@@ -54,13 +65,24 @@ class _ShoppingGuardianAppState extends State<ShoppingGuardianApp> {
       final saved = await const ApiKeyStore().readJustOneApiToken();
       if (mounted && saved.isNotEmpty) {
         setState(() => justOneApiToken = saved);
-        await const PriceMonitorService().checkAll(
-          token: saved,
-          minimumAge: Duration(hours: 6),
-        );
+        await _checkWatchedPrices();
       }
     } catch (_) {
       // Secure storage can be unavailable in widget tests.
+    }
+  }
+
+  Future<void> _checkWatchedPrices() async {
+    final token = justOneApiToken.trim();
+    if (token.isEmpty || checkingWatchedPrices) return;
+    checkingWatchedPrices = true;
+    try {
+      await const PriceMonitorService().checkAll(
+        token: token,
+        minimumAge: Duration(hours: 6),
+      );
+    } finally {
+      checkingWatchedPrices = false;
     }
   }
 

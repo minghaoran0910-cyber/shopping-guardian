@@ -72,7 +72,15 @@ class AppDelegate: FlutterAppDelegate {
         guard granted else { result(false); return }
         let content = UNMutableNotificationContent()
         content.title = "购物守护者"
-        content.body = "冷静期结束了，再看看「\(title)」还想不想买。"
+        let kind = arguments["kind"] as? String ?? "cooldown"
+        switch kind {
+        case "price":
+          content.body = "\(title)，可以考虑下单。"
+        case "feedback":
+          content.body = "\(title) 用了一周，回来记录一下实际体验。"
+        default:
+          content.body = "冷静期结束了，再看看「\(title)」还想不想买。"
+        }
         content.sound = .default
         let date = Date(timeIntervalSince1970: Double(timestamp) / 1000)
         let trigger = UNCalendarNotificationTrigger(dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date), repeats: false)

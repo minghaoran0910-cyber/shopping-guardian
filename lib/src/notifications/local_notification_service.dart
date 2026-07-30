@@ -1,5 +1,7 @@
 import 'package:flutter/services.dart';
 
+enum LocalNotificationKind { cooldown, price, feedback }
+
 class LocalNotificationService {
   const LocalNotificationService({
     this.channel = const MethodChannel('shopping_guardian/notifications'),
@@ -10,12 +12,14 @@ class LocalNotificationService {
     required String id,
     required String title,
     required DateTime at,
+    LocalNotificationKind kind = LocalNotificationKind.cooldown,
   }) async {
     try {
       return await channel.invokeMethod<bool>('schedule', {
             'id': id,
             'title': title,
             'timestamp': at.millisecondsSinceEpoch,
+            'kind': kind.name,
           }) ??
           false;
     } on PlatformException {

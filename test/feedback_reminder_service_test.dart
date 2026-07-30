@@ -39,6 +39,7 @@ void main() {
       'timestamp': purchasedAt
           .add(const Duration(days: 7))
           .millisecondsSinceEpoch,
+      'kind': 'feedback',
     });
 
     await service.cancel('one');

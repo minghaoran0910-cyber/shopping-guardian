@@ -97,12 +97,18 @@ class PriceMonitorService {
                 watch.lastPrice == null ||
                 watch.lastPrice! > watch.targetPrice);
         if (crossedTarget) {
-          final notify = alert ?? notifications.schedule;
-          final scheduled = await notify(
-            id: '${watch.id}_price',
-            title: '${watch.itemName} 已到 ¥${price.toStringAsFixed(2)}',
-            at: observedAt.add(const Duration(seconds: 1)),
-          );
+          final scheduled = alert == null
+              ? await notifications.schedule(
+                  id: '${watch.id}_price',
+                  title: '${watch.itemName} 已到 ¥${price.toStringAsFixed(2)}',
+                  at: observedAt.add(const Duration(seconds: 1)),
+                  kind: LocalNotificationKind.price,
+                )
+              : await alert!(
+                  id: '${watch.id}_price',
+                  title: '${watch.itemName} 已到 ¥${price.toStringAsFixed(2)}',
+                  at: observedAt.add(const Duration(seconds: 1)),
+                );
           if (!scheduled) {
             throw StateError('系统没有创建价格提醒');
           }

@@ -30,7 +30,13 @@ final class LocalNotificationBridge {
         result(FlutterError(code: "invalid_notification", message: "提醒信息不完整。", details: nil))
         return
       }
-      schedule(id: id, title: title, timestamp: timestamp, result: result)
+      schedule(
+        id: id,
+        title: title,
+        timestamp: timestamp,
+        kind: arguments["kind"] as? String ?? "cooldown",
+        result: result
+      )
     case "cancel":
       center.removePendingNotificationRequests(withIdentifiers: [id])
       center.removeDeliveredNotifications(withIdentifiers: [id])
@@ -48,6 +54,7 @@ final class LocalNotificationBridge {
     id: String,
     title: String,
     timestamp: Int64,
+    kind: String,
     result: @escaping FlutterResult
   ) {
     center.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, error in
@@ -65,7 +72,14 @@ final class LocalNotificationBridge {
       }
       let content = UNMutableNotificationContent()
       content.title = "购物守护者"
-      content.body = "冷静期结束了，再看看「\(title)」还想不想买。"
+      switch kind {
+      case "price":
+        content.body = "\(title)，可以考虑下单。"
+      case "feedback":
+        content.body = "\(title) 用了一周，回来记录一下实际体验。"
+      default:
+        content.body = "冷静期结束了，再看看「\(title)」还想不想买。"
+      }
       content.sound = .default
       let requestedDate = Date(timeIntervalSince1970: Double(timestamp) / 1000)
       let interval = max(1, requestedDate.timeIntervalSinceNow)

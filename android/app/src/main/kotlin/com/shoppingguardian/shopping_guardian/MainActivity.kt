@@ -67,6 +67,7 @@ class MainActivity : FlutterActivity() {
                         id = call.argument<String>("id").orEmpty(),
                         title = call.argument<String>("title").orEmpty(),
                         timestamp = call.argument<Number>("timestamp")?.toLong() ?: 0L,
+                        kind = call.argument<String>("kind").orEmpty().ifEmpty { "cooldown" },
                     )
                     if (request.id.isEmpty() || request.timestamp <= 0L) {
                         result.error("invalid_notification", "提醒信息不完整。", null)
@@ -183,7 +184,7 @@ class MainActivity : FlutterActivity() {
     private fun cancelNotification(id: String) {
         if (id.isEmpty()) return
         val alarmManager = getSystemService(AlarmManager::class.java) ?: return
-        val request = NotificationRequest(id, "", 0L)
+        val request = NotificationRequest(id, "", 0L, "cooldown")
         val intent = notificationPendingIntent(request, PendingIntent.FLAG_UPDATE_CURRENT)
         alarmManager.cancel(intent)
         intent.cancel()
@@ -229,6 +230,7 @@ class MainActivity : FlutterActivity() {
         Intent(this, CooldownNotificationReceiver::class.java).apply {
             putExtra("decision_id", request.id)
             putExtra("title", request.title)
+            putExtra("kind", request.kind)
         },
         flag or PendingIntent.FLAG_IMMUTABLE,
     )
@@ -257,5 +259,6 @@ class MainActivity : FlutterActivity() {
         val id: String,
         val title: String,
         val timestamp: Long,
+        val kind: String,
     )
 }

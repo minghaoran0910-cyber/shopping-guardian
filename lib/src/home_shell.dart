@@ -1486,6 +1486,7 @@ class _DecisionDialogState extends State<_DecisionDialog> {
         );
       }
     }
+    var priceWatchSaved = false;
     if (monitorPrice && canMonitor) {
       final itemId = PriceWatchIdentity.itemId(widget.item);
       if (target != null && itemId != null) {
@@ -1502,6 +1503,7 @@ class _DecisionDialogState extends State<_DecisionDialog> {
             lastPrice: widget.item.price,
           ),
         );
+        priceWatchSaved = true;
       }
     }
     var notificationScheduled = true;
@@ -1524,6 +1526,18 @@ class _DecisionDialogState extends State<_DecisionDialog> {
             copy.t(
               '已加入稍后再看，但没能创建系统提醒。可以在系统设置中开启通知。',
               'Saved for later, but the system reminder could not be created. Enable notifications in system settings.',
+            ),
+          ),
+        ),
+      );
+    }
+    if (context.mounted && priceWatchSaved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            GuardianCopy.of(context).t(
+              '已开始监测；达到目标价时会提醒你可以考虑下单。',
+              'Price watch started. You will be alerted when it reaches your target.',
             ),
           ),
         ),
