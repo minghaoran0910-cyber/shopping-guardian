@@ -6,9 +6,10 @@ import 'package:shopping_guardian/src/patterns/personal_pattern.dart';
 void main() {
   DecisionRecord record(
     String id, {
-    String feedback = 'regretted',
-    String usage = 'rarely',
-    int satisfaction = 2,
+    String? feedback = 'regretted',
+    String? usage = 'rarely',
+    int? satisfaction = 2,
+    List<DecisionEvent> events = const [],
   }) => DecisionRecord(
     id: id,
     itemName: '唱片 $id',
@@ -21,6 +22,7 @@ void main() {
     usageFrequency: usage,
     satisfaction: satisfaction,
     category: '唱片',
+    events: events,
   );
 
   test('少于三条同类记录时不生成规律', () {
@@ -47,6 +49,44 @@ void main() {
       patterns.single.evidence.where((item) => !item.supportsPattern),
       hasLength(1),
     );
+  });
+
+  test('未确认购买和没有购后证据的记录不参与候选', () {
+    final patterns = const PatternGenerator().generate([
+      record('1'),
+      record('2'),
+      record(
+        '3',
+        events: [
+          DecisionEvent(status: 'skipped', occurredAt: DateTime(2026, 1, 3)),
+        ],
+      ),
+      record('4', feedback: null, usage: null, satisfaction: null),
+    ]);
+
+    expect(patterns, isEmpty);
+  });
+
+  test('候选依据只包含确认购买且有购后证据的记录', () {
+    final patterns = const PatternGenerator().generate([
+      record('1'),
+      record('2'),
+      record('3'),
+      record(
+        '4',
+        events: [
+          DecisionEvent(status: 'skipped', occurredAt: DateTime(2026, 1, 4)),
+        ],
+      ),
+      record('5', feedback: null, usage: null, satisfaction: null),
+    ]);
+
+    expect(patterns, hasLength(1));
+    expect(patterns.single.evidence.map((item) => item.decisionId), [
+      '1',
+      '2',
+      '3',
+    ]);
   });
 
   test('忽略项不会复活，已确认项保留用户修改', () {

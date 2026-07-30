@@ -32,6 +32,9 @@ class PatternGenerator {
   List<PersonalPattern> generate(List<DecisionRecord> records) {
     final groups = <String, List<DecisionRecord>>{};
     for (final record in records) {
+      if (!record.countsAsPurchased || !_hasPreferenceEvidence(record)) {
+        continue;
+      }
       if (record.category?.trim().isNotEmpty == true) {
         groups
             .putIfAbsent('分类:${record.category!.trim()}', () => [])
@@ -94,4 +97,9 @@ class PatternGenerator {
       record.feedback == 'satisfied' &&
       (record.satisfaction == null || record.satisfaction! >= 4) &&
       (record.usageFrequency == 'weekly' || record.usageFrequency == 'daily');
+
+  bool _hasPreferenceEvidence(DecisionRecord record) =>
+      record.usageFrequency != null ||
+      record.satisfaction != null ||
+      record.feedback == 'regretted';
 }

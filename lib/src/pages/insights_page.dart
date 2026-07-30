@@ -944,8 +944,8 @@ class _InsightsPageState extends State<InsightsPage> {
               const SizedBox(height: 6),
               Text(
                 copy.t(
-                  '至少三条同类记录后才会出现候选。只有你确认的内容会参与之后的分析。',
-                  'Candidates need at least three similar records. Only patterns you confirm are used in later analysis.',
+                  '至少三条已确认购买且填写过购后反馈的同类记录，才会出现候选。只有你确认的内容会参与之后的分析。',
+                  'Candidates need at least three confirmed purchases with post-purchase feedback. Only patterns you confirm are used in later analysis.',
                 ),
               ),
               const SizedBox(height: 10),
