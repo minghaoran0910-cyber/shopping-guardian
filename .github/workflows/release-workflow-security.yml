@@ -1,0 +1,29 @@
+name: Release workflow security
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/macos-signed-release.yml"
+      - ".github/workflows/windows-signed-release.yml"
+      - ".github/workflows/release-workflow-security.yml"
+      - "tool/check_release_credential_scope.sh"
+  pull_request:
+    paths:
+      - ".github/workflows/macos-signed-release.yml"
+      - ".github/workflows/windows-signed-release.yml"
+      - ".github/workflows/release-workflow-security.yml"
+      - "tool/check_release_credential_scope.sh"
+
+permissions:
+  contents: read
+
+jobs:
+  credential-scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: Verify release credential scope
+        run: bash tool/check_release_credential_scope.sh

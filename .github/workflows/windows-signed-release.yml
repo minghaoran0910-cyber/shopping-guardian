@@ -15,14 +15,21 @@ jobs:
   sign:
     runs-on: windows-latest
     timeout-minutes: 40
-    env:
-      WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
-      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
 
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.revision }}
+          fetch-depth: 0
+
+      - name: Require a revision from main history
+        shell: pwsh
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor HEAD origin/main
+          if ($LASTEXITCODE -ne 0) {
+            throw "Only commits reachable from origin/main may use release credentials"
+          }
 
       - uses: subosito/flutter-action@v2
         with:
@@ -32,6 +39,9 @@ jobs:
 
       - name: Require signing credentials
         shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_BASE64)) {
             throw "WINDOWS_CERTIFICATE_BASE64 is not configured"
@@ -52,6 +62,9 @@ jobs:
       - name: Import signing certificate
         id: certificate
         shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: |
           $ErrorActionPreference = "Stop"
           $certificatePath = Join-Path $env:RUNNER_TEMP "windows-signing.pfx"
