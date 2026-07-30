@@ -38,7 +38,7 @@ class DataExporter {
           .toList();
     }
     final content = const JsonEncoder.withIndent('  ').convert({
-      'schema_version': 7,
+      'schema_version': 8,
       'exported_at': DateTime.now().toUtc().toIso8601String(),
       'monthly_budget': budget.limit,
       'model': {

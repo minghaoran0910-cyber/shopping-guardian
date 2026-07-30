@@ -94,6 +94,32 @@ void main() {
     );
   });
 
+  test('finds only the newest watch for the exact platform and item', () async {
+    final now = DateTime(2026, 7, 30, 10);
+    for (final (id, platform, itemId, age) in [
+      ('old', ShoppingPlatform.jd, '123456789', 2),
+      ('new', ShoppingPlatform.jd, '123456789', 1),
+      ('other', ShoppingPlatform.taobao, '123456789', 0),
+    ]) {
+      await store.save(
+        PriceWatch(
+          id: id,
+          decisionId: 'decision-$id',
+          itemName: id,
+          platform: platform,
+          itemId: itemId,
+          productUrl: Uri.parse('https://example.com/$id'),
+          targetPrice: 100,
+          createdAt: now.subtract(Duration(days: age)),
+        ),
+      );
+    }
+
+    final found = await store.findByIdentity(ShoppingPlatform.jd, '123456789');
+
+    expect(found?.id, 'new');
+  });
+
   test(
     'records real observations and alerts only on a target crossing',
     () async {

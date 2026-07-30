@@ -4,12 +4,17 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'analysis_request_summary.dart';
+import 'price_timing_summary.dart';
 
 typedef RetryDelay = Future<void> Function(Duration duration);
 
 enum PurchaseVerdict { buy, wait, skip, alternative, insufficientData }
 
 enum AdviceLevel { low, medium, high }
+
+enum NeedAssessment { established, weak, insufficient }
+
+enum OwnershipRelation { replaces, complements, redundant, insufficient }
 
 class CandidateFact {
   const CandidateFact({required this.text, required this.evidence});
@@ -30,6 +35,8 @@ class PurchaseAdvice {
     required this.alternatives,
     this.candidateFacts = const [],
     this.waitDays,
+    this.needAssessment = NeedAssessment.insufficient,
+    this.ownershipRelation = OwnershipRelation.insufficient,
   });
 
   final PurchaseVerdict verdict;
@@ -42,6 +49,28 @@ class PurchaseAdvice {
   final List<String> alternatives;
   final List<CandidateFact> candidateFacts;
   final int? waitDays;
+  final NeedAssessment needAssessment;
+  final OwnershipRelation ownershipRelation;
+
+  PurchaseAdvice copyWith({
+    PurchaseVerdict? verdict,
+    String? summary,
+    List<String>? reasons,
+    int? waitDays,
+  }) => PurchaseAdvice(
+    verdict: verdict ?? this.verdict,
+    summary: summary ?? this.summary,
+    reasons: reasons ?? this.reasons,
+    missingInformation: missingInformation,
+    risk: risk,
+    confidence: confidence,
+    budgetImpact: budgetImpact,
+    alternatives: alternatives,
+    candidateFacts: candidateFacts,
+    waitDays: waitDays ?? this.waitDays,
+    needAssessment: needAssessment,
+    ownershipRelation: ownershipRelation,
+  );
 }
 
 class ModelClient {
@@ -71,9 +100,13 @@ class ModelClient {
     List<String> tags = const [],
     double? monthlyBudget,
     List<String> matchedRules = const [],
+    int? minimumRuleWaitDays,
     List<String> relatedHistory = const [],
     List<String> confirmedPatterns = const [],
     List<String> ownedItems = const [],
+    PriceTimingSummary priceTiming = const PriceTimingSummary.insufficient(
+      '尚未监测此商品',
+    ),
   }) async {
     final requestClient = client ?? http.Client();
     try {
@@ -87,32 +120,46 @@ class ModelClient {
           tags: tags,
           monthlyBudget: monthlyBudget,
           matchedRules: matchedRules,
+          minimumRuleWaitDays: minimumRuleWaitDays,
           relatedHistory: relatedHistory,
           confirmedPatterns: confirmedPatterns,
           ownedItems: ownedItems,
+          priceTiming: priceTiming,
         ).requestBody,
       );
       final content = await _complete(requestClient, [
         {
           'role': 'system',
           'content':
-              '你是站在用户利益一边的消费决策助手。若提供了同类已有物品，必须说明候选商品是在替代、补充还是重复购买；没有可靠信息时不要猜。只返回 JSON，字段为 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days、candidate_facts。candidate_facts 最多 3 条，每条格式为 {"text":"可能的个人事实","evidence":"本次输入中的直接依据"}；只能归纳输入直接支持的事实，没有就返回空数组。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high。不要替用户购买。',
+              '你是站在用户利益一边的消费决策助手。必须按以下优先级判断：真实需求 > 预算和用户消费规则 > 已有同类物品 > 价格时机。价格证据只能影响“现在买还是等”，绝不能把需求不成立、超预算、命中等待规则或重复购买翻转成 buy。价格证据 status=insufficient 时不得猜测价格趋势或历史低价。若提供了同类已有物品，必须判断候选商品是在替代、补充还是重复购买；没有可靠信息时不要猜。只返回 JSON，字段为 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days、candidate_facts、need_assessment、ownership_relation。need_assessment 只能是 established、weak、insufficient；ownership_relation 只能是 replaces、complements、redundant、insufficient。candidate_facts 最多 3 条，每条格式为 {"text":"可能的个人事实","evidence":"本次输入中的直接依据"}；只能归纳输入直接支持的事实，没有就返回空数组。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high。不要替用户购买。',
         },
         {'role': 'user', 'content': input},
       ]);
       try {
-        return _parse(content);
+        return _applyGuardrails(
+          _parse(content),
+          price: price,
+          monthlyBudget: monthlyBudget,
+          matchedRules: matchedRules,
+          minimumRuleWaitDays: minimumRuleWaitDays,
+        );
       } on FormatException {
         final repaired = await _complete(requestClient, [
           {
             'role': 'system',
             'content':
-                '把下面内容修复成合法 JSON。只返回 JSON，不改变原意。必须包含 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days；candidate_facts 若存在必须是带 text 和 evidence 的数组。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high。',
+                '把下面内容修复成合法 JSON。只返回 JSON，不改变原意。必须包含 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days、need_assessment、ownership_relation；candidate_facts 若存在必须是带 text 和 evidence 的数组。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high；need_assessment 只能是 established、weak、insufficient；ownership_relation 只能是 replaces、complements、redundant、insufficient。',
           },
           {'role': 'user', 'content': content},
         ]);
         try {
-          return _parse(repaired);
+          return _applyGuardrails(
+            _parse(repaired),
+            price: price,
+            monthlyBudget: monthlyBudget,
+            matchedRules: matchedRules,
+            minimumRuleWaitDays: minimumRuleWaitDays,
+          );
         } on FormatException {
           throw const ModelClientException('模型两次返回的 JSON 都无法解析');
         }
@@ -217,7 +264,50 @@ class ModelClient {
       alternatives: _strings(data['alternatives']),
       candidateFacts: _candidateFacts(data['candidate_facts']),
       waitDays: _positiveWaitDays(data['wait_days']),
+      needAssessment: _needAssessment(data['need_assessment']),
+      ownershipRelation: _ownershipRelation(data['ownership_relation']),
     );
+  }
+
+  static PurchaseAdvice _applyGuardrails(
+    PurchaseAdvice advice, {
+    required double price,
+    required double? monthlyBudget,
+    required List<String> matchedRules,
+    required int? minimumRuleWaitDays,
+  }) {
+    if (advice.verdict != PurchaseVerdict.buy) return advice;
+    if (monthlyBudget != null && price > monthlyBudget) {
+      return advice.copyWith(
+        verdict: PurchaseVerdict.skip,
+        summary: '这件商品已经超过你填写的本月预算，价格优惠不能覆盖预算约束。',
+        reasons: [...advice.reasons, '商品价格超过本月预算'],
+      );
+    }
+    if (matchedRules.isNotEmpty) {
+      return advice.copyWith(
+        verdict: PurchaseVerdict.wait,
+        summary: '这件商品命中了你的消费规则，价格优惠不能跳过规则。',
+        reasons: [...advice.reasons, '命中已启用的消费规则'],
+        waitDays: minimumRuleWaitDays ?? advice.waitDays ?? 1,
+      );
+    }
+    if (advice.ownershipRelation == OwnershipRelation.redundant) {
+      return advice.copyWith(
+        verdict: PurchaseVerdict.skip,
+        summary: '它与仍在使用的同类物品重复，低价本身不足以构成购买理由。',
+        reasons: [...advice.reasons, '与已有物品重复'],
+      );
+    }
+    if (advice.needAssessment != NeedAssessment.established) {
+      return advice.copyWith(
+        verdict: PurchaseVerdict.wait,
+        summary: '购买需求还没有说清楚，即使价格合适也建议先等等。',
+        reasons: [...advice.reasons, '真实需求尚未确认'],
+        waitDays: advice.waitDays ?? 1,
+      );
+    }
+    return advice;
   }
 
   static PurchaseVerdict _verdict(Object? value) => switch (value) {
@@ -234,6 +324,19 @@ class ModelClient {
     'medium' => AdviceLevel.medium,
     'high' => AdviceLevel.high,
     _ => throw const FormatException(),
+  };
+
+  static NeedAssessment _needAssessment(Object? value) => switch (value) {
+    'established' => NeedAssessment.established,
+    'weak' => NeedAssessment.weak,
+    _ => NeedAssessment.insufficient,
+  };
+
+  static OwnershipRelation _ownershipRelation(Object? value) => switch (value) {
+    'replaces' => OwnershipRelation.replaces,
+    'complements' => OwnershipRelation.complements,
+    'redundant' => OwnershipRelation.redundant,
+    _ => OwnershipRelation.insufficient,
   };
 
   static List<String> _strings(Object? value) => value is List

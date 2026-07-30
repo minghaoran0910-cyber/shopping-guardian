@@ -179,6 +179,17 @@ class $DecisionsTable extends Decisions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _priceTimingEvidenceMeta =
+      const VerificationMeta('priceTimingEvidence');
+  @override
+  late final GeneratedColumn<String> priceTimingEvidence =
+      GeneratedColumn<String>(
+        'price_timing_evidence',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -197,6 +208,7 @@ class $DecisionsTable extends Decisions
     risk,
     confidence,
     budgetImpact,
+    priceTimingEvidence,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -329,6 +341,15 @@ class $DecisionsTable extends Decisions
         ),
       );
     }
+    if (data.containsKey('price_timing_evidence')) {
+      context.handle(
+        _priceTimingEvidenceMeta,
+        priceTimingEvidence.isAcceptableOrUnknown(
+          data['price_timing_evidence']!,
+          _priceTimingEvidenceMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -402,6 +423,10 @@ class $DecisionsTable extends Decisions
         DriftSqlType.string,
         data['${effectivePrefix}budget_impact'],
       ),
+      priceTimingEvidence: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}price_timing_evidence'],
+      ),
     );
   }
 
@@ -428,6 +453,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
   final String? risk;
   final String? confidence;
   final String? budgetImpact;
+  final String? priceTimingEvidence;
   const StoredDecision({
     required this.id,
     required this.itemName,
@@ -445,6 +471,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     this.risk,
     this.confidence,
     this.budgetImpact,
+    this.priceTimingEvidence,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -483,6 +510,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     if (!nullToAbsent || budgetImpact != null) {
       map['budget_impact'] = Variable<String>(budgetImpact);
     }
+    if (!nullToAbsent || priceTimingEvidence != null) {
+      map['price_timing_evidence'] = Variable<String>(priceTimingEvidence);
+    }
     return map;
   }
 
@@ -520,6 +550,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
       budgetImpact: budgetImpact == null && nullToAbsent
           ? const Value.absent()
           : Value(budgetImpact),
+      priceTimingEvidence: priceTimingEvidence == null && nullToAbsent
+          ? const Value.absent()
+          : Value(priceTimingEvidence),
     );
   }
 
@@ -545,6 +578,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
       risk: serializer.fromJson<String?>(json['risk']),
       confidence: serializer.fromJson<String?>(json['confidence']),
       budgetImpact: serializer.fromJson<String?>(json['budgetImpact']),
+      priceTimingEvidence: serializer.fromJson<String?>(
+        json['priceTimingEvidence'],
+      ),
     );
   }
   @override
@@ -567,6 +603,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
       'risk': serializer.toJson<String?>(risk),
       'confidence': serializer.toJson<String?>(confidence),
       'budgetImpact': serializer.toJson<String?>(budgetImpact),
+      'priceTimingEvidence': serializer.toJson<String?>(priceTimingEvidence),
     };
   }
 
@@ -587,6 +624,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     Value<String?> risk = const Value.absent(),
     Value<String?> confidence = const Value.absent(),
     Value<String?> budgetImpact = const Value.absent(),
+    Value<String?> priceTimingEvidence = const Value.absent(),
   }) => StoredDecision(
     id: id ?? this.id,
     itemName: itemName ?? this.itemName,
@@ -606,6 +644,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     risk: risk.present ? risk.value : this.risk,
     confidence: confidence.present ? confidence.value : this.confidence,
     budgetImpact: budgetImpact.present ? budgetImpact.value : this.budgetImpact,
+    priceTimingEvidence: priceTimingEvidence.present
+        ? priceTimingEvidence.value
+        : this.priceTimingEvidence,
   );
   StoredDecision copyWithCompanion(DecisionsCompanion data) {
     return StoredDecision(
@@ -637,6 +678,9 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
       budgetImpact: data.budgetImpact.present
           ? data.budgetImpact.value
           : this.budgetImpact,
+      priceTimingEvidence: data.priceTimingEvidence.present
+          ? data.priceTimingEvidence.value
+          : this.priceTimingEvidence,
     );
   }
 
@@ -658,7 +702,8 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
           ..write('category: $category, ')
           ..write('risk: $risk, ')
           ..write('confidence: $confidence, ')
-          ..write('budgetImpact: $budgetImpact')
+          ..write('budgetImpact: $budgetImpact, ')
+          ..write('priceTimingEvidence: $priceTimingEvidence')
           ..write(')'))
         .toString();
   }
@@ -681,6 +726,7 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
     risk,
     confidence,
     budgetImpact,
+    priceTimingEvidence,
   );
   @override
   bool operator ==(Object other) =>
@@ -701,7 +747,8 @@ class StoredDecision extends DataClass implements Insertable<StoredDecision> {
           other.category == this.category &&
           other.risk == this.risk &&
           other.confidence == this.confidence &&
-          other.budgetImpact == this.budgetImpact);
+          other.budgetImpact == this.budgetImpact &&
+          other.priceTimingEvidence == this.priceTimingEvidence);
 }
 
 class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
@@ -721,6 +768,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
   final Value<String?> risk;
   final Value<String?> confidence;
   final Value<String?> budgetImpact;
+  final Value<String?> priceTimingEvidence;
   final Value<int> rowid;
   const DecisionsCompanion({
     this.id = const Value.absent(),
@@ -739,6 +787,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     this.risk = const Value.absent(),
     this.confidence = const Value.absent(),
     this.budgetImpact = const Value.absent(),
+    this.priceTimingEvidence = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DecisionsCompanion.insert({
@@ -758,6 +807,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     this.risk = const Value.absent(),
     this.confidence = const Value.absent(),
     this.budgetImpact = const Value.absent(),
+    this.priceTimingEvidence = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        itemName = Value(itemName),
@@ -783,6 +833,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     Expression<String>? risk,
     Expression<String>? confidence,
     Expression<String>? budgetImpact,
+    Expression<String>? priceTimingEvidence,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -802,6 +853,8 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
       if (risk != null) 'risk': risk,
       if (confidence != null) 'confidence': confidence,
       if (budgetImpact != null) 'budget_impact': budgetImpact,
+      if (priceTimingEvidence != null)
+        'price_timing_evidence': priceTimingEvidence,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -823,6 +876,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     Value<String?>? risk,
     Value<String?>? confidence,
     Value<String?>? budgetImpact,
+    Value<String?>? priceTimingEvidence,
     Value<int>? rowid,
   }) {
     return DecisionsCompanion(
@@ -842,6 +896,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
       risk: risk ?? this.risk,
       confidence: confidence ?? this.confidence,
       budgetImpact: budgetImpact ?? this.budgetImpact,
+      priceTimingEvidence: priceTimingEvidence ?? this.priceTimingEvidence,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -897,6 +952,11 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
     if (budgetImpact.present) {
       map['budget_impact'] = Variable<String>(budgetImpact.value);
     }
+    if (priceTimingEvidence.present) {
+      map['price_timing_evidence'] = Variable<String>(
+        priceTimingEvidence.value,
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -922,6 +982,7 @@ class DecisionsCompanion extends UpdateCompanion<StoredDecision> {
           ..write('risk: $risk, ')
           ..write('confidence: $confidence, ')
           ..write('budgetImpact: $budgetImpact, ')
+          ..write('priceTimingEvidence: $priceTimingEvidence, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5567,6 +5628,7 @@ typedef $$DecisionsTableCreateCompanionBuilder =
       Value<String?> risk,
       Value<String?> confidence,
       Value<String?> budgetImpact,
+      Value<String?> priceTimingEvidence,
       Value<int> rowid,
     });
 typedef $$DecisionsTableUpdateCompanionBuilder =
@@ -5587,6 +5649,7 @@ typedef $$DecisionsTableUpdateCompanionBuilder =
       Value<String?> risk,
       Value<String?> confidence,
       Value<String?> budgetImpact,
+      Value<String?> priceTimingEvidence,
       Value<int> rowid,
     });
 
@@ -5819,6 +5882,11 @@ class $$DecisionsTableFilterComposer
 
   ColumnFilters<String> get budgetImpact => $composableBuilder(
     column: $table.budgetImpact,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get priceTimingEvidence => $composableBuilder(
+    column: $table.priceTimingEvidence,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6064,6 +6132,11 @@ class $$DecisionsTableOrderingComposer
     column: $table.budgetImpact,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get priceTimingEvidence => $composableBuilder(
+    column: $table.priceTimingEvidence,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DecisionsTableAnnotationComposer
@@ -6132,6 +6205,11 @@ class $$DecisionsTableAnnotationComposer
 
   GeneratedColumn<String> get budgetImpact => $composableBuilder(
     column: $table.budgetImpact,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get priceTimingEvidence => $composableBuilder(
+    column: $table.priceTimingEvidence,
     builder: (column) => column,
   );
 
@@ -6343,6 +6421,7 @@ class $$DecisionsTableTableManager
                 Value<String?> risk = const Value.absent(),
                 Value<String?> confidence = const Value.absent(),
                 Value<String?> budgetImpact = const Value.absent(),
+                Value<String?> priceTimingEvidence = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DecisionsCompanion(
                 id: id,
@@ -6361,6 +6440,7 @@ class $$DecisionsTableTableManager
                 risk: risk,
                 confidence: confidence,
                 budgetImpact: budgetImpact,
+                priceTimingEvidence: priceTimingEvidence,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6381,6 +6461,7 @@ class $$DecisionsTableTableManager
                 Value<String?> risk = const Value.absent(),
                 Value<String?> confidence = const Value.absent(),
                 Value<String?> budgetImpact = const Value.absent(),
+                Value<String?> priceTimingEvidence = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DecisionsCompanion.insert(
                 id: id,
@@ -6399,6 +6480,7 @@ class $$DecisionsTableTableManager
                 risk: risk,
                 confidence: confidence,
                 budgetImpact: budgetImpact,
+                priceTimingEvidence: priceTimingEvidence,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -22,6 +22,7 @@ class Decisions extends Table {
   TextColumn get risk => text().nullable()();
   TextColumn get confidence => text().nullable()();
   TextColumn get budgetImpact => text().nullable()();
+  TextColumn get priceTimingEvidence => text().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -210,7 +211,7 @@ class GuardianDatabase extends _$GuardianDatabase {
   }
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -245,6 +246,9 @@ class GuardianDatabase extends _$GuardianDatabase {
           priceObservations,
           priceObservations.matchConfidence,
         );
+      }
+      if (from < 8) {
+        await migrator.addColumn(decisions, decisions.priceTimingEvidence);
       }
     },
     beforeOpen: (details) async {

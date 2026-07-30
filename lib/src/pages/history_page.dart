@@ -248,6 +248,15 @@ class _HistoryPageState extends State<HistoryPage> {
                       ),
                     ),
                   ),
+                if (record.priceTimingEvidence?.isNotEmpty == true) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    copy.t('当时的价格证据', 'Price evidence at the time'),
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(record.priceTimingEvidence!),
+                ],
                 if (record.alternatives.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Text(

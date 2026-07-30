@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../copy.dart';
+import '../prices/price_watch.dart';
 import 'analysis_request_summary.dart';
+import 'price_timing_summary.dart';
 
 class AnalysisRequestReviewDialog extends StatelessWidget {
   const AnalysisRequestReviewDialog({super.key, required this.summary});
@@ -63,6 +65,14 @@ class AnalysisRequestReviewDialog extends StatelessWidget {
                     ? copy.t('无', 'None')
                     : summary.matchedRules.join('\n'),
               ),
+              if (summary.minimumRuleWaitDays != null)
+                _SummaryRow(
+                  label: copy.t('规则要求的等待期', 'Rule waiting period'),
+                  value: copy.t(
+                    '至少 ${summary.minimumRuleWaitDays} 天',
+                    'At least ${summary.minimumRuleWaitDays} days',
+                  ),
+                ),
               _SummaryRow(
                 label: copy.t('相关历史摘要', 'Related history summaries'),
                 value: summary.relatedHistory.isEmpty
@@ -80,6 +90,10 @@ class AnalysisRequestReviewDialog extends StatelessWidget {
                 value: summary.confirmedPatterns.isEmpty
                     ? copy.t('无', 'None')
                     : summary.confirmedPatterns.join('\n'),
+              ),
+              _SummaryRow(
+                label: copy.t('价格时机证据', 'Price timing evidence'),
+                value: _priceTimingDetails(copy, summary.priceTiming),
               ),
               const SizedBox(height: 8),
               Text(
@@ -104,6 +118,43 @@ class AnalysisRequestReviewDialog extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _priceTimingDetails(GuardianCopy copy, PriceTimingSummary timing) {
+    final lines = <String>[
+      switch (timing.status) {
+        PriceTimingStatus.nearLocalLow => copy.t(
+          '当前价接近本机 30 天低价',
+          'Current price is near this device’s 30-day low',
+        ),
+        PriceTimingStatus.aboveLocalLow => copy.t(
+          '当前价高于本机 30 天低价',
+          'Current price is above this device’s 30-day low',
+        ),
+        PriceTimingStatus.insufficient => copy.t(
+          '数据不足，不能判断入手时机',
+          'Insufficient evidence to judge timing',
+        ),
+      },
+    ];
+    void addSnapshot(String label, PriceSnapshot? value) {
+      if (value == null) return;
+      lines.add(
+        '$label：¥${value.price.toStringAsFixed(2)} · ${value.source} · '
+        '${value.observedAt.toLocal().toString().substring(0, 16)}',
+      );
+    }
+
+    addSnapshot(copy.t('当前价', 'Current'), timing.current);
+    addSnapshot(copy.t('上次可信价', 'Previous trusted'), timing.reference);
+    addSnapshot(copy.t('本机 30 天低价', '30-day low on device'), timing.recentLow);
+    lines.add(
+      copy.t(
+        '价格只影响现在买还是等，不能覆盖需求、预算、规则或已有物品判断。',
+        'Price may affect buy-now versus wait, but cannot override need, budget, rules, or owned items.',
+      ),
+    );
+    return lines.join('\n');
   }
 }
 

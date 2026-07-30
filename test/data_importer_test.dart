@@ -30,6 +30,7 @@ Map<String, Object?> decisionJson({
   'risk': 'medium',
   'confidence': 'high',
   'budgetImpact': '本月预算充足',
+  'priceTimingEvidence': '当前价 ¥299.00｜justoneapi｜2026-07-30T10:00:00.000',
   'alternatives': alternatives,
   'events': [
     {'status': 'waiting', 'occurredAt': '2026-07-27T10:00:00.000'},
@@ -116,7 +117,7 @@ void main() {
     final importer = DataImporter();
 
     await expectLater(
-      importer.preview(importJson(version: 8)),
+      importer.preview(importJson(version: 9)),
       throwsA(
         isA<DataImportException>().having(
           (error) => error.message,

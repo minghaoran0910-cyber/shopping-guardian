@@ -37,6 +37,7 @@ class DecisionRecord {
     this.risk,
     this.confidence,
     this.budgetImpact,
+    this.priceTimingEvidence,
     this.alternatives = const [],
     this.events = const [],
   });
@@ -61,6 +62,7 @@ class DecisionRecord {
   final String? risk;
   final String? confidence;
   final String? budgetImpact;
+  final String? priceTimingEvidence;
   final List<String> alternatives;
   final List<DecisionEvent> events;
 
@@ -110,6 +112,7 @@ class DecisionRecord {
     'risk': risk,
     'confidence': confidence,
     'budgetImpact': budgetImpact,
+    'priceTimingEvidence': priceTimingEvidence,
     'alternatives': alternatives,
     'events': events.map((event) => event.toJson()).toList(),
   };
@@ -147,6 +150,7 @@ class DecisionRecord {
     risk: json['risk']?.toString(),
     confidence: json['confidence']?.toString(),
     budgetImpact: json['budgetImpact']?.toString(),
+    priceTimingEvidence: json['priceTimingEvidence']?.toString(),
     alternatives:
         (json['alternatives'] as List?)?.map((item) => '$item').toList() ??
         const [],
@@ -198,6 +202,7 @@ class DecisionRecord {
     risk: risk,
     confidence: confidence,
     budgetImpact: budgetImpact,
+    priceTimingEvidence: priceTimingEvidence,
     alternatives: alternatives,
     events: events ?? this.events,
   );

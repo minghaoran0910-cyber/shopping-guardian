@@ -17,6 +17,23 @@ class PriceWatchStore {
     return rows.map(_fromRow).toList();
   }
 
+  Future<PriceWatch?> findByIdentity(
+    ShoppingPlatform platform,
+    String itemId,
+  ) async {
+    final row =
+        await (_database.select(_database.priceWatches)
+              ..where(
+                (watch) =>
+                    watch.platform.equals(platform.name) &
+                    watch.itemId.equals(itemId),
+              )
+              ..orderBy([(watch) => OrderingTerm.desc(watch.createdAt)])
+              ..limit(1))
+            .getSingleOrNull();
+    return row == null ? null : _fromRow(row);
+  }
+
   Future<void> save(PriceWatch watch) => _database
       .into(_database.priceWatches)
       .insertOnConflictUpdate(

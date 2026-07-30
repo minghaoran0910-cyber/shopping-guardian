@@ -240,6 +240,7 @@ class DecisionStore {
             risk: Value(record.risk),
             confidence: Value(record.confidence),
             budgetImpact: Value(record.budgetImpact),
+            priceTimingEvidence: Value(record.priceTimingEvidence),
           ),
         );
     for (final (position, event) in record.events.indexed) {
@@ -345,6 +346,7 @@ class DecisionStore {
       risk: row.risk,
       confidence: row.confidence,
       budgetImpact: row.budgetImpact,
+      priceTimingEvidence: row.priceTimingEvidence,
       alternatives: alternatives.map((item) => item.description).toList(),
       events: events
           .map(

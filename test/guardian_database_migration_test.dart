@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shopping_guardian/src/data/guardian_database.dart';
 
 void main() {
-  test('migrates a v1 database through price confidence v7', () async {
+  test('migrates a v1 database through price evidence v8', () async {
     await GuardianDatabase.resetAfterTesting();
     final database = GuardianDatabase(
       NativeDatabase.memory(
@@ -35,7 +35,7 @@ void main() {
         .get();
     final names = columns.map((row) => row.read<String>('name')).toSet();
 
-    expect(database.schemaVersion, 7);
+    expect(database.schemaVersion, 8);
     expect(
       names,
       containsAll([
@@ -43,6 +43,7 @@ void main() {
         'satisfaction',
         'regret_reason',
         'category',
+        'price_timing_evidence',
       ]),
     );
     final priceColumns = await database
@@ -73,6 +74,26 @@ void main() {
     final database = GuardianDatabase(
       NativeDatabase.memory(
         setup: (raw) {
+          raw.execute('''
+            CREATE TABLE decisions (
+              id TEXT NOT NULL PRIMARY KEY,
+              item_name TEXT NOT NULL,
+              total REAL NOT NULL,
+              verdict TEXT NOT NULL,
+              user_choice TEXT NOT NULL,
+              summary TEXT NOT NULL,
+              created_at INTEGER NOT NULL,
+              wait_until INTEGER,
+              feedback TEXT,
+              usage_frequency TEXT,
+              satisfaction INTEGER,
+              regret_reason TEXT,
+              category TEXT,
+              risk TEXT,
+              confidence TEXT,
+              budget_impact TEXT
+            )
+          ''');
           raw.execute('''
             CREATE TABLE price_observations (
               id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,

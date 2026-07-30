@@ -111,7 +111,7 @@ class DataImporter {
     }
     final document = Map<String, dynamic>.from(decoded);
     final version = document['schema_version'];
-    if (version is! int || version < 1 || version > 7) {
+    if (version is! int || version < 1 || version > 8) {
       throw const DataImportException('不支持这个数据版本，请先升级应用');
     }
 
@@ -389,7 +389,8 @@ class DataImporter {
             (json['tags'] != null && json['tags'] is! List) ||
             !_isNullableString(json['risk']) ||
             !_isNullableString(json['confidence']) ||
-            !_isNullableString(json['budgetImpact'])) {
+            !_isNullableString(json['budgetImpact']) ||
+            !_isNullableString(json['priceTimingEvidence'])) {
           throw const FormatException();
         }
         final events = json['events'] as List?;
@@ -650,6 +651,7 @@ class DataImporter {
             risk: Value(record.risk),
             confidence: Value(record.confidence),
             budgetImpact: Value(record.budgetImpact),
+            priceTimingEvidence: Value(record.priceTimingEvidence),
           ),
         );
     for (final (position, event) in record.events.indexed) {

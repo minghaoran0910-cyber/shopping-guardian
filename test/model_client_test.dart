@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shopping_guardian/src/analysis/model_client.dart';
+import 'package:shopping_guardian/src/analysis/price_timing_summary.dart';
 
 void main() {
   test('sends only the selected history summaries', () async {
@@ -37,7 +38,90 @@ void main() {
     expect(input['related_history'], ['过去买过同类键盘，后来很少使用']);
     expect(input['confirmed_patterns'], ['我确认：买键盘前先检查已有设备']);
     expect(input['owned_items_same_category'], ['旧键盘 ×1（仍在使用；办公）']);
+    expect(input['price_timing_evidence']['status'], 'insufficient');
+    expect(
+      (messages.first as Map<String, dynamic>)['content'],
+      contains('真实需求 > 预算和用户消费规则 > 已有同类物品 > 价格时机'),
+    );
     expect(jsonEncode(requestBody), isNot(contains('secret-key')));
+  });
+
+  test('a favorable price can never override budget or rules', () async {
+    final client = MockClient(
+      (_) async => http.Response(
+        '{"choices":[{"message":{"content":"{\\"verdict\\":\\"buy\\",'
+        '\\"risk\\":\\"low\\",\\"confidence\\":\\"high\\",'
+        '\\"summary\\":\\"正好是低价，买\\",\\"reasons\\":[\\"接近低价\\"],'
+        '\\"budget_impact\\":\\"可接受\\",\\"alternatives\\":[],'
+        '\\"missing_information\\":[],\\"need_assessment\\":\\"established\\",'
+        '\\"ownership_relation\\":\\"complements\\"}"}}]}',
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      ),
+    );
+    const timing = PriceTimingSummary(
+      status: PriceTimingStatus.nearLocalLow,
+      note: '接近本机低价',
+      trustedCount: 2,
+    );
+
+    final overBudget =
+        await ModelClient(
+          endpoint: 'https://example.com/v1/chat/completions',
+          apiKey: 'test',
+          model: 'test',
+          client: client,
+        ).analyze(
+          itemName: '耳机',
+          price: 1200,
+          monthlyBudget: 1000,
+          priceTiming: timing,
+        );
+    final matchedRule =
+        await ModelClient(
+          endpoint: 'https://example.com/v1/chat/completions',
+          apiKey: 'test',
+          model: 'test',
+          client: client,
+        ).analyze(
+          itemName: '耳机',
+          price: 800,
+          monthlyBudget: 1000,
+          matchedRules: const ['数码产品：至少等待 3 天'],
+          minimumRuleWaitDays: 3,
+          priceTiming: timing,
+        );
+
+    expect(overBudget.verdict, PurchaseVerdict.skip);
+    expect(overBudget.summary, contains('不能覆盖预算'));
+    expect(matchedRule.verdict, PurchaseVerdict.wait);
+    expect(matchedRule.summary, contains('不能跳过规则'));
+    expect(matchedRule.waitDays, 3);
+  });
+
+  test('a favorable price cannot turn a redundant item into buy', () async {
+    final client = MockClient(
+      (_) async => http.Response(
+        '{"choices":[{"message":{"content":"{\\"verdict\\":\\"buy\\",'
+        '\\"risk\\":\\"low\\",\\"confidence\\":\\"high\\",'
+        '\\"summary\\":\\"低价可买\\",\\"reasons\\":[],'
+        '\\"budget_impact\\":\\"预算内\\",\\"alternatives\\":[],'
+        '\\"missing_information\\":[],\\"need_assessment\\":\\"established\\",'
+        '\\"ownership_relation\\":\\"redundant\\"}"}}]}',
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      ),
+    );
+
+    final advice = await ModelClient(
+      endpoint: 'https://example.com/v1/chat/completions',
+      apiKey: 'test',
+      model: 'test',
+      client: client,
+    ).analyze(itemName: '耳机', price: 800, ownedItems: const ['仍在使用的同类耳机']);
+
+    expect(advice.verdict, PurchaseVerdict.skip);
+    expect(advice.summary, contains('重复'));
   });
 
   test('parses structured purchase advice', () async {

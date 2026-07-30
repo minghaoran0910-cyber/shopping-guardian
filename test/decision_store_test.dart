@@ -89,6 +89,7 @@ void main() {
         risk: 'medium',
         confidence: 'high',
         budgetImpact: '占预算 20%',
+        priceTimingEvidence: '当前价 ¥399.00｜justoneapi｜2026-07-30T10:00:00.000',
         alternatives: const ['买二手'],
       ),
     );
@@ -102,6 +103,7 @@ void main() {
     expect(record.risk, 'medium');
     expect(record.confidence, 'high');
     expect(record.budgetImpact, '占预算 20%');
+    expect(record.priceTimingEvidence, contains('当前价 ¥399.00'));
     expect(record.alternatives, ['买二手']);
   });
 

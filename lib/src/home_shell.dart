@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'analysis/analysis_request_summary.dart';
 import 'analysis/analysis_request_review_dialog.dart';
 import 'analysis/model_client.dart';
+import 'analysis/price_timing_summary.dart';
 import 'budget/budget_store.dart';
 import 'data/all_data_clearer.dart';
 import 'export/data_importer.dart';
@@ -1124,8 +1125,19 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
           .map((item) => item.title ?? copy.t('未命名商品', 'Unnamed item'))
           .join(copy.t('、', ', '));
       final ruleSummaries = matchedRules
-          .map((rule) => '${rule.name}：${rule.description}')
+          .map(
+            (rule) =>
+                '${rule.name}：${rule.description}'
+                '${rule.waitDays == null ? '' : '（至少等待 ${rule.waitDays} 天）'}',
+          )
           .toList();
+      final minimumRuleWaitDays = matchedRules
+          .map((rule) => rule.waitDays)
+          .whereType<int>()
+          .fold<int?>(null, (current, days) {
+            if (current == null || days > current) return days;
+            return current;
+          });
       final historySummaries = history.map((item) => item.summary).toList();
       final selectedCategory = category.text.trim().isEmpty
           ? null
@@ -1160,6 +1172,29 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
           .toSet()
           .take(10)
           .toList();
+      PriceTimingSummary priceTiming;
+      if (widget.items.length != 1) {
+        priceTiming = const PriceTimingSummary.insufficient(
+          '多件商品不能共用一条价格记录，请逐件分析入手时机',
+        );
+      } else {
+        final sourceItem = widget.items.single;
+        final sourceItemId = PriceWatchIdentity.itemId(sourceItem);
+        final watched = sourceItemId == null
+            ? null
+            : await const PriceWatchStore().findByIdentity(
+                sourceItem.platform,
+                sourceItemId,
+              );
+        priceTiming = watched == null
+            ? const PriceTimingSummary.insufficient('尚未监测此商品')
+            : PriceTimingSummary.fromEvidence(
+                PriceEvidence.from(
+                  await const PriceWatchStore().history(watched.id),
+                  now: DateTime.now(),
+                ),
+              );
+      }
       final requestSummary = AnalysisRequestSummary(
         endpoint: config.endpoint,
         itemName: itemName,
@@ -1169,9 +1204,11 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
         tags: tagValues,
         monthlyBudget: double.tryParse(budget.text.trim()),
         matchedRules: ruleSummaries,
+        minimumRuleWaitDays: minimumRuleWaitDays,
         relatedHistory: historySummaries,
         confirmedPatterns: confirmedPatterns,
         ownedItems: ownedSummaries,
+        priceTiming: priceTiming,
       );
       final confirmed = await _confirmAnalysisRequest(requestSummary);
       if (!confirmed || !mounted) return;
@@ -1189,9 +1226,11 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
             tags: tagValues,
             monthlyBudget: double.tryParse(budget.text.trim()),
             matchedRules: ruleSummaries,
+            minimumRuleWaitDays: minimumRuleWaitDays,
             relatedHistory: historySummaries,
             confirmedPatterns: confirmedPatterns,
             ownedItems: ownedSummaries,
+            priceTiming: priceTiming,
           );
       if (!mounted) return;
       final saved = await showDialog<bool>(
@@ -1205,6 +1244,7 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
           referencedHistory: historySummaries,
           referencedPatterns: confirmedPatterns,
           referencedOwnedItems: ownedSummaries,
+          priceTiming: priceTiming,
           category: selectedCategory,
           tags: tagValues,
         ),
@@ -1382,6 +1422,7 @@ class _DecisionDialog extends StatefulWidget {
     required this.referencedHistory,
     required this.referencedPatterns,
     required this.referencedOwnedItems,
+    required this.priceTiming,
     required this.category,
     required this.tags,
   });
@@ -1393,6 +1434,7 @@ class _DecisionDialog extends StatefulWidget {
   final List<String> referencedHistory;
   final List<String> referencedPatterns;
   final List<String> referencedOwnedItems;
+  final PriceTimingSummary priceTiming;
   final String? category;
   final List<String> tags;
 
@@ -1449,6 +1491,7 @@ class _DecisionDialogState extends State<_DecisionDialog> {
         risk: widget.advice.risk.name,
         confidence: widget.advice.confidence.name,
         budgetImpact: widget.advice.budgetImpact,
+        priceTimingEvidence: widget.priceTiming.auditText,
         alternatives: widget.advice.alternatives,
         events: [
           DecisionEvent(status: 'analyzed', occurredAt: now),
@@ -1601,6 +1644,13 @@ class _DecisionDialogState extends State<_DecisionDialog> {
                     ),
                   ),
                 ),
+              const SizedBox(height: 10),
+              Text(
+                copy.t('价格时机', 'Price timing'),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 4),
+              Text(_priceTimingLabel(copy, widget.priceTiming)),
               ...widget.advice.reasons.map(
                 (item) => Padding(
                   padding: const EdgeInsets.only(top: 8),
@@ -1780,4 +1830,26 @@ class _DecisionDialogState extends State<_DecisionDialog> {
         AdviceLevel.medium => copy.t('中', 'Medium'),
         AdviceLevel.high => copy.t('高', 'High'),
       };
+
+  static String _priceTimingLabel(
+    GuardianCopy copy,
+    PriceTimingSummary timing,
+  ) {
+    final current = timing.current;
+    final low = timing.recentLow;
+    return switch (timing.status) {
+      PriceTimingStatus.nearLocalLow => copy.t(
+        '当前 ¥${current!.price.toStringAsFixed(2)}，接近本机 30 天低价 ¥${low!.price.toStringAsFixed(2)}。这只说明价格时机，不代表商品值得买。',
+        'Current ¥${current.price.toStringAsFixed(2)}, near this device’s 30-day low of ¥${low.price.toStringAsFixed(2)}. This only describes timing, not whether the item is worth buying.',
+      ),
+      PriceTimingStatus.aboveLocalLow => copy.t(
+        '当前 ¥${current!.price.toStringAsFixed(2)}，高于本机 30 天低价 ¥${low!.price.toStringAsFixed(2)}。',
+        'Current ¥${current.price.toStringAsFixed(2)}, above this device’s 30-day low of ¥${low.price.toStringAsFixed(2)}.',
+      ),
+      PriceTimingStatus.insufficient => copy.t(
+        '数据不足：${timing.note}',
+        'Insufficient evidence: ${timing.note}',
+      ),
+    };
+  }
 }
