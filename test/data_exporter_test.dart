@@ -10,6 +10,8 @@ import 'package:shopping_guardian/src/owned/owned_item.dart';
 import 'package:shopping_guardian/src/owned/owned_item_store.dart';
 import 'package:shopping_guardian/src/prices/price_watch.dart';
 import 'package:shopping_guardian/src/prices/price_watch_store.dart';
+import 'package:shopping_guardian/src/profile/consumer_profile.dart';
+import 'package:shopping_guardian/src/profile/consumer_profile_store.dart';
 import 'package:shopping_guardian/src/rules/consumption_rule_store.dart';
 
 void main() {
@@ -76,6 +78,15 @@ void main() {
     await const ConsumptionRuleStore().saveAll([
       const ConsumptionRule(id: 'rule-1', name: '等待', description: '大额消费等两天'),
     ]);
+    await const ConsumerProfileStore().save(
+      ConsumerProfile(
+        title: '清醒规划派',
+        traits: ['先比较再决定', '重视长期使用', '愿意等待好价格'],
+        reminder: '低价只是时机，不是购买理由。',
+        source: 'quiz',
+        updatedAt: createdAt,
+      ),
+    );
     const channel = MethodChannel('test/export');
     String? exported;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -90,7 +101,7 @@ void main() {
 
     expect(await const DataExporter(channel: channel).export(), isTrue);
     final data = jsonDecode(exported!) as Map<String, dynamic>;
-    expect(data['schema_version'], 8);
+    expect(data['schema_version'], 9);
     expect(data['monthly_budget'], 2000);
     expect(data['decisions'], hasLength(1));
     final decision = (data['decisions'] as List).single as Map<String, dynamic>;
@@ -100,6 +111,7 @@ void main() {
     expect(data['rules'], hasLength(1));
     expect(data['price_watches'], hasLength(1));
     expect(data['owned_items'], hasLength(1));
+    expect((data['consumer_profile'] as Map)['title'], '清醒规划派');
     final history = data['price_history'] as Map<String, dynamic>;
     expect(
       ((history['watch-export'] as List).single

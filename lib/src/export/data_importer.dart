@@ -11,6 +11,8 @@ import '../patterns/pattern_store.dart';
 import '../patterns/personal_pattern.dart';
 import '../owned/owned_item.dart';
 import '../prices/price_watch.dart';
+import '../profile/consumer_profile.dart';
+import '../profile/consumer_profile_store.dart';
 import '../rules/consumption_rule.dart';
 
 enum DataImportMode { merge, replace }
@@ -40,6 +42,8 @@ class DataImportPreview {
     this.priceHistory = const {},
     this.ownedItems = const [],
     this.ownedItemConflicts = 0,
+    this.consumerProfile,
+    this.containsConsumerProfile = false,
   });
 
   final int schemaVersion;
@@ -56,6 +60,8 @@ class DataImportPreview {
   final Map<String, List<PriceSnapshot>> priceHistory;
   final List<OwnedItem> ownedItems;
   final int ownedItemConflicts;
+  final ConsumerProfile? consumerProfile;
+  final bool containsConsumerProfile;
 }
 
 class DataImportResult {
@@ -64,6 +70,7 @@ class DataImportResult {
     required this.importedRules,
     this.importedPriceWatches = 0,
     this.importedOwnedItems = 0,
+    this.consumerProfileImported = false,
     required this.skippedConflicts,
     required this.budgetImported,
   });
@@ -72,6 +79,7 @@ class DataImportResult {
   final int importedRules;
   final int importedPriceWatches;
   final int importedOwnedItems;
+  final bool consumerProfileImported;
   final int skippedConflicts;
   final bool budgetImported;
 }
@@ -111,7 +119,7 @@ class DataImporter {
     }
     final document = Map<String, dynamic>.from(decoded);
     final version = document['schema_version'];
-    if (version is! int || version < 1 || version > 8) {
+    if (version is! int || version < 1 || version > 9) {
       throw const DataImportException('不支持这个数据版本，请先升级应用');
     }
 
@@ -126,6 +134,10 @@ class DataImporter {
       priceWatches,
     );
     final ownedItems = _parseOwnedItems(document['owned_items'], version);
+    final consumerProfile = _parseConsumerProfile(
+      document['consumer_profile'],
+      version,
+    );
     await LegacyDataMigrator(_database).migrate();
 
     final existingDecisionIds =
@@ -168,6 +180,8 @@ class DataImporter {
       ownedItemConflicts: ownedItems
           .where((item) => existingOwnedItemIds.contains(item.id))
           .length,
+      consumerProfile: consumerProfile,
+      containsConsumerProfile: version >= 9,
     );
   }
 
@@ -196,6 +210,11 @@ class DataImporter {
         await (_database.delete(
           _database.appValues,
         )..where((row) => row.key.equals(PatternStore.key))).go();
+        if (preview.containsConsumerProfile) {
+          await (_database.delete(
+            _database.appValues,
+          )..where((row) => row.key.equals(ConsumerProfileStore.key))).go();
+        }
       }
 
       final existingDecisionIds =
@@ -342,12 +361,32 @@ class DataImporter {
               mode: InsertMode.insertOrReplace,
             );
       }
+      var consumerProfileImported = false;
+      if (preview.consumerProfile != null) {
+        final existingProfile =
+            await (_database.select(_database.appValues)
+                  ..where((row) => row.key.equals(ConsumerProfileStore.key)))
+                .getSingleOrNull();
+        if (mode == DataImportMode.replace || existingProfile == null) {
+          await _database
+              .into(_database.appValues)
+              .insert(
+                AppValuesCompanion.insert(
+                  key: ConsumerProfileStore.key,
+                  value: jsonEncode(preview.consumerProfile!.toJson()),
+                ),
+                mode: InsertMode.insertOrReplace,
+              );
+          consumerProfileImported = true;
+        }
+      }
 
       return DataImportResult(
         importedDecisions: importedDecisions,
         importedRules: importedRules,
         importedPriceWatches: importedPriceWatches,
         importedOwnedItems: importedOwnedItems,
+        consumerProfileImported: consumerProfileImported,
         skippedConflicts: skippedConflicts,
         budgetImported: budgetImported,
       );
@@ -575,6 +614,19 @@ class DataImporter {
       }
     }
     return items;
+  }
+
+  ConsumerProfile? _parseConsumerProfile(Object? value, int version) {
+    if (version < 9) return null;
+    if (value == null) return null;
+    if (value is! Map) {
+      throw const DataImportException('consumer_profile 必须是对象或 null');
+    }
+    try {
+      return ConsumerProfile.fromJson(Map<String, dynamic>.from(value));
+    } on Object {
+      throw const DataImportException('consumer_profile 格式有误');
+    }
   }
 
   Map<String, List<PriceSnapshot>> _parsePriceHistory(

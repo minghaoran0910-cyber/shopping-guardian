@@ -364,10 +364,12 @@ class SettingsPage extends StatelessWidget {
                       copy.t(
                         '${preview.decisions.length} 条决策记录 · ${preview.rules.length} 条消费规则'
                             '${preview.ownedItems.isEmpty ? '' : ' · ${preview.ownedItems.length} 件已有物品'}'
-                            '${preview.priceWatches.isEmpty ? '' : ' · ${preview.priceWatches.length} 个价格监测'}',
+                            '${preview.priceWatches.isEmpty ? '' : ' · ${preview.priceWatches.length} 个价格监测'}'
+                            '${preview.consumerProfile == null ? '' : ' · 1 份消费人格'}',
                         '${preview.decisions.length} decisions · ${preview.rules.length} rules'
                             '${preview.ownedItems.isEmpty ? '' : ' · ${preview.ownedItems.length} owned items'}'
-                            '${preview.priceWatches.isEmpty ? '' : ' · ${preview.priceWatches.length} price watches'}',
+                            '${preview.priceWatches.isEmpty ? '' : ' · ${preview.priceWatches.length} price watches'}'
+                            '${preview.consumerProfile == null ? '' : ' · 1 consumer profile'}',
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -428,12 +430,12 @@ class SettingsPage extends StatelessWidget {
                             )
                           : preview.containsRules
                           ? copy.t(
-                              '删除本机决策、规则和预算，再写入这份文件。此操作无法撤销。',
-                              'Delete local decisions, rules, and budget before importing this file. This cannot be undone.',
+                              '删除本机决策、规则、预算和这份备份支持的消费人格，再写入文件。此操作无法撤销。',
+                              'Delete local decisions, rules, budget, and the consumer profile supported by this backup before importing. This cannot be undone.',
                             )
                           : copy.t(
-                              '这是旧版备份：将替换决策和预算，但保留本机消费规则。此操作无法撤销。',
-                              'This is an older backup: decisions and budget will be replaced, while local rules are kept. This cannot be undone.',
+                              '这是旧版备份：将替换决策和预算，但保留本机消费规则与消费人格。此操作无法撤销。',
+                              'This is an older backup: decisions and budget will be replaced, while local rules and consumer profile are kept. This cannot be undone.',
                             ),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
@@ -465,10 +467,12 @@ class SettingsPage extends StatelessWidget {
               '已导入 ${result.importedDecisions} 条决策和 ${result.importedRules} 条规则'
                   '${result.importedOwnedItems == 0 ? '' : '，${result.importedOwnedItems} 件已有物品'}'
                   '${result.importedPriceWatches == 0 ? '' : '，${result.importedPriceWatches} 个价格监测'}'
+                  '${result.consumerProfileImported ? '，1 份消费人格' : ''}'
                   '${result.skippedConflicts > 0 ? '，跳过 ${result.skippedConflicts} 条重复内容' : ''}。',
               'Imported ${result.importedDecisions} decisions and ${result.importedRules} rules'
                   '${result.importedOwnedItems == 0 ? '' : '; ${result.importedOwnedItems} owned items'}'
                   '${result.importedPriceWatches == 0 ? '' : '; ${result.importedPriceWatches} price watches'}'
+                  '${result.consumerProfileImported ? '; 1 consumer profile' : ''}'
                   '${result.skippedConflicts > 0 ? '; skipped ${result.skippedConflicts} duplicates' : ''}.',
             ),
           ),

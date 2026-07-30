@@ -17,6 +17,7 @@
 - [x] DATA-06 增加 Schema 版本、事务和损坏记录隔离
 - [x] DATA-07 实现 JSON 数据导入
 - [x] DATA-08 支持导入预览、覆盖/合并和失败回滚
+- [x] DATA-09 消费人格进入版本化 JSON 备份；合并保留本机编辑，覆盖与旧备份兼容
 - [x] MODEL-01 Endpoint 支持标准路径与完整自定义地址
 - [x] MODEL-02 `response_format` 可配置
 - [x] MODEL-03 增加 Ollama 和常见兼容服务预设

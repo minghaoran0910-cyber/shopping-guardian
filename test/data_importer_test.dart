@@ -8,6 +8,8 @@ import 'package:shopping_guardian/src/export/data_importer.dart';
 import 'package:shopping_guardian/src/history/decision_store.dart';
 import 'package:shopping_guardian/src/owned/owned_item_store.dart';
 import 'package:shopping_guardian/src/prices/price_watch_store.dart';
+import 'package:shopping_guardian/src/profile/consumer_profile.dart';
+import 'package:shopping_guardian/src/profile/consumer_profile_store.dart';
 import 'package:shopping_guardian/src/rules/consumption_rule_store.dart';
 
 Map<String, Object?> decisionJson({
@@ -46,6 +48,7 @@ String importJson({
   List<Map<String, Object?>>? priceWatches,
   Map<String, Object?>? priceHistory,
   List<Map<String, Object?>>? ownedItems,
+  Map<String, Object?>? consumerProfile,
 }) => jsonEncode({
   'schema_version': version,
   'monthly_budget': budget,
@@ -69,6 +72,7 @@ String importJson({
   if (version >= 5) 'price_watches': priceWatches ?? [],
   if (version >= 5) 'price_history': priceHistory ?? {},
   if (version >= 6) 'owned_items': ownedItems ?? [],
+  if (version >= 9) 'consumer_profile': consumerProfile,
 });
 
 void main() {
@@ -117,7 +121,7 @@ void main() {
     final importer = DataImporter();
 
     await expectLater(
-      importer.preview(importJson(version: 9)),
+      importer.preview(importJson(version: 10)),
       throwsA(
         isA<DataImportException>().having(
           (error) => error.message,
@@ -330,6 +334,118 @@ void main() {
     expect((await const OwnedItemStore().readAll()).single.status, 'in_use');
   });
 
+  test(
+    'imports a valid consumer profile without overwriting it on merge',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final database = GuardianDatabase.memory();
+      addTearDown(database.close);
+      final store = ConsumerProfileStore(database: database);
+      final local = ConsumerProfile(
+        title: '本机结果',
+        traits: const ['本机特点一', '本机特点二', '本机特点三'],
+        reminder: '保留本机编辑。',
+        source: 'quiz',
+        updatedAt: DateTime(2026, 7, 29),
+      );
+      await store.save(local);
+      final importer = DataImporter(database: database);
+      final preview = await importer.preview(
+        importJson(
+          version: 9,
+          consumerProfile: {
+            'title': '备份结果',
+            'traits': ['备份特点一', '备份特点二', '备份特点三'],
+            'reminder': '来自备份的提醒。',
+            'source': 'evidence',
+            'updated_at': '2026-07-30T10:00:00.000',
+          },
+        ),
+      );
+
+      expect(preview.containsConsumerProfile, isTrue);
+      expect(preview.consumerProfile?.title, '备份结果');
+      final merged = await importer.apply(preview, DataImportMode.merge);
+      expect(merged.consumerProfileImported, isFalse);
+      expect((await store.read())?.title, '本机结果');
+
+      final replaced = await importer.apply(preview, DataImportMode.replace);
+      expect(replaced.consumerProfileImported, isTrue);
+      expect((await store.read())?.title, '备份结果');
+    },
+  );
+
+  test('old backup replacement preserves a local consumer profile', () async {
+    SharedPreferences.setMockInitialValues({});
+    final database = GuardianDatabase.memory();
+    addTearDown(database.close);
+    final store = ConsumerProfileStore(database: database);
+    await store.save(
+      ConsumerProfile(
+        title: '不能被旧备份删除',
+        traits: const ['特点一', '特点二', '特点三'],
+        reminder: '旧格式不了解这个字段。',
+        source: 'quiz',
+        updatedAt: DateTime(2026, 7, 29),
+      ),
+    );
+    final importer = DataImporter(database: database);
+    final preview = await importer.preview(importJson(version: 8));
+
+    expect(preview.containsConsumerProfile, isFalse);
+    await importer.apply(preview, DataImportMode.replace);
+    expect((await store.read())?.title, '不能被旧备份删除');
+  });
+
+  test('rejects an invalid consumer profile in a v9 backup', () async {
+    SharedPreferences.setMockInitialValues({});
+    final database = GuardianDatabase.memory();
+    addTearDown(database.close);
+    final importer = DataImporter(database: database);
+
+    await expectLater(
+      importer.preview(
+        importJson(
+          version: 9,
+          consumerProfile: {
+            'title': '缺少特点',
+            'traits': ['只有一项'],
+            'reminder': '不应导入。',
+            'source': 'quiz',
+            'updated_at': '2026-07-30T10:00:00.000',
+          },
+        ),
+      ),
+      throwsA(isA<DataImportException>()),
+    );
+  });
+
+  test(
+    'v9 replacement with an explicit null removes the local profile',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final database = GuardianDatabase.memory();
+      addTearDown(database.close);
+      final store = ConsumerProfileStore(database: database);
+      await store.save(
+        ConsumerProfile(
+          title: '准备删除',
+          traits: const ['特点一', '特点二', '特点三'],
+          reminder: '新版空值应明确删除。',
+          source: 'quiz',
+          updatedAt: DateTime(2026, 7, 29),
+        ),
+      );
+      final importer = DataImporter(database: database);
+      final preview = await importer.preview(
+        importJson(version: 9, consumerProfile: null),
+      );
+
+      await importer.apply(preview, DataImportMode.replace);
+      expect(await store.read(), isNull);
+    },
+  );
+
   test('replace swaps decisions, rules, and budget in one operation', () async {
     SharedPreferences.setMockInitialValues({});
     await const DecisionStore().add(
@@ -378,6 +494,15 @@ void main() {
         createdAt: DateTime(2026, 7, 1),
       ),
     );
+    await const ConsumerProfileStore().save(
+      ConsumerProfile(
+        title: '事务失败后保留',
+        traits: const ['特点一', '特点二', '特点三'],
+        reminder: '不允许部分删除。',
+        source: 'quiz',
+        updatedAt: DateTime(2026, 7, 29),
+      ),
+    );
     final database = GuardianDatabase.instance;
     await database.customStatement('''
       CREATE TRIGGER fail_imported_alternative
@@ -403,6 +528,7 @@ void main() {
 
     final records = await const DecisionStore().readAll();
     expect(records.single.id, 'local');
+    expect((await const ConsumerProfileStore().read())?.title, '事务失败后保留');
   });
 
   test('returns null when file selection is cancelled', () async {

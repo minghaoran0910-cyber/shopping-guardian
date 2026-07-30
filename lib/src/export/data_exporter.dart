@@ -8,6 +8,7 @@ import '../history/decision_store.dart';
 import '../owned/owned_item_store.dart';
 import '../patterns/pattern_store.dart';
 import '../prices/price_watch_store.dart';
+import '../profile/consumer_profile_store.dart';
 import '../rules/consumption_rule_store.dart';
 
 class DataExporter {
@@ -24,6 +25,7 @@ class DataExporter {
     final patterns = await const PatternStore().readAll();
     final ownedItems = await const OwnedItemStore().readAll();
     final priceWatches = await const PriceWatchStore().readAll();
+    final consumerProfile = await const ConsumerProfileStore().read();
     final priceHistory = <String, Object?>{};
     for (final watch in priceWatches) {
       priceHistory[watch.id] = (await const PriceWatchStore().history(watch.id))
@@ -38,7 +40,7 @@ class DataExporter {
           .toList();
     }
     final content = const JsonEncoder.withIndent('  ').convert({
-      'schema_version': 8,
+      'schema_version': 9,
       'exported_at': DateTime.now().toUtc().toIso8601String(),
       'monthly_budget': budget.limit,
       'model': {
@@ -55,6 +57,7 @@ class DataExporter {
       'owned_items': ownedItems.map((item) => item.toJson()).toList(),
       'price_watches': priceWatches.map((watch) => watch.toJson()).toList(),
       'price_history': priceHistory,
+      'consumer_profile': consumerProfile?.toJson(),
     });
     try {
       return await channel.invokeMethod<bool>('saveJson', {
