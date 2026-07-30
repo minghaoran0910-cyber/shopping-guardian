@@ -22,6 +22,7 @@ import 'patterns/candidate_fact_recorder.dart';
 import 'patterns/pattern_store.dart';
 import 'patterns/personal_pattern.dart';
 import 'prices/price_monitor_service.dart';
+import 'prices/price_evidence.dart';
 import 'prices/price_watch.dart';
 import 'prices/price_watch_store.dart';
 import 'release/app_version.dart';

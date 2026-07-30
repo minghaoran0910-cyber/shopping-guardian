@@ -7,8 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:shopping_guardian/main.dart';
 import 'package:shopping_guardian/src/history/decision_store.dart';
+import 'package:shopping_guardian/src/import/share_parser.dart';
 import 'package:shopping_guardian/src/import/shared_text_receiver.dart';
 import 'package:shopping_guardian/src/owned/owned_item_store.dart';
+import 'package:shopping_guardian/src/prices/price_watch.dart';
+import 'package:shopping_guardian/src/prices/price_watch_store.dart';
 
 void main() {
   testWidgets('shows setup choices on first launch', (tester) async {
@@ -79,14 +82,105 @@ void main() {
     SharedPreferences.setMockInitialValues({'onboarding_seen': true});
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
     await tester.pumpWidget(const ShoppingGuardianApp());
     await tester.tap(find.text('稍后再看'));
     await tester.pumpAndSettle();
 
     expect(find.text('这里还空着'), findsOneWidget);
+  });
+
+  testWidgets('shows traceable price evidence and local low', (tester) async {
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    const watchId = 'widget-price-evidence';
+    const unknownWatchId = 'widget-price-unknown';
+    const store = PriceWatchStore();
+    await store.delete(watchId);
+    await store.delete(unknownWatchId);
+    addTearDown(() async {
+      await store.delete(watchId);
+      await store.delete(unknownWatchId);
+    });
+    final now = DateTime.now();
+    await store.save(
+      PriceWatch(
+        id: watchId,
+        decisionId: 'widget-price-decision',
+        itemName: '证据测试耳机',
+        platform: ShoppingPlatform.jd,
+        itemId: '123456789',
+        productUrl: Uri.parse('https://item.jd.com/123456789.html'),
+        targetPrice: 450,
+        createdAt: now,
+        lastPrice: 480,
+      ),
+    );
+    await store.addObservation(
+      PriceSnapshot(
+        watchId: watchId,
+        observedAt: now.subtract(const Duration(hours: 7)),
+        price: 500,
+        source: 'justoneapi',
+        matchConfidence: 0.9,
+      ),
+    );
+    await store.save(
+      PriceWatch(
+        id: unknownWatchId,
+        decisionId: 'widget-price-unknown-decision',
+        itemName: '证据不足的商品',
+        platform: ShoppingPlatform.jd,
+        itemId: '987654321',
+        productUrl: Uri.parse('https://item.jd.com/987654321.html'),
+        targetPrice: 300,
+        createdAt: now,
+      ),
+    );
+    await store.addObservation(
+      PriceSnapshot(
+        watchId: unknownWatchId,
+        observedAt: now.subtract(const Duration(hours: 1)),
+        price: 299,
+        source: 'justoneapi',
+        matchConfidence: 0.4,
+      ),
+    );
+    await store.addObservation(
+      PriceSnapshot(
+        watchId: watchId,
+        observedAt: now.subtract(const Duration(hours: 1)),
+        price: 480,
+        source: 'justoneapi',
+        matchConfidence: 0.9,
+      ),
+    );
+
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.tap(find.text('稍后再看'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('证据测试耳机'), findsOneWidget);
+    expect(find.textContaining('当前价：¥480.00 · JustOneAPI'), findsOneWidget);
+    expect(
+      find.textContaining('参考价（上次记录）：¥500.00 · JustOneAPI'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('本机 30 天低价：¥480.00'), findsOneWidget);
+    expect(find.text('证据不足的商品'), findsOneWidget);
+    expect(find.textContaining('当前价：不知道'), findsOneWidget);
+    expect(find.textContaining('参考价（上次记录）：不知道'), findsOneWidget);
+    expect(find.textContaining('本机 30 天低价：不知道'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('changes language and theme from settings', (tester) async {

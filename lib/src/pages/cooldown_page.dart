@@ -10,13 +10,27 @@ class CooldownPage extends StatefulWidget {
 }
 
 class _CooldownPageState extends State<CooldownPage> {
-  late Future<(List<DecisionRecord>, List<PriceWatch>)> data = _load();
+  late Future<_CooldownData> data = _load();
   bool checkingPrices = false;
 
-  Future<(List<DecisionRecord>, List<PriceWatch>)> _load() async => (
-    await const DecisionStore().readAll(),
-    await const PriceWatchStore().readAll(),
-  );
+  Future<_CooldownData> _load() async {
+    final records = await const DecisionStore().readAll();
+    final watches = await const PriceWatchStore().readAll();
+    final histories = await Future.wait(
+      watches.map((watch) => const PriceWatchStore().history(watch.id)),
+    );
+    final evidence = <String, PriceEvidence>{};
+    final now = DateTime.now();
+    for (var index = 0; index < watches.length; index++) {
+      final watch = watches[index];
+      evidence[watch.id] = PriceEvidence.from(histories[index], now: now);
+    }
+    return _CooldownData(
+      records: records,
+      watches: watches,
+      evidence: evidence,
+    );
+  }
 
   Future<void> _checkPrices() async {
     final copy = GuardianCopy.of(context);
@@ -96,11 +110,13 @@ class _CooldownPageState extends State<CooldownPage> {
           label: Text(copy.t('检查价格', 'Check prices')),
         ),
       ],
-      child: FutureBuilder<(List<DecisionRecord>, List<PriceWatch>)>(
+      child: FutureBuilder<_CooldownData>(
         future: data,
         builder: (context, snapshot) {
-          final records = snapshot.data?.$1 ?? const <DecisionRecord>[];
-          final watches = snapshot.data?.$2 ?? const <PriceWatch>[];
+          final records = snapshot.data?.records ?? const <DecisionRecord>[];
+          final watches = snapshot.data?.watches ?? const <PriceWatch>[];
+          final evidence =
+              snapshot.data?.evidence ?? const <String, PriceEvidence>{};
           final items = records
               .where(
                 (record) =>
@@ -127,26 +143,21 @@ class _CooldownPageState extends State<CooldownPage> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 10),
-                ...watches.map(
-                  (watch) => Card(
+                ...watches.map((watch) {
+                  final prices =
+                      evidence[watch.id] ??
+                      const PriceEvidence(trustedCount: 0);
+                  return Card(
                     child: ListTile(
                       leading: const Icon(Icons.trending_down),
                       title: Text(watch.itemName),
-                      subtitle: Text(
-                        [
-                          if (!watch.enabled) copy.t('已暂停', 'Paused'),
-                          copy.t(
-                            '目标 ¥${watch.targetPrice.toStringAsFixed(2)}',
-                            'Target ¥${watch.targetPrice.toStringAsFixed(2)}',
-                          ),
-                          if (watch.lastPrice != null)
-                            copy.t(
-                              '最近 ¥${watch.lastPrice!.toStringAsFixed(2)}',
-                              'Latest ¥${watch.lastPrice!.toStringAsFixed(2)}',
-                            ),
-                          if (watch.lastError != null)
-                            copy.t('上次检查失败', 'Last check failed'),
-                        ].join(' · '),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: _PriceEvidenceSummary(
+                          watch: watch,
+                          evidence: prices,
+                          copy: copy,
+                        ),
                       ),
                       trailing: PopupMenuButton<String>(
                         tooltip: copy.t('管理价格监测', 'Manage price watch'),
@@ -185,8 +196,8 @@ class _CooldownPageState extends State<CooldownPage> {
                         ],
                       ),
                     ),
-                  ),
-                ),
+                  );
+                }),
                 const SizedBox(height: 24),
               ],
               if (items.isNotEmpty) ...[
@@ -216,4 +227,116 @@ class _CooldownPageState extends State<CooldownPage> {
       ),
     );
   }
+}
+
+class _CooldownData {
+  const _CooldownData({
+    required this.records,
+    required this.watches,
+    required this.evidence,
+  });
+
+  final List<DecisionRecord> records;
+  final List<PriceWatch> watches;
+  final Map<String, PriceEvidence> evidence;
+}
+
+class _PriceEvidenceSummary extends StatelessWidget {
+  const _PriceEvidenceSummary({
+    required this.watch,
+    required this.evidence,
+    required this.copy,
+  });
+
+  final PriceWatch watch;
+  final PriceEvidence evidence;
+  final GuardianCopy copy;
+
+  @override
+  Widget build(BuildContext context) {
+    final current = evidence.current;
+    final reference = evidence.reference;
+    final recentLow = evidence.recentLow;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          [
+            if (!watch.enabled) copy.t('已暂停', 'Paused'),
+            copy.t(
+              '目标 ¥${watch.targetPrice.toStringAsFixed(2)}',
+              'Target ¥${watch.targetPrice.toStringAsFixed(2)}',
+            ),
+            if (watch.lastError != null) copy.t('上次检查失败', 'Last check failed'),
+          ].join(' · '),
+        ),
+        const SizedBox(height: 8),
+        _PriceEvidenceLine(
+          label: copy.t('当前价', 'Current'),
+          snapshot: current,
+          unknown: copy.t(
+            '不知道（缺少 24 小时内可信报价）',
+            'Unknown (no trusted quote in 24h)',
+          ),
+        ),
+        _PriceEvidenceLine(
+          label: copy.t('参考价（上次记录）', 'Reference (previous quote)'),
+          snapshot: reference,
+          unknown: copy.t(
+            '不知道（还没有上一条可信报价）',
+            'Unknown (no previous trusted quote)',
+          ),
+        ),
+        _PriceEvidenceLine(
+          label: copy.t('本机 30 天低价', '30-day low on this device'),
+          snapshot: recentLow,
+          unknown: copy.t(
+            '不知道（至少需要两次、间隔 6 小时的可信记录）',
+            'Unknown (needs two trusted quotes at least 6h apart)',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PriceEvidenceLine extends StatelessWidget {
+  const _PriceEvidenceLine({
+    required this.label,
+    required this.snapshot,
+    required this.unknown,
+  });
+
+  final String label;
+  final PriceSnapshot? snapshot;
+  final String unknown;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = snapshot;
+    if (value == null) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 3),
+        child: Text('$label：$unknown'),
+      );
+    }
+    final local = value.observedAt.toLocal();
+    final time =
+        '${local.month.toString().padLeft(2, '0')}-'
+        '${local.day.toString().padLeft(2, '0')} '
+        '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Text(
+        '$label：¥${value.price.toStringAsFixed(2)} · '
+        '${_sourceName(value.source)} · $time',
+      ),
+    );
+  }
+
+  String _sourceName(String source) => switch (source) {
+    'justoneapi' => 'JustOneAPI',
+    _ => source,
+  };
 }
