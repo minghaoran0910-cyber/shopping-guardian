@@ -120,6 +120,26 @@ void main() {
     expect(found?.id, 'new');
   });
 
+  test('changing a target resets crossing state for the next real quote', () {
+    final now = DateTime(2026, 7, 30, 10);
+    final updated = PriceWatch(
+      id: 'watch-edit-target',
+      decisionId: 'decision-edit-target',
+      itemName: '测试耳机',
+      platform: ShoppingPlatform.jd,
+      itemId: '123456789',
+      productUrl: Uri.parse('https://item.jd.com/123456789.html'),
+      targetPrice: 800,
+      createdAt: now,
+      lastPrice: 799,
+      notifiedAt: now,
+    ).copyWith(targetPrice: 750, clearLastPrice: true, clearNotification: true);
+
+    expect(updated.targetPrice, 750);
+    expect(updated.lastPrice, isNull);
+    expect(updated.notifiedAt, isNull);
+  });
+
   test(
     'records real observations and alerts only on a target crossing',
     () async {
@@ -402,7 +422,7 @@ void main() {
       expect(invocation?.method, 'schedule');
       expect(invocation?.arguments, {
         'id': 'watch-price-kind_price',
-        'title': '测试耳机 已到 ¥799.00',
+        'title': '测试耳机 已到 ¥799.00，可以考虑下单',
         'timestamp': now.add(const Duration(seconds: 1)).millisecondsSinceEpoch,
         'kind': 'price',
       });

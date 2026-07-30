@@ -79,6 +79,60 @@ class _CooldownPageState extends State<CooldownPage> {
     }
   }
 
+  Future<void> _editTarget(PriceWatch watch) async {
+    final copy = GuardianCopy.of(context);
+    final controller = TextEditingController(
+      text: watch.targetPrice.toStringAsFixed(2),
+    );
+    final value = await showDialog<double>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(copy.t('修改目标价', 'Change target price')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: copy.t('目标价', 'Target price'),
+            prefixText: '¥ ',
+            helperText: copy.t(
+              '达到或低于这个价格时提醒你考虑下单。',
+              'We will alert you when the price reaches this target.',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(copy.t('取消', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () {
+              final parsed = double.tryParse(controller.text.trim());
+              if (parsed == null || parsed <= 0 || !parsed.isFinite) return;
+              Navigator.pop(context, parsed);
+            },
+            child: Text(copy.t('保存', 'Save')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null) return;
+    await const PriceWatchStore().save(
+      watch.copyWith(
+        targetPrice: value,
+        clearLastPrice: true,
+        clearNotification: true,
+        clearLastError: true,
+      ),
+    );
+    if (widget.justOneApiToken.trim().isNotEmpty) {
+      await const PriceMonitorService().checkAll(token: widget.justOneApiToken);
+    }
+    if (mounted) setState(() => data = _load());
+  }
+
   Future<void> _deleteWatch(PriceWatch watch) async {
     await const PriceWatchStore().delete(watch.id);
     await const LocalNotificationService().cancel('${watch.id}_price');
@@ -164,6 +218,8 @@ class _CooldownPageState extends State<CooldownPage> {
                         onSelected: (value) {
                           if (value == 'toggle') {
                             _toggle(watch, !watch.enabled);
+                          } else if (value == 'target') {
+                            _editTarget(watch);
                           } else if (value == 'delete') {
                             _deleteWatch(watch);
                           }
@@ -182,6 +238,16 @@ class _CooldownPageState extends State<CooldownPage> {
                                 watch.enabled
                                     ? copy.t('暂停监测', 'Pause watch')
                                     : copy.t('继续监测', 'Resume watch'),
+                              ),
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'target',
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.price_change_outlined),
+                              title: Text(
+                                copy.t('修改目标价', 'Change target price'),
                               ),
                             ),
                           ),

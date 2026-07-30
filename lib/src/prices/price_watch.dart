@@ -32,6 +32,7 @@ class PriceWatch {
   final DateTime? notifiedAt;
 
   PriceWatch copyWith({
+    double? targetPrice,
     bool? enabled,
     double? lastPrice,
     DateTime? lastCheckedAt,
@@ -39,6 +40,7 @@ class PriceWatch {
     DateTime? notifiedAt,
     bool clearLastError = false,
     bool clearNotification = false,
+    bool clearLastPrice = false,
   }) => PriceWatch(
     id: id,
     decisionId: decisionId,
@@ -46,10 +48,10 @@ class PriceWatch {
     platform: platform,
     itemId: itemId,
     productUrl: productUrl,
-    targetPrice: targetPrice,
+    targetPrice: targetPrice ?? this.targetPrice,
     createdAt: createdAt,
     enabled: enabled ?? this.enabled,
-    lastPrice: lastPrice ?? this.lastPrice,
+    lastPrice: clearLastPrice ? null : lastPrice ?? this.lastPrice,
     lastCheckedAt: lastCheckedAt ?? this.lastCheckedAt,
     lastError: clearLastError ? null : lastError ?? this.lastError,
     notifiedAt: clearNotification ? null : notifiedAt ?? this.notifiedAt,

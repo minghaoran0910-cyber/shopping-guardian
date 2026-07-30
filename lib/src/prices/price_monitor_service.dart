@@ -100,13 +100,15 @@ class PriceMonitorService {
           final scheduled = alert == null
               ? await notifications.schedule(
                   id: '${watch.id}_price',
-                  title: '${watch.itemName} 已到 ¥${price.toStringAsFixed(2)}',
+                  title:
+                      '${watch.itemName} 已到 ¥${price.toStringAsFixed(2)}，可以考虑下单',
                   at: observedAt.add(const Duration(seconds: 1)),
                   kind: LocalNotificationKind.price,
                 )
               : await alert!(
                   id: '${watch.id}_price',
-                  title: '${watch.itemName} 已到 ¥${price.toStringAsFixed(2)}',
+                  title:
+                      '${watch.itemName} 已到 ¥${price.toStringAsFixed(2)}，可以考虑下单',
                   at: observedAt.add(const Duration(seconds: 1)),
                 );
           if (!scheduled) {

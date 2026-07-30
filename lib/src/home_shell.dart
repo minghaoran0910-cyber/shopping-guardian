@@ -1,4 +1,8 @@
+import 'dart:ui' as ui;
+
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'analysis/analysis_request_summary.dart';
@@ -27,6 +31,9 @@ import 'prices/price_monitor_service.dart';
 import 'prices/price_evidence.dart';
 import 'prices/price_watch.dart';
 import 'prices/price_watch_store.dart';
+import 'profile/consumer_profile.dart';
+import 'profile/consumer_profile_generator.dart';
+import 'profile/consumer_profile_store.dart';
 import 'release/app_version.dart';
 import 'release/version_checker.dart';
 import 'rules/consumption_rule_store.dart';
@@ -1549,10 +1556,16 @@ class _DecisionDialogState extends State<_DecisionDialog> {
             productUrl: widget.item.url,
             targetPrice: target,
             createdAt: now,
-            lastPrice: widget.item.price,
           ),
         );
         priceWatchSaved = true;
+        try {
+          await const PriceMonitorService().checkAll(
+            token: widget.justOneApiToken,
+          );
+        } on Object {
+          // The watch stays saved and can be checked again from Later.
+        }
       }
     }
     var notificationScheduled = true;
