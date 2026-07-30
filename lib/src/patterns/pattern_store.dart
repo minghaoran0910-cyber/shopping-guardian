@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../data/guardian_database.dart';
+import 'confirmed_pattern_reference.dart';
 import 'personal_pattern.dart';
 
 class PatternStore {
@@ -36,6 +37,44 @@ class PatternStore {
         .where((text) => text.isNotEmpty)
         .take(limit)
         .toList();
+  }
+
+  Future<List<ConfirmedPatternReference>> readConfirmedReferences({
+    required Set<String> validDecisionIds,
+    int limit = 10,
+  }) async {
+    if (limit <= 0) return const [];
+    final references = <ConfirmedPatternReference>[];
+    for (final pattern in await readAll()) {
+      if (pattern.status != 'confirmed' || pattern.text.trim().isEmpty) {
+        continue;
+      }
+      final evidence = pattern.evidence
+          .where((item) => validDecisionIds.contains(item.decisionId))
+          .toList();
+      final supporting = evidence
+          .where((item) => item.supportsPattern)
+          .map((item) => item.summary.trim())
+          .where((item) => item.isNotEmpty)
+          .toSet()
+          .toList();
+      if (supporting.isEmpty) continue;
+      references.add(
+        ConfirmedPatternReference(
+          id: pattern.id,
+          text: pattern.text.trim(),
+          supportingEvidence: supporting,
+          contraryEvidence: evidence
+              .where((item) => !item.supportsPattern)
+              .map((item) => item.summary.trim())
+              .where((item) => item.isNotEmpty)
+              .toSet()
+              .toList(),
+        ),
+      );
+      if (references.length == limit) break;
+    }
+    return references;
   }
 
   Future<void> save(PersonalPattern pattern) async {

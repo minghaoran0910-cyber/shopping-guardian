@@ -89,7 +89,9 @@ class AnalysisRequestReviewDialog extends StatelessWidget {
                 label: copy.t('已确认的个人规律', 'Confirmed personal patterns'),
                 value: summary.confirmedPatterns.isEmpty
                     ? copy.t('无', 'None')
-                    : summary.confirmedPatterns.join('\n'),
+                    : summary.confirmedPatterns
+                          .map((item) => item.auditText)
+                          .join('\n\n'),
               ),
               _SummaryRow(
                 label: copy.t('价格时机证据', 'Price timing evidence'),

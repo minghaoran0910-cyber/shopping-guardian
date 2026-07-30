@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../patterns/confirmed_pattern_reference.dart';
 import 'analysis_request_summary.dart';
 import 'price_timing_summary.dart';
 
@@ -102,7 +103,7 @@ class ModelClient {
     List<String> matchedRules = const [],
     int? minimumRuleWaitDays,
     List<String> relatedHistory = const [],
-    List<String> confirmedPatterns = const [],
+    List<ConfirmedPatternReference> confirmedPatterns = const [],
     List<String> ownedItems = const [],
     PriceTimingSummary priceTiming = const PriceTimingSummary.insufficient(
       '尚未监测此商品',
@@ -131,7 +132,7 @@ class ModelClient {
         {
           'role': 'system',
           'content':
-              '你是站在用户利益一边的消费决策助手。必须按以下优先级判断：真实需求 > 预算和用户消费规则 > 已有同类物品 > 价格时机。价格证据只能影响“现在买还是等”，绝不能把需求不成立、超预算、命中等待规则或重复购买翻转成 buy。价格证据 status=insufficient 时不得猜测价格趋势或历史低价。若提供了同类已有物品，必须判断候选商品是在替代、补充还是重复购买；没有可靠信息时不要猜。只返回 JSON，字段为 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days、candidate_facts、need_assessment、ownership_relation。need_assessment 只能是 established、weak、insufficient；ownership_relation 只能是 replaces、complements、redundant、insufficient。candidate_facts 最多 3 条，每条格式为 {"text":"可能的个人事实","evidence":"本次输入中的直接依据"}；只能归纳输入直接支持的事实，没有就返回空数组。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high。不要替用户购买。',
+              '你是站在用户利益一边的消费决策助手。必须按以下优先级判断：真实需求 > 预算和用户消费规则 > 已有同类物品 > 价格时机。价格证据只能影响“现在买还是等”，绝不能把需求不成立、超预算、命中等待规则或重复购买翻转成 buy。价格证据 status=insufficient 时不得猜测价格趋势或历史低价。confirmed_patterns 中只有用户确认过的偏好；引用时必须同时考虑 supporting_evidence 和 contrary_evidence，不得编造来源，也不得把反例省略后包装成确定结论。若提供了同类已有物品，必须判断候选商品是在替代、补充还是重复购买；没有可靠信息时不要猜。只返回 JSON，字段为 verdict、risk、confidence、summary、reasons、budget_impact、alternatives、missing_information、wait_days、candidate_facts、need_assessment、ownership_relation。need_assessment 只能是 established、weak、insufficient；ownership_relation 只能是 replaces、complements、redundant、insufficient。candidate_facts 最多 3 条，每条格式为 {"text":"可能的个人事实","evidence":"本次输入中的直接依据"}；只能归纳输入直接支持的事实，没有就返回空数组。verdict 只能是 buy、wait、skip、alternative、insufficient_data；risk 和 confidence 只能是 low、medium、high。不要替用户购买。',
         },
         {'role': 'user', 'content': input},
       ]);

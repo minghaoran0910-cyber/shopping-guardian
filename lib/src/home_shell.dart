@@ -20,6 +20,7 @@ import 'owned/owned_item_store.dart';
 import 'owned/purchase_list_import.dart';
 import 'patterns/pattern_generator.dart';
 import 'patterns/candidate_fact_recorder.dart';
+import 'patterns/confirmed_pattern_reference.dart';
 import 'patterns/pattern_store.dart';
 import 'patterns/personal_pattern.dart';
 import 'prices/price_monitor_service.dart';
@@ -1164,7 +1165,10 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
         );
       }
       final ownedSummaries = ownedSummariesByName.values.take(10).toList();
-      final confirmedPatterns = await const PatternStore().readConfirmedTexts();
+      final confirmedPatterns = await const PatternStore()
+          .readConfirmedReferences(
+            validDecisionIds: decisionRecords.map((item) => item.id).toSet(),
+          );
       final tagValues = tags.text
           .split(RegExp(r'[,，]'))
           .map((tag) => tag.trim())
@@ -1432,7 +1436,7 @@ class _DecisionDialog extends StatefulWidget {
   final SharedShoppingItem item;
   final String justOneApiToken;
   final List<String> referencedHistory;
-  final List<String> referencedPatterns;
+  final List<ConfirmedPatternReference> referencedPatterns;
   final List<String> referencedOwnedItems;
   final PriceTimingSummary priceTiming;
   final String? category;
@@ -1484,7 +1488,9 @@ class _DecisionDialogState extends State<_DecisionDialog> {
         createdAt: now,
         waitUntil: waitUntil,
         referencedHistory: widget.referencedHistory,
-        referencedPatterns: widget.referencedPatterns,
+        referencedPatterns: widget.referencedPatterns
+            .map((item) => item.auditText)
+            .toList(),
         referencedOwnedItems: widget.referencedOwnedItems,
         category: widget.category,
         tags: widget.tags,
@@ -1752,7 +1758,32 @@ class _DecisionDialogState extends State<_DecisionDialog> {
                     ),
                   ),
                   children: widget.referencedPatterns
-                      .map((pattern) => ListTile(title: Text(pattern)))
+                      .map(
+                        (pattern) => ExpansionTile(
+                          tilePadding: EdgeInsets.zero,
+                          title: Text(pattern.text),
+                          children: [
+                            ...pattern.supportingEvidence.map(
+                              (item) => ListTile(
+                                dense: true,
+                                leading: const Icon(Icons.add_circle_outline),
+                                title: Text(copy.t('支持依据', 'Supporting')),
+                                subtitle: Text(item),
+                              ),
+                            ),
+                            ...pattern.contraryEvidence.map(
+                              (item) => ListTile(
+                                dense: true,
+                                leading: const Icon(
+                                  Icons.remove_circle_outline,
+                                ),
+                                title: Text(copy.t('相反记录', 'Counterexample')),
+                                subtitle: Text(item),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
                       .toList(),
                 ),
               if (widget.referencedOwnedItems.isNotEmpty)

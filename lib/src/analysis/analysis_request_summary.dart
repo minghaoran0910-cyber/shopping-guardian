@@ -1,4 +1,5 @@
 import 'price_timing_summary.dart';
+import '../patterns/confirmed_pattern_reference.dart';
 
 class AnalysisRequestSummary {
   const AnalysisRequestSummary({
@@ -27,7 +28,7 @@ class AnalysisRequestSummary {
   final List<String> matchedRules;
   final int? minimumRuleWaitDays;
   final List<String> relatedHistory;
-  final List<String> confirmedPatterns;
+  final List<ConfirmedPatternReference> confirmedPatterns;
   final List<String> ownedItems;
   final PriceTimingSummary priceTiming;
 
@@ -46,7 +47,9 @@ class AnalysisRequestSummary {
     'matched_rules': matchedRules,
     'minimum_rule_wait_days': minimumRuleWaitDays,
     'related_history': relatedHistory,
-    'confirmed_patterns': confirmedPatterns,
+    'confirmed_patterns': confirmedPatterns
+        .map((item) => item.toJson())
+        .toList(),
     'owned_items_same_category': ownedItems,
     'price_timing_evidence': priceTiming.toJson(),
   };

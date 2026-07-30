@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shopping_guardian/src/analysis/analysis_request_review_dialog.dart';
 import 'package:shopping_guardian/src/analysis/analysis_request_summary.dart';
 import 'package:shopping_guardian/src/analysis/price_timing_summary.dart';
+import 'package:shopping_guardian/src/patterns/confirmed_pattern_reference.dart';
 
 void main() {
   testWidgets('shows the model payload and can cancel sending', (tester) async {
@@ -16,6 +17,14 @@ void main() {
       matchedRules: ['大额商品：至少等两天'],
       relatedHistory: ['上次买键盘后使用频率很低'],
       ownedItems: ['旧键盘｜仍在使用｜数量 1'],
+      confirmedPatterns: [
+        ConfirmedPatternReference(
+          id: 'keyboard',
+          text: '买键盘前先检查已有设备',
+          supportingEvidence: ['键盘 A · 很少使用 · 2/5'],
+          contraryEvidence: ['键盘 B · 每天使用 · 5/5'],
+        ),
+      ],
       priceTiming: PriceTimingSummary.insufficient('可信价格记录不足'),
     );
     bool? result;
@@ -50,6 +59,8 @@ void main() {
     expect(find.text('上次买键盘后使用频率很低'), findsOneWidget);
     expect(find.text('同类已有物品'), findsOneWidget);
     expect(find.text('旧键盘｜仍在使用｜数量 1'), findsOneWidget);
+    expect(find.textContaining('支持：键盘 A'), findsOneWidget);
+    expect(find.textContaining('反例：键盘 B'), findsOneWidget);
     expect(find.text('价格时机证据'), findsOneWidget);
     expect(find.textContaining('数据不足，不能判断入手时机'), findsOneWidget);
     expect(find.textContaining('API Key 只用于请求头'), findsOneWidget);

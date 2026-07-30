@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shopping_guardian/src/analysis/model_client.dart';
 import 'package:shopping_guardian/src/analysis/price_timing_summary.dart';
+import 'package:shopping_guardian/src/patterns/confirmed_pattern_reference.dart';
 
 void main() {
   test('sends only the selected history summaries', () async {
@@ -27,7 +28,14 @@ void main() {
       itemName: '键盘',
       price: 699,
       relatedHistory: const ['过去买过同类键盘，后来很少使用'],
-      confirmedPatterns: const ['我确认：买键盘前先检查已有设备'],
+      confirmedPatterns: const [
+        ConfirmedPatternReference(
+          id: 'keyboard-check',
+          text: '我确认：买键盘前先检查已有设备',
+          supportingEvidence: ['键盘 A · 很少使用 · 2/5'],
+          contraryEvidence: ['键盘 B · 每天使用 · 5/5'],
+        ),
+      ],
       ownedItems: const ['旧键盘 ×1（仍在使用；办公）'],
     );
 
@@ -36,12 +44,23 @@ void main() {
         jsonDecode((messages.last as Map<String, dynamic>)['content'] as String)
             as Map<String, dynamic>;
     expect(input['related_history'], ['过去买过同类键盘，后来很少使用']);
-    expect(input['confirmed_patterns'], ['我确认：买键盘前先检查已有设备']);
+    expect(input['confirmed_patterns'], [
+      {
+        'pattern_id': 'keyboard-check',
+        'text': '我确认：买键盘前先检查已有设备',
+        'supporting_evidence': ['键盘 A · 很少使用 · 2/5'],
+        'contrary_evidence': ['键盘 B · 每天使用 · 5/5'],
+      },
+    ]);
     expect(input['owned_items_same_category'], ['旧键盘 ×1（仍在使用；办公）']);
     expect(input['price_timing_evidence']['status'], 'insufficient');
     expect(
       (messages.first as Map<String, dynamic>)['content'],
       contains('真实需求 > 预算和用户消费规则 > 已有同类物品 > 价格时机'),
+    );
+    expect(
+      (messages.first as Map<String, dynamic>)['content'],
+      contains('不得把反例省略'),
     );
     expect(jsonEncode(requestBody), isNot(contains('secret-key')));
   });
