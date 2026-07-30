@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shopping_guardian/main.dart';
+import 'package:shopping_guardian/src/import/shared_text_receiver.dart';
 
 void main() {
   testWidgets('关键页面在 200% 字号下没有溢出', (tester) async {
@@ -63,6 +64,53 @@ void main() {
 
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+    handle.dispose();
+  });
+
+  testWidgets('Android 分享文字进入后聚焦有标签的商品输入框', (tester) async {
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
+    const channel = MethodChannel('test/accessibility-shared-text');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          expect(call.method, 'getInitialText');
+          return '【京东】https://3.cn/accessibility-test';
+        });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      ShoppingGuardianApp(
+        sharedTextReceiver: SharedTextReceiver(channel: channel),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final field = find.widgetWithText(TextField, '链接或描述');
+    expect(field, findsOneWidget);
+    final textField = tester.widget<TextField>(field);
+    expect(textField.controller?.text, contains('京东'));
+    expect(textField.focusNode?.hasFocus, isTrue);
+    expect(find.bySemanticsLabel('链接或描述'), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('预算输入框拥有明确标签', (tester) async {
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('改预算'));
+    await tester.pumpAndSettle();
+
+    final field = find.widgetWithText(TextField, '本月预算');
+    expect(field, findsOneWidget);
+    expect(
+      find.descendant(of: field, matching: find.bySemanticsLabel('本月预算')),
+      findsOneWidget,
+    );
     handle.dispose();
   });
 }

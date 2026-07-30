@@ -952,15 +952,22 @@ class _ModelSettingsState extends State<_ModelSettings> {
         ),
         Align(
           alignment: Alignment.centerRight,
-          child: FilledButton.tonalIcon(
-            onPressed: loading || testing ? null : _testAndSave,
-            icon: testing
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.link_rounded),
-            label: Text(copy.t('测试并保存', 'Test and save')),
+          child: Semantics(
+            liveRegion: testing,
+            child: FilledButton.tonalIcon(
+              onPressed: loading || testing ? null : _testAndSave,
+              icon: testing
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.link_rounded),
+              label: Text(
+                testing
+                    ? copy.t('正在测试连接', 'Testing connection')
+                    : copy.t('测试并保存', 'Test and save'),
+              ),
+            ),
           ),
         ),
       ],
@@ -1062,15 +1069,22 @@ class _JustOneApiSettingsState extends State<_JustOneApiSettings> {
         ),
         Align(
           alignment: Alignment.centerRight,
-          child: FilledButton.tonalIcon(
-            onPressed: busy ? null : _saveAndTest,
-            icon: busy
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.link_rounded),
-            label: Text(copy.t('测试并保存', 'Test and save')),
+          child: Semantics(
+            liveRegion: busy,
+            child: FilledButton.tonalIcon(
+              onPressed: busy ? null : _saveAndTest,
+              icon: busy
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.link_rounded),
+              label: Text(
+                busy
+                    ? copy.t('正在测试连接', 'Testing connection')
+                    : copy.t('测试并保存', 'Test and save'),
+              ),
+            ),
           ),
         ),
       ],

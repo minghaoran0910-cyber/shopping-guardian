@@ -269,6 +269,7 @@ class AnalyzePage extends StatefulWidget {
 
 class _AnalyzePageState extends State<AnalyzePage> {
   final inputController = TextEditingController();
+  final inputFocusNode = FocusNode();
   final manualName = TextEditingController();
   final manualPrice = TextEditingController();
   final manualStore = TextEditingController();
@@ -293,7 +294,9 @@ class _AnalyzePageState extends State<AnalyzePage> {
     inputController.text = value;
     inputController.selection = TextSelection.collapsed(offset: value.length);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) widget.onSharedTextConsumed();
+      if (!mounted) return;
+      inputFocusNode.requestFocus();
+      widget.onSharedTextConsumed();
     });
   }
 
@@ -308,6 +311,7 @@ class _AnalyzePageState extends State<AnalyzePage> {
   @override
   void dispose() {
     inputController.dispose();
+    inputFocusNode.dispose();
     manualName.dispose();
     manualPrice.dispose();
     manualStore.dispose();
@@ -342,6 +346,7 @@ class _AnalyzePageState extends State<AnalyzePage> {
           const SizedBox(height: 16),
           TextField(
             controller: inputController,
+            focusNode: inputFocusNode,
             minLines: 4,
             maxLines: 7,
             decoration: InputDecoration(
@@ -456,115 +461,121 @@ class _AnalyzePageState extends State<AnalyzePage> {
             ),
           ),
           const SizedBox(height: 28),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton.icon(
-              onPressed: isImporting
-                  ? null
-                  : () async {
-                      if (inputController.text.trim().isEmpty && !showManual) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              copy.t(
-                                '先填点商品信息。',
-                                'Add some item details first.',
-                              ),
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-                      var parsed = ShoppingShareParser.parse(
-                        inputController.text,
-                      );
-                      if (parsed.isEmpty) {
-                        final price = double.tryParse(manualPrice.text.trim());
-                        if (showManual &&
-                            manualName.text.trim().isNotEmpty &&
-                            price != null) {
-                          parsed = [
-                            SharedShoppingItem(
-                              platform: _manualPlatform(manualStore.text),
-                              kind: ShareKind.product,
-                              url: Uri.parse('local://manual/item'),
-                              title: manualName.text.trim(),
-                              price: price,
-                            ),
-                          ];
-                        } else {
-                          setState(() => showManual = true);
+          Semantics(
+            liveRegion: isImporting,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: isImporting
+                    ? null
+                    : () async {
+                        if (inputController.text.trim().isEmpty &&
+                            !showManual) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
                                 copy.t(
-                                  '没认出链接，手动补一下名称和价格。',
-                                  'Link not recognized. Add the name and price manually.',
+                                  '先填点商品信息。',
+                                  'Add some item details first.',
                                 ),
                               ),
                             ),
                           );
                           return;
                         }
-                      }
-                      var previewItems = parsed;
-                      final details = widget.justOneApiToken.isEmpty
-                          ? null
-                          : JustOneApiClient(token: widget.justOneApiToken);
-                      setState(() => isImporting = true);
-                      try {
-                        final result = await ImportCoordinator(
-                          details: details,
-                        ).enrich(parsed);
-                        previewItems = result.items;
-                        if (context.mounted && result.warnings.isNotEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                result.warnings
-                                    .map(
-                                      (warning) => switch (warning) {
-                                        ImportWarning
-                                            .taobaoCollectionNeedsScreenshot =>
-                                          copy.t(
-                                            '淘宝购物车暂时不能从链接自动读取，请改用购物车截图。',
-                                            'Taobao carts cannot be read from a link yet. Use a cart screenshot instead.',
-                                          ),
-                                        ImportWarning.enrichmentFailed => copy.t(
-                                          '部分商品没能自动补全，已保留分享文字里的信息，请在下一步手动核对。',
-                                          'Some items could not be enriched. Their shared details were kept; review them manually in the next step.',
-                                        ),
-                                      },
-                                    )
-                                    .join('\n'),
-                              ),
-                              duration: const Duration(seconds: 6),
-                            ),
+                        var parsed = ShoppingShareParser.parse(
+                          inputController.text,
+                        );
+                        if (parsed.isEmpty) {
+                          final price = double.tryParse(
+                            manualPrice.text.trim(),
                           );
+                          if (showManual &&
+                              manualName.text.trim().isNotEmpty &&
+                              price != null) {
+                            parsed = [
+                              SharedShoppingItem(
+                                platform: _manualPlatform(manualStore.text),
+                                kind: ShareKind.product,
+                                url: Uri.parse('local://manual/item'),
+                                title: manualName.text.trim(),
+                                price: price,
+                              ),
+                            ];
+                          } else {
+                            setState(() => showManual = true);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  copy.t(
+                                    '没认出链接，手动补一下名称和价格。',
+                                    'Link not recognized. Add the name and price manually.',
+                                  ),
+                                ),
+                              ),
+                            );
+                            return;
+                          }
                         }
-                      } finally {
-                        if (mounted) setState(() => isImporting = false);
-                      }
-                      if (!context.mounted) return;
-                      final saved = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => _ImportPreviewDialog(
-                          items: previewItems,
-                          justOneApiToken: widget.justOneApiToken,
-                        ),
-                      );
-                      if (saved == true && mounted) _clearDraft();
-                    },
-              icon: isImporting
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.arrow_forward_rounded),
-              label: Text(
-                isImporting
-                    ? copy.t('正在读取', 'Reading')
-                    : copy.t('下一步', 'Continue'),
+                        var previewItems = parsed;
+                        final details = widget.justOneApiToken.isEmpty
+                            ? null
+                            : JustOneApiClient(token: widget.justOneApiToken);
+                        setState(() => isImporting = true);
+                        try {
+                          final result = await ImportCoordinator(
+                            details: details,
+                          ).enrich(parsed);
+                          previewItems = result.items;
+                          if (context.mounted && result.warnings.isNotEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  result.warnings
+                                      .map(
+                                        (warning) => switch (warning) {
+                                          ImportWarning
+                                              .taobaoCollectionNeedsScreenshot =>
+                                            copy.t(
+                                              '淘宝购物车暂时不能从链接自动读取，请改用购物车截图。',
+                                              'Taobao carts cannot be read from a link yet. Use a cart screenshot instead.',
+                                            ),
+                                          ImportWarning.enrichmentFailed => copy.t(
+                                            '部分商品没能自动补全，已保留分享文字里的信息，请在下一步手动核对。',
+                                            'Some items could not be enriched. Their shared details were kept; review them manually in the next step.',
+                                          ),
+                                        },
+                                      )
+                                      .join('\n'),
+                                ),
+                                duration: const Duration(seconds: 6),
+                              ),
+                            );
+                          }
+                        } finally {
+                          if (mounted) setState(() => isImporting = false);
+                        }
+                        if (!context.mounted) return;
+                        final saved = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => _ImportPreviewDialog(
+                            items: previewItems,
+                            justOneApiToken: widget.justOneApiToken,
+                          ),
+                        );
+                        if (saved == true && mounted) _clearDraft();
+                      },
+                icon: isImporting
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.arrow_forward_rounded),
+                label: Text(
+                  isImporting
+                      ? copy.t('正在读取', 'Reading')
+                      : copy.t('下一步', 'Continue'),
+                ),
               ),
             ),
           ),
@@ -684,7 +695,10 @@ class _BudgetEditorDialogState extends State<_BudgetEditorDialog> {
         controller: controller,
         autofocus: true,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: const InputDecoration(prefixText: '¥ '),
+        decoration: InputDecoration(
+          labelText: copy.t('本月预算', 'Monthly budget'),
+          prefixText: '¥ ',
+        ),
       ),
       actions: [
         TextButton(
@@ -1410,12 +1424,15 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
           onPressed: () => Navigator.pop(context),
           child: Text(copy.t('返回', 'Back')),
         ),
-        FilledButton(
-          onPressed: analyzing ? null : _run,
-          child: Text(
-            analyzing
-                ? copy.t('分析中…', 'Analyzing…')
-                : copy.t('开始分析', 'Analyze'),
+        Semantics(
+          liveRegion: analyzing,
+          child: FilledButton(
+            onPressed: analyzing ? null : _run,
+            child: Text(
+              analyzing
+                  ? copy.t('分析中…', 'Analyzing…')
+                  : copy.t('开始分析', 'Analyze'),
+            ),
           ),
         ),
       ],

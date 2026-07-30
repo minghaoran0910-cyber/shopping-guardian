@@ -1,5 +1,5 @@
 abstract final class AppVersion {
-  static const current = '1.10.0';
+  static const current = '1.10.1';
   static const releasesUrl =
       'https://github.com/minghaoran0910-cyber/shopping-guardian/releases';
 }
