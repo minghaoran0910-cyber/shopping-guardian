@@ -1,10 +1,11 @@
 # 分发与签名决策
 
-更新日期：2026-07-28
+更新日期：2026-07-30
 
 ## 当前策略
 
-- Android：GitHub Release 提供 APK；正式发布前继续校验签名和 SHA-256。
+- 当前 Latest Release：[`v1.10.0`](https://github.com/minghaoran0910-cyber/shopping-guardian/releases/tag/v1.10.0)。
+- Android：GitHub Release 提供 APK；发布前校验包内版本、签名和 SHA-256。
 - macOS：当前提供未公证 ZIP，并在下载说明中明确系统首次打开方式。
 - Windows：当前提供未签名便携 ZIP，下载页明确 SmartScreen 提示。
 - iOS：维持源码自签，不提供无法验证来源的通用 IPA。
