@@ -111,7 +111,7 @@ class DataImporter {
     }
     final document = Map<String, dynamic>.from(decoded);
     final version = document['schema_version'];
-    if (version is! int || version < 1 || version > 6) {
+    if (version is! int || version < 1 || version > 7) {
       throw const DataImportException('不支持这个数据版本，请先升级应用');
     }
 
@@ -268,6 +268,7 @@ class DataImporter {
                   observedAt: observation.observedAt,
                   price: observation.price,
                   source: observation.source,
+                  matchConfidence: Value(observation.matchConfidence),
                 ),
               );
         }
@@ -596,11 +597,19 @@ class DataImporter {
           final json = Map<String, dynamic>.from(item as Map);
           final price = (json['price'] as num).toDouble();
           if (price <= 0 || !price.isFinite) throw const FormatException();
+          final confidence = json['matchConfidence'] == null
+              ? null
+              : (json['matchConfidence'] as num).toDouble();
+          if (confidence != null &&
+              (!confidence.isFinite || confidence < 0 || confidence > 1)) {
+            throw const FormatException();
+          }
           return PriceSnapshot(
             watchId: watchId,
             observedAt: DateTime.parse('${json['observedAt']}'),
             price: price,
             source: '${json['source']}',
+            matchConfidence: confidence,
           );
         }).toList();
       } on Object {

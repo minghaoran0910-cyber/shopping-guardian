@@ -59,6 +59,7 @@ void main() {
         observedAt: createdAt,
         price: 300,
         source: 'justoneapi',
+        matchConfidence: 0.9,
       ),
     );
     await const OwnedItemStore().save(
@@ -89,7 +90,7 @@ void main() {
 
     expect(await const DataExporter(channel: channel).export(), isTrue);
     final data = jsonDecode(exported!) as Map<String, dynamic>;
-    expect(data['schema_version'], 6);
+    expect(data['schema_version'], 7);
     expect(data['monthly_budget'], 2000);
     expect(data['decisions'], hasLength(1));
     final decision = (data['decisions'] as List).single as Map<String, dynamic>;
@@ -100,6 +101,11 @@ void main() {
     expect(data['price_watches'], hasLength(1));
     expect(data['owned_items'], hasLength(1));
     final history = data['price_history'] as Map<String, dynamic>;
+    expect(
+      ((history['watch-export'] as List).single
+          as Map<String, dynamic>)['matchConfidence'],
+      0.9,
+    );
     expect(history['watch-export'], hasLength(1));
     expect(exported, isNot(contains('must-not-export')));
     expect(exported, isNot(contains('api_key')));

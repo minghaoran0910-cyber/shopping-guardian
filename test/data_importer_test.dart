@@ -116,7 +116,7 @@ void main() {
     final importer = DataImporter();
 
     await expectLater(
-      importer.preview(importJson(version: 7)),
+      importer.preview(importJson(version: 8)),
       throwsA(
         isA<DataImportException>().having(
           (error) => error.message,
@@ -237,6 +237,66 @@ void main() {
       hasLength(1),
     );
   });
+
+  test(
+    'imports v7 price matching confidence and validates its range',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final observedAt = '2026-07-30T10:00:00.000';
+      final importer = DataImporter();
+      final watch = {
+        'id': 'watch-confidence',
+        'decisionId': 'imported-1',
+        'itemName': '耳机',
+        'platform': 'jd',
+        'itemId': '123456789',
+        'productUrl': 'https://item.jd.com/123456789.html',
+        'targetPrice': 500,
+        'createdAt': observedAt,
+        'enabled': true,
+      };
+      final preview = await importer.preview(
+        importJson(
+          version: 7,
+          priceWatches: [watch],
+          priceHistory: {
+            'watch-confidence': [
+              {
+                'observedAt': observedAt,
+                'price': 499,
+                'source': 'justoneapi',
+                'matchConfidence': 0.9,
+              },
+            ],
+          },
+        ),
+      );
+      expect(
+        preview.priceHistory['watch-confidence']!.single.matchConfidence,
+        0.9,
+      );
+
+      await expectLater(
+        importer.preview(
+          importJson(
+            version: 7,
+            priceWatches: [watch],
+            priceHistory: {
+              'watch-confidence': [
+                {
+                  'observedAt': observedAt,
+                  'price': 499,
+                  'source': 'justoneapi',
+                  'matchConfidence': 2,
+                },
+              ],
+            },
+          ),
+        ),
+        throwsA(isA<DataImportException>()),
+      );
+    },
+  );
 
   test('imports manually owned items with their current status', () async {
     SharedPreferences.setMockInitialValues({});

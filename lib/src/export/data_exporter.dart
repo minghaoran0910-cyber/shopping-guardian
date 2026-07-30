@@ -32,12 +32,13 @@ class DataExporter {
               'observedAt': observation.observedAt.toIso8601String(),
               'price': observation.price,
               'source': observation.source,
+              'matchConfidence': observation.matchConfidence,
             },
           )
           .toList();
     }
     final content = const JsonEncoder.withIndent('  ').convert({
-      'schema_version': 6,
+      'schema_version': 7,
       'exported_at': DateTime.now().toUtc().toIso8601String(),
       'monthly_budget': budget.limit,
       'model': {

@@ -159,6 +159,7 @@ class PriceObservations extends Table {
   DateTimeColumn get observedAt => dateTime()();
   RealColumn get price => real()();
   TextColumn get source => text()();
+  RealColumn get matchConfidence => real().nullable()();
 }
 
 class MigrationQuarantine extends Table {
@@ -209,7 +210,7 @@ class GuardianDatabase extends _$GuardianDatabase {
   }
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -236,6 +237,14 @@ class GuardianDatabase extends _$GuardianDatabase {
       if (from < 6) {
         await migrator.createTable(ownedItems);
         await migrator.createTable(decisionOwnedReferences);
+      }
+      // Databases upgraded from before v5 create the current table shape above,
+      // which already contains this column. Only existing v5/v6 tables need it.
+      if (from >= 5 && from < 7) {
+        await migrator.addColumn(
+          priceObservations,
+          priceObservations.matchConfidence,
+        );
       }
     },
     beforeOpen: (details) async {

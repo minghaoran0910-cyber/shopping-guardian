@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shopping_guardian/src/data/guardian_database.dart';
 
 void main() {
-  test('migrates a v1 database through owned items v6', () async {
+  test('migrates a v1 database through price confidence v7', () async {
     await GuardianDatabase.resetAfterTesting();
     final database = GuardianDatabase(
       NativeDatabase.memory(
@@ -35,7 +35,7 @@ void main() {
         .get();
     final names = columns.map((row) => row.read<String>('name')).toSet();
 
-    expect(database.schemaVersion, 6);
+    expect(database.schemaVersion, 7);
     expect(
       names,
       containsAll([
@@ -44,6 +44,13 @@ void main() {
         'regret_reason',
         'category',
       ]),
+    );
+    final priceColumns = await database
+        .customSelect("PRAGMA table_info('price_observations')")
+        .get();
+    expect(
+      priceColumns.map((row) => row.read<String>('name')),
+      contains('match_confidence'),
     );
     final tables = await database
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -58,6 +65,36 @@ void main() {
         'owned_items',
         'decision_owned_references',
       ]),
+    );
+  });
+
+  test('adds price confidence to an existing v6 observation table', () async {
+    await GuardianDatabase.resetAfterTesting();
+    final database = GuardianDatabase(
+      NativeDatabase.memory(
+        setup: (raw) {
+          raw.execute('''
+            CREATE TABLE price_observations (
+              id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+              watch_id TEXT NOT NULL,
+              observed_at INTEGER NOT NULL,
+              price REAL NOT NULL,
+              source TEXT NOT NULL
+            )
+          ''');
+          raw.execute('PRAGMA user_version = 6');
+        },
+      ),
+    );
+    addTearDown(database.close);
+
+    final columns = await database
+        .customSelect("PRAGMA table_info('price_observations')")
+        .get();
+
+    expect(
+      columns.map((row) => row.read<String>('name')),
+      contains('match_confidence'),
     );
   });
 }

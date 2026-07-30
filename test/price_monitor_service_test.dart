@@ -3,12 +3,53 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shopping_guardian/src/data/guardian_database.dart';
 import 'package:shopping_guardian/src/import/share_parser.dart';
 import 'package:shopping_guardian/src/prices/price_monitor_service.dart';
+import 'package:shopping_guardian/src/prices/price_provider.dart';
 import 'package:shopping_guardian/src/prices/price_watch.dart';
 import 'package:shopping_guardian/src/prices/price_watch_store.dart';
+
+class _RecordingPriceProvider implements PriceProvider {
+  PriceWatch? receivedWatch;
+  String? receivedCredential;
+  DateTime? receivedObservedAt;
+
+  @override
+  String get id => 'recording-provider';
+
+  @override
+  bool supports(PriceWatch watch) => true;
+
+  @override
+  Future<PriceQuote> fetch(
+    PriceWatch watch, {
+    required String credential,
+    required DateTime observedAt,
+  }) async {
+    receivedWatch = watch;
+    receivedCredential = credential;
+    receivedObservedAt = observedAt;
+    return PriceQuote(
+      price: 399,
+      observedAt: observedAt,
+      source: id,
+      matchConfidence: 0.85,
+    );
+  }
+}
 
 void main() {
   late GuardianDatabase database;
   late PriceWatchStore store;
+
+  PriceQuote quote(
+    double price,
+    DateTime observedAt, {
+    double confidence = 0.9,
+  }) => PriceQuote(
+    price: price,
+    observedAt: observedAt,
+    source: 'test-provider',
+    matchConfidence: confidence,
+  );
 
   setUp(() {
     database = GuardianDatabase.memory();
@@ -71,7 +112,7 @@ void main() {
       final alerts = <String>[];
       final service = PriceMonitorService(
         store: store,
-        loader: (_) async => currentPrice,
+        loader: (_) async => quote(currentPrice, now),
         alert: ({required id, required title, required at}) async {
           alerts.add('$id:$title');
           return true;
@@ -154,7 +195,7 @@ void main() {
       var alerts = 0;
       final result = await PriceMonitorService(
         store: store,
-        loader: (_) async => 249,
+        loader: (_) async => quote(249, now),
         alert: ({required id, required title, required at}) async {
           alerts++;
           return true;
@@ -186,12 +227,80 @@ void main() {
       store: store,
       loader: (_) async {
         calls++;
-        return 499;
+        return quote(499, now);
       },
     ).checkAll(token: 'test', now: now, minimumAge: const Duration(hours: 6));
 
     expect(result.checked, 0);
     expect(calls, 0);
+  });
+
+  test(
+    'stores low-confidence quotes but never alerts or trusts them',
+    () async {
+      final now = DateTime(2026, 7, 30, 10);
+      await store.save(
+        PriceWatch(
+          id: 'watch-low-confidence',
+          decisionId: 'decision-low-confidence',
+          itemName: '测试耳机',
+          platform: ShoppingPlatform.jd,
+          itemId: '123456789',
+          productUrl: Uri.parse('https://item.jd.com/123456789.html'),
+          targetPrice: 800,
+          createdAt: now,
+          lastPrice: 900,
+        ),
+      );
+      var alerts = 0;
+      final result = await PriceMonitorService(
+        store: store,
+        loader: (_) async => quote(100, now, confidence: 0.4),
+        alert: ({required id, required title, required at}) async {
+          alerts++;
+          return true;
+        },
+      ).checkAll(token: 'test', now: now);
+
+      expect(result.failed, 1);
+      expect(result.reachedTarget, 0);
+      expect(alerts, 0);
+      final history = await store.history('watch-low-confidence');
+      expect(history.single.price, 100);
+      expect(history.single.matchConfidence, 0.4);
+      final watch = (await store.readAll()).single;
+      expect(watch.lastPrice, 900);
+      expect(watch.lastError, contains('置信度'));
+    },
+  );
+
+  test('uses an injected provider without changing monitoring logic', () async {
+    final now = DateTime(2026, 7, 30, 10);
+    final watch = PriceWatch(
+      id: 'watch-provider',
+      decisionId: 'decision-provider',
+      itemName: '测试商品',
+      platform: ShoppingPlatform.unknown,
+      itemId: 'provider-item',
+      productUrl: Uri.parse('https://example.com/provider-item'),
+      targetPrice: 300,
+      createdAt: now,
+    );
+    await store.save(watch);
+    final provider = _RecordingPriceProvider();
+
+    final result = await PriceMonitorService(
+      store: store,
+      provider: provider,
+    ).checkAll(token: 'provider-key', now: now);
+
+    expect(result.checked, 1);
+    expect(provider.receivedWatch?.id, watch.id);
+    expect(provider.receivedCredential, 'provider-key');
+    expect(provider.receivedObservedAt, now);
+    final history = await store.history(watch.id);
+    expect(history.single.source, provider.id);
+    expect(history.single.matchConfidence, 0.85);
   });
 
   test('does not mark a rejected system notification as delivered', () async {
@@ -211,7 +320,7 @@ void main() {
     );
     final service = PriceMonitorService(
       store: store,
-      loader: (_) async => 799,
+      loader: (_) async => quote(799, now),
       alert: ({required id, required title, required at}) async => false,
     );
 

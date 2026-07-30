@@ -17,8 +17,9 @@ class PriceWatchStore {
     return rows.map(_fromRow).toList();
   }
 
-  Future<void> save(PriceWatch watch) =>
-      _database.into(_database.priceWatches).insertOnConflictUpdate(
+  Future<void> save(PriceWatch watch) => _database
+      .into(_database.priceWatches)
+      .insertOnConflictUpdate(
         PriceWatchesCompanion.insert(
           id: watch.id,
           decisionId: watch.decisionId,
@@ -45,6 +46,7 @@ class PriceWatchStore {
             observedAt: observation.observedAt,
             price: observation.price,
             source: observation.source,
+            matchConfidence: Value(observation.matchConfidence),
           ),
         );
   }
@@ -62,6 +64,7 @@ class PriceWatchStore {
             observedAt: row.observedAt,
             price: row.price,
             source: row.source,
+            matchConfidence: row.matchConfidence,
           ),
         )
         .toList();

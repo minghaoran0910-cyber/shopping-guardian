@@ -1,10 +1,9 @@
-import '../import/justoneapi_client.dart';
-import '../import/share_parser.dart';
 import '../notifications/local_notification_service.dart';
+import 'price_provider.dart';
 import 'price_watch.dart';
 import 'price_watch_store.dart';
 
-typedef PriceLoader = Future<double?> Function(PriceWatch watch);
+typedef PriceLoader = Future<PriceQuote?> Function(PriceWatch watch);
 typedef PriceAlert =
     Future<bool> Function({
       required String id,
@@ -28,12 +27,14 @@ class PriceMonitorService {
   const PriceMonitorService({
     this.store = const PriceWatchStore(),
     this.notifications = const LocalNotificationService(),
+    this.provider = const JustOneApiPriceProvider(),
     this.loader,
     this.alert,
   });
 
   final PriceWatchStore store;
   final LocalNotificationService notifications;
+  final PriceProvider provider;
   final PriceLoader? loader;
   final PriceAlert? alert;
 
@@ -58,21 +59,36 @@ class PriceMonitorService {
               checkedAt.difference(watch.lastCheckedAt!) >= minimumAge),
     )) {
       try {
-        final price = loader == null
-            ? await _loadPrice(watch, token)
+        final quote = loader == null
+            ? await provider.fetch(
+                watch,
+                credential: token,
+                observedAt: checkedAt,
+              )
             : await loader!(watch);
-        if (price == null || price <= 0 || !price.isFinite) {
-          throw const JustOneApiException('接口没有返回可用价格');
+        if (quote == null ||
+            quote.price <= 0 ||
+            !quote.price.isFinite ||
+            quote.source.trim().isEmpty ||
+            !quote.matchConfidence.isFinite ||
+            quote.matchConfidence < 0 ||
+            quote.matchConfidence > 1) {
+          throw StateError('价格提供者没有返回有效报价');
         }
-        final observedAt = checkedAt;
+        final price = quote.price;
+        final observedAt = quote.observedAt;
         await store.addObservation(
           PriceSnapshot(
             watchId: watch.id,
             observedAt: observedAt,
             price: price,
-            source: 'justoneapi',
+            source: quote.source,
+            matchConfidence: quote.matchConfidence,
           ),
         );
+        if (quote.matchConfidence < 0.8) {
+          throw StateError('商品匹配置信度不足，未用于提醒');
+        }
         final reachedNow = price <= watch.targetPrice;
         final crossedTarget =
             reachedNow &&
@@ -114,16 +130,5 @@ class PriceMonitorService {
       reachedTarget: reached,
       failed: failed,
     );
-  }
-
-  Future<double?> _loadPrice(PriceWatch watch, String token) async {
-    final client = JustOneApiClient(token: token);
-    final product = switch (watch.platform) {
-      ShoppingPlatform.taobao => await client.loadTaobaoProduct(watch.itemId),
-      ShoppingPlatform.jd => await client.loadJdProduct(watch.itemId),
-      ShoppingPlatform.pinduoduo || ShoppingPlatform.unknown =>
-        throw const JustOneApiException('这个平台暂不支持自动查价'),
-    };
-    return product.price;
   }
 }

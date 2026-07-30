@@ -4738,6 +4738,17 @@ class $PriceObservationsTable extends PriceObservations
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _matchConfidenceMeta = const VerificationMeta(
+    'matchConfidence',
+  );
+  @override
+  late final GeneratedColumn<double> matchConfidence = GeneratedColumn<double>(
+    'match_confidence',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4745,6 +4756,7 @@ class $PriceObservationsTable extends PriceObservations
     observedAt,
     price,
     source,
+    matchConfidence,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4793,6 +4805,15 @@ class $PriceObservationsTable extends PriceObservations
     } else if (isInserting) {
       context.missing(_sourceMeta);
     }
+    if (data.containsKey('match_confidence')) {
+      context.handle(
+        _matchConfidenceMeta,
+        matchConfidence.isAcceptableOrUnknown(
+          data['match_confidence']!,
+          _matchConfidenceMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4822,6 +4843,10 @@ class $PriceObservationsTable extends PriceObservations
         DriftSqlType.string,
         data['${effectivePrefix}source'],
       )!,
+      matchConfidence: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}match_confidence'],
+      ),
     );
   }
 
@@ -4838,12 +4863,14 @@ class PriceObservation extends DataClass
   final DateTime observedAt;
   final double price;
   final String source;
+  final double? matchConfidence;
   const PriceObservation({
     required this.id,
     required this.watchId,
     required this.observedAt,
     required this.price,
     required this.source,
+    this.matchConfidence,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4853,6 +4880,9 @@ class PriceObservation extends DataClass
     map['observed_at'] = Variable<DateTime>(observedAt);
     map['price'] = Variable<double>(price);
     map['source'] = Variable<String>(source);
+    if (!nullToAbsent || matchConfidence != null) {
+      map['match_confidence'] = Variable<double>(matchConfidence);
+    }
     return map;
   }
 
@@ -4863,6 +4893,9 @@ class PriceObservation extends DataClass
       observedAt: Value(observedAt),
       price: Value(price),
       source: Value(source),
+      matchConfidence: matchConfidence == null && nullToAbsent
+          ? const Value.absent()
+          : Value(matchConfidence),
     );
   }
 
@@ -4877,6 +4910,7 @@ class PriceObservation extends DataClass
       observedAt: serializer.fromJson<DateTime>(json['observedAt']),
       price: serializer.fromJson<double>(json['price']),
       source: serializer.fromJson<String>(json['source']),
+      matchConfidence: serializer.fromJson<double?>(json['matchConfidence']),
     );
   }
   @override
@@ -4888,6 +4922,7 @@ class PriceObservation extends DataClass
       'observedAt': serializer.toJson<DateTime>(observedAt),
       'price': serializer.toJson<double>(price),
       'source': serializer.toJson<String>(source),
+      'matchConfidence': serializer.toJson<double?>(matchConfidence),
     };
   }
 
@@ -4897,12 +4932,16 @@ class PriceObservation extends DataClass
     DateTime? observedAt,
     double? price,
     String? source,
+    Value<double?> matchConfidence = const Value.absent(),
   }) => PriceObservation(
     id: id ?? this.id,
     watchId: watchId ?? this.watchId,
     observedAt: observedAt ?? this.observedAt,
     price: price ?? this.price,
     source: source ?? this.source,
+    matchConfidence: matchConfidence.present
+        ? matchConfidence.value
+        : this.matchConfidence,
   );
   PriceObservation copyWithCompanion(PriceObservationsCompanion data) {
     return PriceObservation(
@@ -4913,6 +4952,9 @@ class PriceObservation extends DataClass
           : this.observedAt,
       price: data.price.present ? data.price.value : this.price,
       source: data.source.present ? data.source.value : this.source,
+      matchConfidence: data.matchConfidence.present
+          ? data.matchConfidence.value
+          : this.matchConfidence,
     );
   }
 
@@ -4923,13 +4965,15 @@ class PriceObservation extends DataClass
           ..write('watchId: $watchId, ')
           ..write('observedAt: $observedAt, ')
           ..write('price: $price, ')
-          ..write('source: $source')
+          ..write('source: $source, ')
+          ..write('matchConfidence: $matchConfidence')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, watchId, observedAt, price, source);
+  int get hashCode =>
+      Object.hash(id, watchId, observedAt, price, source, matchConfidence);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4938,7 +4982,8 @@ class PriceObservation extends DataClass
           other.watchId == this.watchId &&
           other.observedAt == this.observedAt &&
           other.price == this.price &&
-          other.source == this.source);
+          other.source == this.source &&
+          other.matchConfidence == this.matchConfidence);
 }
 
 class PriceObservationsCompanion extends UpdateCompanion<PriceObservation> {
@@ -4947,12 +4992,14 @@ class PriceObservationsCompanion extends UpdateCompanion<PriceObservation> {
   final Value<DateTime> observedAt;
   final Value<double> price;
   final Value<String> source;
+  final Value<double?> matchConfidence;
   const PriceObservationsCompanion({
     this.id = const Value.absent(),
     this.watchId = const Value.absent(),
     this.observedAt = const Value.absent(),
     this.price = const Value.absent(),
     this.source = const Value.absent(),
+    this.matchConfidence = const Value.absent(),
   });
   PriceObservationsCompanion.insert({
     this.id = const Value.absent(),
@@ -4960,6 +5007,7 @@ class PriceObservationsCompanion extends UpdateCompanion<PriceObservation> {
     required DateTime observedAt,
     required double price,
     required String source,
+    this.matchConfidence = const Value.absent(),
   }) : watchId = Value(watchId),
        observedAt = Value(observedAt),
        price = Value(price),
@@ -4970,6 +5018,7 @@ class PriceObservationsCompanion extends UpdateCompanion<PriceObservation> {
     Expression<DateTime>? observedAt,
     Expression<double>? price,
     Expression<String>? source,
+    Expression<double>? matchConfidence,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4977,6 +5026,7 @@ class PriceObservationsCompanion extends UpdateCompanion<PriceObservation> {
       if (observedAt != null) 'observed_at': observedAt,
       if (price != null) 'price': price,
       if (source != null) 'source': source,
+      if (matchConfidence != null) 'match_confidence': matchConfidence,
     });
   }
 
@@ -4986,6 +5036,7 @@ class PriceObservationsCompanion extends UpdateCompanion<PriceObservation> {
     Value<DateTime>? observedAt,
     Value<double>? price,
     Value<String>? source,
+    Value<double?>? matchConfidence,
   }) {
     return PriceObservationsCompanion(
       id: id ?? this.id,
@@ -4993,6 +5044,7 @@ class PriceObservationsCompanion extends UpdateCompanion<PriceObservation> {
       observedAt: observedAt ?? this.observedAt,
       price: price ?? this.price,
       source: source ?? this.source,
+      matchConfidence: matchConfidence ?? this.matchConfidence,
     );
   }
 
@@ -5014,6 +5066,9 @@ class PriceObservationsCompanion extends UpdateCompanion<PriceObservation> {
     if (source.present) {
       map['source'] = Variable<String>(source.value);
     }
+    if (matchConfidence.present) {
+      map['match_confidence'] = Variable<double>(matchConfidence.value);
+    }
     return map;
   }
 
@@ -5024,7 +5079,8 @@ class PriceObservationsCompanion extends UpdateCompanion<PriceObservation> {
           ..write('watchId: $watchId, ')
           ..write('observedAt: $observedAt, ')
           ..write('price: $price, ')
-          ..write('source: $source')
+          ..write('source: $source, ')
+          ..write('matchConfidence: $matchConfidence')
           ..write(')'))
         .toString();
   }
@@ -9490,6 +9546,7 @@ typedef $$PriceObservationsTableCreateCompanionBuilder =
       required DateTime observedAt,
       required double price,
       required String source,
+      Value<double?> matchConfidence,
     });
 typedef $$PriceObservationsTableUpdateCompanionBuilder =
     PriceObservationsCompanion Function({
@@ -9498,6 +9555,7 @@ typedef $$PriceObservationsTableUpdateCompanionBuilder =
       Value<DateTime> observedAt,
       Value<double> price,
       Value<String> source,
+      Value<double?> matchConfidence,
     });
 
 final class $$PriceObservationsTableReferences
@@ -9561,6 +9619,11 @@ class $$PriceObservationsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<double> get matchConfidence => $composableBuilder(
+    column: $table.matchConfidence,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$PriceWatchesTableFilterComposer get watchId {
     final $$PriceWatchesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -9614,6 +9677,11 @@ class $$PriceObservationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get matchConfidence => $composableBuilder(
+    column: $table.matchConfidence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$PriceWatchesTableOrderingComposer get watchId {
     final $$PriceWatchesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -9660,6 +9728,11 @@ class $$PriceObservationsTableAnnotationComposer
 
   GeneratedColumn<String> get source =>
       $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<double> get matchConfidence => $composableBuilder(
+    column: $table.matchConfidence,
+    builder: (column) => column,
+  );
 
   $$PriceWatchesTableAnnotationComposer get watchId {
     final $$PriceWatchesTableAnnotationComposer composer = $composerBuilder(
@@ -9723,12 +9796,14 @@ class $$PriceObservationsTableTableManager
                 Value<DateTime> observedAt = const Value.absent(),
                 Value<double> price = const Value.absent(),
                 Value<String> source = const Value.absent(),
+                Value<double?> matchConfidence = const Value.absent(),
               }) => PriceObservationsCompanion(
                 id: id,
                 watchId: watchId,
                 observedAt: observedAt,
                 price: price,
                 source: source,
+                matchConfidence: matchConfidence,
               ),
           createCompanionCallback:
               ({
@@ -9737,12 +9812,14 @@ class $$PriceObservationsTableTableManager
                 required DateTime observedAt,
                 required double price,
                 required String source,
+                Value<double?> matchConfidence = const Value.absent(),
               }) => PriceObservationsCompanion.insert(
                 id: id,
                 watchId: watchId,
                 observedAt: observedAt,
                 price: price,
                 source: source,
+                matchConfidence: matchConfidence,
               ),
           withReferenceMapper: (p0) => p0
               .map(

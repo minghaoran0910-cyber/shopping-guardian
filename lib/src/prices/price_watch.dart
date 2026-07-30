@@ -101,12 +101,14 @@ class PriceSnapshot {
     required this.observedAt,
     required this.price,
     required this.source,
+    this.matchConfidence,
   });
 
   final String watchId;
   final DateTime observedAt;
   final double price;
   final String source;
+  final double? matchConfidence;
 }
 
 abstract final class PriceWatchIdentity {
