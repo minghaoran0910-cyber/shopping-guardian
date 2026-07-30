@@ -16,6 +16,7 @@ import 'notifications/local_notification_service.dart';
 import 'notifications/feedback_reminder_service.dart';
 import 'owned/owned_item.dart';
 import 'owned/owned_item_store.dart';
+import 'owned/purchase_list_import.dart';
 import 'patterns/pattern_generator.dart';
 import 'patterns/pattern_store.dart';
 import 'patterns/personal_pattern.dart';

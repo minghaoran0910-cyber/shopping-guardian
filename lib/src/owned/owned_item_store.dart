@@ -49,6 +49,32 @@ class OwnedItemStore {
         );
   }
 
+  Future<void> saveAll(List<OwnedItem> items) async {
+    for (final item in items) {
+      _validate(item);
+    }
+    await _database.transaction(() async {
+      for (final item in items) {
+        await _database
+            .into(_database.ownedItems)
+            .insertOnConflictUpdate(
+              OwnedItemsCompanion.insert(
+                id: item.id,
+                name: item.name.trim(),
+                category: item.category.trim(),
+                status: item.status,
+                quantity: Value(item.quantity),
+                notes: Value(_nullable(item.notes)),
+                purchasePrice: Value(item.purchasePrice),
+                acquiredAt: Value(item.acquiredAt),
+                createdAt: item.createdAt,
+                updatedAt: item.updatedAt,
+              ),
+            );
+      }
+    });
+  }
+
   Future<void> delete(String id) => (_database.delete(
     _database.ownedItems,
   )..where((row) => row.id.equals(id))).go();

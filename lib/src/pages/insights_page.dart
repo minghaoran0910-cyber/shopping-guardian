@@ -272,6 +272,285 @@ class _InsightsPageState extends State<InsightsPage> {
     }
   }
 
+  Future<void> _importPurchaseList(List<OwnedItem> existingItems) async {
+    final copy = GuardianCopy.of(context);
+    final controller = TextEditingController();
+    final input = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(copy.t('导入历史购买清单', 'Import purchase history')),
+        content: SizedBox(
+          width: 560,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  copy.t(
+                    '每行一件，用“|”分隔：名称 | 分类 | 当前状态 | 当时价格 | 日期 | 备注',
+                    'One item per line, separated by “|”: name | category | current status | price | date | notes',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  copy.t(
+                    '状态可填：仍在使用、备用、已淘汰、已转卖、已退货。留空会按“买过，现状不确定”处理。',
+                    'Status: in_use, backup, retired, returned. Blank means previously bought, current status unknown.',
+                  ),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  key: const Key('purchase-list-input'),
+                  controller: controller,
+                  autofocus: true,
+                  minLines: 7,
+                  maxLines: 14,
+                  decoration: InputDecoration(
+                    hintText: copy.t(
+                      'AirPods Pro | 数码 | 仍在使用 | 1499 | 2024-06-18 | 通勤\n'
+                          '旧键盘 | 数码 | 已转卖 | 399 | 2022-03-01',
+                      'AirPods Pro | 数码 | in_use | 1499 | 2024-06-18 | commute\n'
+                          'Old keyboard | 数码 | retired | 399 | 2022-03-01',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(copy.t('取消', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: Text(copy.t('解析并预览', 'Parse and preview')),
+          ),
+        ],
+      ),
+    );
+    if (input == null || input.trim().isEmpty || !mounted) return;
+    final parsed = const PurchaseListParser().parse(input);
+    if (parsed.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(copy.t('没有找到可导入的行。', 'No importable rows found.')),
+        ),
+      );
+      return;
+    }
+
+    final normalizedExisting = {
+      for (final item in existingItems)
+        '${item.name.trim().toLowerCase()}\u0000${item.category}',
+    };
+    final seenInInput = <String>{};
+    final drafts = parsed.map((item) {
+      final key = '${item.name.trim().toLowerCase()}\u0000${item.category}';
+      final duplicate =
+          normalizedExisting.contains(key) || !seenInInput.add(key);
+      return item.copyWith(included: item.isValid && !duplicate);
+    }).toList();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final selected = drafts.where(
+            (item) => item.included && item.isValid,
+          );
+          bool isDuplicate(int index) {
+            final draft = drafts[index];
+            final key =
+                '${draft.name.trim().toLowerCase()}\u0000${draft.category}';
+            if (normalizedExisting.contains(key)) return true;
+            for (var previous = 0; previous < index; previous++) {
+              final other = drafts[previous];
+              if (!other.included) continue;
+              final otherKey =
+                  '${other.name.trim().toLowerCase()}\u0000${other.category}';
+              if (otherKey == key) return true;
+            }
+            return false;
+          }
+
+          return AlertDialog(
+            title: Text(copy.t('核对后再导入', 'Review before importing')),
+            content: SizedBox(
+              width: 640,
+              height: MediaQuery.sizeOf(context).height * .62,
+              child: ListView.builder(
+                itemCount: drafts.length,
+                itemBuilder: (context, index) {
+                  final draft = drafts[index];
+                  final conflict = isDuplicate(index);
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            value: draft.included,
+                            onChanged: draft.isValid && !conflict
+                                ? (value) => setDialogState(
+                                    () => drafts[index] = draft.copyWith(
+                                      included: value ?? false,
+                                    ),
+                                  )
+                                : null,
+                            title: Text(
+                              draft.name.isEmpty
+                                  ? copy.t('未填写名称', 'Missing name')
+                                  : draft.name,
+                            ),
+                            subtitle: Text(
+                              conflict
+                                  ? copy.t(
+                                      '同名同分类项目已存在或在本清单前面出现，默认不导入。',
+                                      'This name and category already exists or appeared earlier; excluded by default.',
+                                    )
+                                  : draft.error != null
+                                  ? _purchaseImportError(copy, draft.error!)
+                                  : [
+                                      if (draft.purchasePrice != null)
+                                        '¥${draft.purchasePrice!.toStringAsFixed(2)}',
+                                      if (draft.acquiredAt != null)
+                                        draft.acquiredAt!
+                                            .toIso8601String()
+                                            .substring(0, 10),
+                                      if (draft.notes?.isNotEmpty == true)
+                                        draft.notes!,
+                                    ].join(' · '),
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  initialValue: draft.category,
+                                  decoration: InputDecoration(
+                                    labelText: copy.t('分类', 'Category'),
+                                  ),
+                                  items: OwnedItemTemplates.categories
+                                      .map(
+                                        (value) => DropdownMenuItem(
+                                          value: value,
+                                          child: Text(
+                                            _categoryLabel(copy, value),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (value) => setDialogState(
+                                    () => drafts[index] = draft.copyWith(
+                                      category: value,
+                                      included: false,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  initialValue: draft.status,
+                                  decoration: InputDecoration(
+                                    labelText: copy.t('当前状态', 'Current status'),
+                                  ),
+                                  items: OwnedItemTemplates.statuses
+                                      .map(
+                                        (value) => DropdownMenuItem(
+                                          value: value,
+                                          child: Text(
+                                            _statusLabel(copy, value),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (value) => setDialogState(
+                                    () => drafts[index] = draft.copyWith(
+                                      status: value,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(copy.t('取消', 'Cancel')),
+              ),
+              FilledButton(
+                onPressed: selected.isEmpty
+                    ? null
+                    : () => Navigator.pop(dialogContext, true),
+                child: Text(
+                  copy.t(
+                    '导入 ${selected.length} 件',
+                    'Import ${selected.length} items',
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    if (confirmed != true) return;
+    final now = DateTime.now();
+    final selected = drafts.where((item) => item.included && item.isValid);
+    await const OwnedItemStore().saveAll([
+      for (final (index, draft) in selected.indexed)
+        OwnedItem(
+          id: 'owned_import_${now.microsecondsSinceEpoch}_$index',
+          name: draft.name.trim(),
+          category: draft.category,
+          status: draft.status,
+          quantity: 1,
+          notes: draft.notes,
+          purchasePrice: draft.purchasePrice,
+          acquiredAt: draft.acquiredAt,
+          createdAt: now,
+          updatedAt: now,
+        ),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      data = _load();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          copy.t(
+            '已导入 ${selected.length} 件历史购买。',
+            'Imported ${selected.length} historical purchases.',
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _purchaseImportError(GuardianCopy copy, String error) {
+    if (error.contains('missing_name')) {
+      return copy.t('缺少商品名称。', 'Missing item name.');
+    }
+    if (error.contains('invalid_price')) {
+      return copy.t('价格格式不正确。', 'Invalid price.');
+    }
+    return copy.t('日期应使用 YYYY-MM-DD。', 'Use YYYY-MM-DD for the date.');
+  }
+
   static String _categoryLabel(GuardianCopy copy, String category) =>
       switch (category) {
         '数码' => copy.t('数码', 'Tech'),
@@ -309,18 +588,24 @@ class _InsightsPageState extends State<InsightsPage> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Expanded(
-                    child: Text(
-                      copy.t('我的物品', 'My items'),
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
+                  Text(
+                    copy.t('我的物品', 'My items'),
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _importPurchaseList(manualItems),
+                    icon: const Icon(Icons.playlist_add),
+                    label: Text(copy.t('导入购买清单', 'Import purchases')),
                   ),
                   FilledButton.tonalIcon(
                     onPressed: _editOwnedItem,
                     icon: const Icon(Icons.add),
-                    label: Text(copy.t('添加', 'Add')),
+                    label: Text(copy.t('添加一件', 'Add one')),
                   ),
                 ],
               ),

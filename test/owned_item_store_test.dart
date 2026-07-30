@@ -109,4 +109,23 @@ void main() {
     expect(() => store.save(item(quantity: 0)), throwsArgumentError);
     expect(() => store.save(item(price: -1)), throwsArgumentError);
   });
+
+  test('saveAll validates every row before writing any row', () async {
+    final now = DateTime(2026, 7, 30, 10);
+    OwnedItem item(String id, int quantity) => OwnedItem(
+      id: id,
+      name: '商品',
+      category: '数码',
+      status: 'unknown',
+      quantity: quantity,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    await expectLater(
+      store.saveAll([item('valid', 1), item('invalid', 0)]),
+      throwsArgumentError,
+    );
+    expect(await store.readAll(), isEmpty);
+  });
 }

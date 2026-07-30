@@ -19,10 +19,10 @@ void main() {
         (_) async => http.Response.bytes(
           utf8.encode(
             jsonEncode({
-              'tag_name': 'v1.9.0',
+              'tag_name': 'v9.9.9',
               'body': '修复导入问题',
               'html_url':
-                  'https://github.com/minghaoran0910-cyber/shopping-guardian/releases/tag/v1.9.0',
+                  'https://github.com/minghaoran0910-cyber/shopping-guardian/releases/tag/v9.9.9',
             }),
           ),
           200,
@@ -30,7 +30,7 @@ void main() {
       ),
     );
     final release = await checker.check();
-    expect(release.latestVersion, '1.9.0');
+    expect(release.latestVersion, '9.9.9');
     expect(release.updateAvailable, isTrue);
     expect(release.notes, '修复导入问题');
   });

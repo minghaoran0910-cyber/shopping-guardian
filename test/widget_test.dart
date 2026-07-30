@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shopping_guardian/main.dart';
 import 'package:shopping_guardian/src/history/decision_store.dart';
 import 'package:shopping_guardian/src/import/shared_text_receiver.dart';
+import 'package:shopping_guardian/src/owned/owned_item_store.dart';
 
 void main() {
   testWidgets('shows setup choices on first launch', (tester) async {
@@ -410,7 +411,7 @@ void main() {
     await tester.pumpWidget(const ShoppingGuardianApp());
     await tester.tap(find.text('习惯'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('添加'));
+    await tester.tap(find.text('添加一件'));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, '物品名称 *'), '我的旧耳机');
     await tester.pump();
@@ -420,5 +421,50 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('我的旧耳机'), findsOneWidget);
     expect(find.textContaining('数码 · 仍在使用'), findsOneWidget);
+  });
+
+  testWidgets('previews and imports a historical purchase list', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.tap(find.text('习惯'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('导入购买清单'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('purchase-list-input')),
+      '历史耳机 | 数码 | 仍在使用 | 899 | 2023-06-01 | 通勤使用\n'
+      '退货键盘 | 数码 | 已退货 | 499 | 2024-01-02',
+    );
+    await tester.tap(find.text('解析并预览'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('核对后再导入'), findsOneWidget);
+    expect(find.text('历史耳机'), findsOneWidget);
+    expect(find.text('退货键盘'), findsOneWidget);
+    expect(find.text('导入 2 件'), findsOneWidget);
+    await tester.tap(find.text('导入 2 件'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    final items = await const OwnedItemStore().readAll();
+    final imported = items.where(
+      (item) => item.name == '历史耳机' || item.name == '退货键盘',
+    );
+    expect(imported, hasLength(2));
+    expect(
+      imported.singleWhere((item) => item.name == '历史耳机').status,
+      'in_use',
+    );
+    expect(
+      imported.singleWhere((item) => item.name == '退货键盘').status,
+      'returned',
+    );
   });
 }
