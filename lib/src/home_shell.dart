@@ -17,6 +17,9 @@ import 'notifications/feedback_reminder_service.dart';
 import 'patterns/pattern_generator.dart';
 import 'patterns/pattern_store.dart';
 import 'patterns/personal_pattern.dart';
+import 'prices/price_monitor_service.dart';
+import 'prices/price_watch.dart';
+import 'prices/price_watch_store.dart';
 import 'release/app_version.dart';
 import 'release/version_checker.dart';
 import 'rules/consumption_rule_store.dart';
@@ -121,7 +124,9 @@ class _HomeShellState extends State<HomeShell> {
         sharedText: widget.sharedText,
         onSharedTextConsumed: widget.onSharedTextConsumed,
       ),
-      GuardianDestination.cooldown => const CooldownPage(),
+      GuardianDestination.cooldown => CooldownPage(
+        justOneApiToken: widget.justOneApiToken,
+      ),
       GuardianDestination.history => const HistoryPage(),
       GuardianDestination.insights => const InsightsPage(),
       GuardianDestination.settings => SettingsPage(
@@ -382,8 +387,10 @@ class _AnalyzePageState extends State<AnalyzePage> {
                           }
                           final saved = await showDialog<bool>(
                             context: context,
-                            builder: (context) =>
-                                _ImportPreviewDialog(items: recognition.items),
+                            builder: (context) => _ImportPreviewDialog(
+                              items: recognition.items,
+                              justOneApiToken: widget.justOneApiToken,
+                            ),
                           );
                           if (saved == true && mounted) _clearDraft();
                         } on PlatformException catch (error) {
@@ -526,8 +533,10 @@ class _AnalyzePageState extends State<AnalyzePage> {
                       if (!context.mounted) return;
                       final saved = await showDialog<bool>(
                         context: context,
-                        builder: (context) =>
-                            _ImportPreviewDialog(items: previewItems),
+                        builder: (context) => _ImportPreviewDialog(
+                          items: previewItems,
+                          justOneApiToken: widget.justOneApiToken,
+                        ),
                       );
                       if (saved == true && mounted) _clearDraft();
                     },
@@ -777,9 +786,13 @@ class _ManualFields extends StatelessWidget {
 }
 
 class _ImportPreviewDialog extends StatefulWidget {
-  const _ImportPreviewDialog({required this.items});
+  const _ImportPreviewDialog({
+    required this.items,
+    required this.justOneApiToken,
+  });
 
   final List<SharedShoppingItem> items;
+  final String justOneApiToken;
 
   @override
   State<_ImportPreviewDialog> createState() => _ImportPreviewDialogState();
@@ -875,6 +888,7 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
         context: context,
         builder: (context) => _AnalysisDialog(
           items: [current],
+          justOneApiToken: widget.justOneApiToken,
           batchPosition: processedItemCount + 1,
           batchCount: analysisItemCount!,
         ),
@@ -1047,10 +1061,12 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
 class _AnalysisDialog extends StatefulWidget {
   const _AnalysisDialog({
     required this.items,
+    required this.justOneApiToken,
     this.batchPosition = 1,
     this.batchCount = 1,
   });
   final List<SharedShoppingItem> items;
+  final String justOneApiToken;
   final int batchPosition;
   final int batchCount;
   @override
@@ -1156,6 +1172,8 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
           advice: advice,
           total: total,
           itemName: itemName,
+          item: widget.items.single,
+          justOneApiToken: widget.justOneApiToken,
           referencedHistory: historySummaries,
           referencedPatterns: confirmedPatterns,
           category: category.text.trim().isEmpty ? null : category.text.trim(),
@@ -1292,11 +1310,13 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
   }
 }
 
-class _DecisionDialog extends StatelessWidget {
+class _DecisionDialog extends StatefulWidget {
   const _DecisionDialog({
     required this.advice,
     required this.total,
     required this.itemName,
+    required this.item,
+    required this.justOneApiToken,
     required this.referencedHistory,
     required this.referencedPatterns,
     required this.category,
@@ -1305,35 +1325,65 @@ class _DecisionDialog extends StatelessWidget {
   final PurchaseAdvice advice;
   final double total;
   final String itemName;
+  final SharedShoppingItem item;
+  final String justOneApiToken;
   final List<String> referencedHistory;
   final List<String> referencedPatterns;
   final String? category;
   final List<String> tags;
 
+  @override
+  State<_DecisionDialog> createState() => _DecisionDialogState();
+}
+
+class _DecisionDialogState extends State<_DecisionDialog> {
+  late final TextEditingController targetPrice = TextEditingController(
+    text: (widget.total * 0.9).toStringAsFixed(2),
+  );
+  bool monitorPrice = false;
+
+  bool get canMonitor =>
+      widget.justOneApiToken.trim().isNotEmpty &&
+      PriceWatchIdentity.supports(widget.item);
+
+  @override
+  void dispose() {
+    targetPrice.dispose();
+    super.dispose();
+  }
+
   Future<void> _choose(BuildContext context, String choice) async {
+    final target = double.tryParse(targetPrice.text.trim());
+    if (monitorPrice && (target == null || target <= 0 || !target.isFinite)) {
+      final copy = GuardianCopy.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(copy.t('目标价要大于 0。', 'Enter a target above 0.'))),
+      );
+      return;
+    }
     final now = DateTime.now();
     final id = now.microsecondsSinceEpoch.toString();
     final waitUntil = choice == 'wait'
-        ? now.add(Duration(days: advice.waitDays ?? 7))
+        ? now.add(Duration(days: widget.advice.waitDays ?? 7))
         : null;
     await const DecisionStore().add(
       DecisionRecord(
         id: id,
-        itemName: itemName,
-        total: total,
-        verdict: advice.verdict.name,
+        itemName: widget.itemName,
+        total: widget.total,
+        verdict: widget.advice.verdict.name,
         userChoice: choice,
-        summary: advice.summary,
+        summary: widget.advice.summary,
         createdAt: now,
         waitUntil: waitUntil,
-        referencedHistory: referencedHistory,
-        referencedPatterns: referencedPatterns,
-        category: category,
-        tags: tags,
-        risk: advice.risk.name,
-        confidence: advice.confidence.name,
-        budgetImpact: advice.budgetImpact,
-        alternatives: advice.alternatives,
+        referencedHistory: widget.referencedHistory,
+        referencedPatterns: widget.referencedPatterns,
+        category: widget.category,
+        tags: widget.tags,
+        risk: widget.advice.risk.name,
+        confidence: widget.advice.confidence.name,
+        budgetImpact: widget.advice.budgetImpact,
+        alternatives: widget.advice.alternatives,
         events: [
           DecisionEvent(status: 'analyzed', occurredAt: now),
           DecisionEvent(
@@ -1349,12 +1399,30 @@ class _DecisionDialog extends StatelessWidget {
         ],
       ),
     );
+    if (monitorPrice && canMonitor) {
+      final itemId = PriceWatchIdentity.itemId(widget.item);
+      if (target != null && itemId != null) {
+        await const PriceWatchStore().save(
+          PriceWatch(
+            id: 'price_$id',
+            decisionId: id,
+            itemName: widget.itemName,
+            platform: widget.item.platform,
+            itemId: itemId,
+            productUrl: widget.item.url,
+            targetPrice: target,
+            createdAt: now,
+            lastPrice: widget.item.price,
+          ),
+        );
+      }
+    }
     var notificationScheduled = true;
     if (waitUntil != null) {
       try {
         notificationScheduled = await const LocalNotificationService().schedule(
           id: id,
-          title: itemName,
+          title: widget.itemName,
           at: waitUntil,
         );
       } on PlatformException {
@@ -1380,7 +1448,7 @@ class _DecisionDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final copy = GuardianCopy.of(context);
-    final title = switch (advice.verdict) {
+    final title = switch (widget.advice.verdict) {
       PurchaseVerdict.buy => copy.t('可以买', 'Buy'),
       PurchaseVerdict.wait => copy.t('先等等', 'Wait'),
       PurchaseVerdict.skip => copy.t('这次先不买', 'Skip'),
@@ -1400,57 +1468,57 @@ class _DecisionDialog extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '¥${total.toStringAsFixed(2)}',
+                '¥${widget.total.toStringAsFixed(2)}',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 10),
-              Text(advice.summary),
+              Text(widget.advice.summary),
               const SizedBox(height: 8),
               Text(
                 copy.t(
-                  '风险：${_levelLabel(copy, advice.risk)} · 信心：${_levelLabel(copy, advice.confidence)}',
-                  'Risk: ${_levelLabel(copy, advice.risk)} · Confidence: ${_levelLabel(copy, advice.confidence)}',
+                  '风险：${_levelLabel(copy, widget.advice.risk)} · 信心：${_levelLabel(copy, widget.advice.confidence)}',
+                  'Risk: ${_levelLabel(copy, widget.advice.risk)} · Confidence: ${_levelLabel(copy, widget.advice.confidence)}',
                 ),
               ),
-              if (advice.budgetImpact.isNotEmpty)
+              if (widget.advice.budgetImpact.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     copy.t(
-                      '预算影响：${advice.budgetImpact}',
-                      'Budget impact: ${advice.budgetImpact}',
+                      '预算影响：${widget.advice.budgetImpact}',
+                      'Budget impact: ${widget.advice.budgetImpact}',
                     ),
                   ),
                 ),
-              if (advice.waitDays != null)
+              if (widget.advice.waitDays != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     copy.t(
-                      '建议等 ${advice.waitDays} 天再看。',
-                      'Check again in ${advice.waitDays} days.',
+                      '建议等 ${widget.advice.waitDays} 天再看。',
+                      'Check again in ${widget.advice.waitDays} days.',
                     ),
                   ),
                 ),
-              ...advice.reasons.map(
+              ...widget.advice.reasons.map(
                 (item) => Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text('• $item'),
                 ),
               ),
-              ...advice.missingInformation.map(
+              ...widget.advice.missingInformation.map(
                 (item) => Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text('• $item'),
                 ),
               ),
-              if (advice.alternatives.isNotEmpty) ...[
+              if (widget.advice.alternatives.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Text(
                   copy.t('可以考虑', 'Alternatives'),
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
-                ...advice.alternatives.map(
+                ...widget.advice.alternatives.map(
                   (item) => Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text('• $item'),
@@ -1458,7 +1526,7 @@ class _DecisionDialog extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 10),
-              if (referencedHistory.isEmpty)
+              if (widget.referencedHistory.isEmpty)
                 Text(
                   copy.t(
                     '本次为通用分析，没有引用个人历史。',
@@ -1472,11 +1540,11 @@ class _DecisionDialog extends StatelessWidget {
                   childrenPadding: EdgeInsets.zero,
                   title: Text(
                     copy.t(
-                      '引用了 ${referencedHistory.length} 条个人历史',
-                      '${referencedHistory.length} personal records used',
+                      '引用了 ${widget.referencedHistory.length} 条个人历史',
+                      '${widget.referencedHistory.length} personal records used',
                     ),
                   ),
-                  children: referencedHistory
+                  children: widget.referencedHistory
                       .map(
                         (item) => ListTile(
                           contentPadding: EdgeInsets.zero,
@@ -1486,18 +1554,49 @@ class _DecisionDialog extends StatelessWidget {
                       )
                       .toList(),
                 ),
-              if (referencedPatterns.isNotEmpty)
+              if (widget.referencedPatterns.isNotEmpty)
                 ExpansionTile(
                   tilePadding: EdgeInsets.zero,
                   title: Text(
                     copy.t(
-                      '引用了 ${referencedPatterns.length} 条已确认规律',
-                      '${referencedPatterns.length} confirmed patterns used',
+                      '引用了 ${widget.referencedPatterns.length} 条已确认规律',
+                      '${widget.referencedPatterns.length} confirmed patterns used',
                     ),
                   ),
-                  children: referencedPatterns
+                  children: widget.referencedPatterns
                       .map((pattern) => ListTile(title: Text(pattern)))
                       .toList(),
+                ),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: monitorPrice,
+                onChanged: canMonitor
+                    ? (value) => setState(() => monitorPrice = value)
+                    : null,
+                title: Text(copy.t('到目标价时提醒我', 'Alert me at my target')),
+                subtitle: Text(
+                  canMonitor
+                      ? copy.t(
+                          '使用商品接口记录真实价格；检查时间受系统后台限制。',
+                          'Uses the product API for real prices; timing depends on the operating system.',
+                        )
+                      : copy.t(
+                          '需要淘宝或京东单品链接，并先配置 JustOneAPI。',
+                          'Requires a Taobao or JD product link and JustOneAPI.',
+                        ),
+                ),
+              ),
+              if (monitorPrice)
+                TextField(
+                  controller: targetPrice,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: copy.t('目标价', 'Target price'),
+                    prefixText: '¥ ',
+                  ),
                 ),
             ],
           ),

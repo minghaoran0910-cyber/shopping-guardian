@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../budget/budget_store.dart';
 import '../history/decision_store.dart';
 import '../patterns/pattern_store.dart';
+import '../prices/price_watch_store.dart';
 import '../rules/consumption_rule_store.dart';
 
 class DataExporter {
@@ -20,8 +21,21 @@ class DataExporter {
     final rules = await const ConsumptionRuleStore().readAll();
     final budget = await const BudgetStore().snapshot();
     final patterns = await const PatternStore().readAll();
+    final priceWatches = await const PriceWatchStore().readAll();
+    final priceHistory = <String, Object?>{};
+    for (final watch in priceWatches) {
+      priceHistory[watch.id] = (await const PriceWatchStore().history(watch.id))
+          .map(
+            (observation) => {
+              'observedAt': observation.observedAt.toIso8601String(),
+              'price': observation.price,
+              'source': observation.source,
+            },
+          )
+          .toList();
+    }
     final content = const JsonEncoder.withIndent('  ').convert({
-      'schema_version': 4,
+      'schema_version': 5,
       'exported_at': DateTime.now().toUtc().toIso8601String(),
       'monthly_budget': budget.limit,
       'model': {
@@ -35,6 +49,8 @@ class DataExporter {
       'decisions': records.map((record) => record.toJson()).toList(),
       'rules': rules.map((rule) => rule.toJson()).toList(),
       'personal_patterns': patterns.map((pattern) => pattern.toJson()).toList(),
+      'price_watches': priceWatches.map((watch) => watch.toJson()).toList(),
+      'price_history': priceHistory,
     });
     try {
       return await channel.invokeMethod<bool>('saveJson', {

@@ -6,11 +6,13 @@ class GuardianPageFrame extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.child,
+    this.actions = const [],
   });
 
   final String title;
   final String subtitle;
   final Widget child;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -33,6 +35,13 @@ class GuardianPageFrame extends StatelessWidget {
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
+                if (actions.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Wrap(spacing: 8, runSpacing: 8, children: actions),
+                  ),
+                ],
                 const SizedBox(height: 28),
                 child,
               ],

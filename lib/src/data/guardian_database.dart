@@ -104,6 +104,35 @@ class AppValues extends Table {
   Set<Column<Object>> get primaryKey => {key};
 }
 
+@DataClassName('StoredPriceWatch')
+class PriceWatches extends Table {
+  TextColumn get id => text()();
+  TextColumn get decisionId => text()();
+  TextColumn get itemName => text()();
+  TextColumn get platform => text()();
+  TextColumn get itemId => text()();
+  TextColumn get productUrl => text()();
+  RealColumn get targetPrice => real()();
+  DateTimeColumn get createdAt => dateTime()();
+  BoolColumn get enabled => boolean().withDefault(const Constant(true))();
+  RealColumn get lastPrice => real().nullable()();
+  DateTimeColumn get lastCheckedAt => dateTime().nullable()();
+  TextColumn get lastError => text().nullable()();
+  DateTimeColumn get notifiedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+class PriceObservations extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get watchId =>
+      text().references(PriceWatches, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get observedAt => dateTime()();
+  RealColumn get price => real()();
+  TextColumn get source => text()();
+}
+
 class MigrationQuarantine extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get sourceKey => text()();
@@ -122,6 +151,8 @@ class MigrationQuarantine extends Table {
     DecisionTags,
     ConsumptionRules,
     AppValues,
+    PriceWatches,
+    PriceObservations,
     MigrationQuarantine,
   ],
 )
@@ -148,7 +179,7 @@ class GuardianDatabase extends _$GuardianDatabase {
   }
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -168,6 +199,10 @@ class GuardianDatabase extends _$GuardianDatabase {
       if (from < 4) {
         await migrator.createTable(decisionPatternReferences);
       }
+      if (from < 5) {
+        await migrator.createTable(priceWatches);
+        await migrator.createTable(priceObservations);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -182,6 +217,8 @@ class GuardianDatabase extends _$GuardianDatabase {
     await delete(decisionTags).go();
     await delete(decisions).go();
     await delete(consumptionRules).go();
+    await delete(priceObservations).go();
+    await delete(priceWatches).go();
     await delete(appValues).go();
     await delete(migrationQuarantine).go();
   });

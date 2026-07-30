@@ -362,8 +362,10 @@ class SettingsPage extends StatelessWidget {
                   children: [
                     Text(
                       copy.t(
-                        '${preview.decisions.length} 条决策记录 · ${preview.rules.length} 条消费规则',
-                        '${preview.decisions.length} decisions · ${preview.rules.length} rules',
+                        '${preview.decisions.length} 条决策记录 · ${preview.rules.length} 条消费规则'
+                            '${preview.priceWatches.isEmpty ? '' : ' · ${preview.priceWatches.length} 个价格监测'}',
+                        '${preview.decisions.length} decisions · ${preview.rules.length} rules'
+                            '${preview.priceWatches.isEmpty ? '' : ' · ${preview.priceWatches.length} price watches'}',
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -375,13 +377,16 @@ class SettingsPage extends StatelessWidget {
                               'Monthly budget: ¥${preview.monthlyBudget!.toStringAsFixed(0)}',
                             ),
                     ),
-                    if (preview.decisionConflicts + preview.ruleConflicts > 0)
+                    if (preview.decisionConflicts +
+                            preview.ruleConflicts +
+                            preview.priceWatchConflicts >
+                        0)
                       Padding(
                         padding: const EdgeInsets.only(top: 10),
                         child: Text(
                           copy.t(
-                            '${preview.decisionConflicts + preview.ruleConflicts} 条内容与本机 ID 重复。合并时会保留本机版本。',
-                            '${preview.decisionConflicts + preview.ruleConflicts} items share IDs with local data. Merge keeps the local versions.',
+                            '${preview.decisionConflicts + preview.ruleConflicts + preview.priceWatchConflicts} 条内容与本机 ID 重复。合并时会保留本机版本。',
+                            '${preview.decisionConflicts + preview.ruleConflicts + preview.priceWatchConflicts} items share IDs with local data. Merge keeps the local versions.',
                           ),
                         ),
                       ),
@@ -455,8 +460,10 @@ class SettingsPage extends StatelessWidget {
           content: Text(
             copy.t(
               '已导入 ${result.importedDecisions} 条决策和 ${result.importedRules} 条规则'
+                  '${result.importedPriceWatches == 0 ? '' : '，${result.importedPriceWatches} 个价格监测'}'
                   '${result.skippedConflicts > 0 ? '，跳过 ${result.skippedConflicts} 条重复内容' : ''}。',
               'Imported ${result.importedDecisions} decisions and ${result.importedRules} rules'
+                  '${result.importedPriceWatches == 0 ? '' : '; ${result.importedPriceWatches} price watches'}'
                   '${result.skippedConflicts > 0 ? '; skipped ${result.skippedConflicts} duplicates' : ''}.',
             ),
           ),

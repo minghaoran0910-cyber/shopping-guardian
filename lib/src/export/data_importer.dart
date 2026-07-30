@@ -6,8 +6,10 @@ import 'package:file_selector/file_selector.dart';
 import '../data/guardian_database.dart';
 import '../data/legacy_data_migrator.dart';
 import '../history/decision_record.dart';
+import '../import/share_parser.dart';
 import '../patterns/pattern_store.dart';
 import '../patterns/personal_pattern.dart';
+import '../prices/price_watch.dart';
 import '../rules/consumption_rule.dart';
 
 enum DataImportMode { merge, replace }
@@ -29,9 +31,12 @@ class DataImportPreview {
     required this.monthlyBudget,
     required this.decisionConflicts,
     required this.ruleConflicts,
+    this.priceWatchConflicts = 0,
     required this.containsModelConfiguration,
     required this.containsRules,
     this.personalPatterns = const [],
+    this.priceWatches = const [],
+    this.priceHistory = const {},
   });
 
   final int schemaVersion;
@@ -40,21 +45,26 @@ class DataImportPreview {
   final double? monthlyBudget;
   final int decisionConflicts;
   final int ruleConflicts;
+  final int priceWatchConflicts;
   final bool containsModelConfiguration;
   final bool containsRules;
   final List<PersonalPattern> personalPatterns;
+  final List<PriceWatch> priceWatches;
+  final Map<String, List<PriceSnapshot>> priceHistory;
 }
 
 class DataImportResult {
   const DataImportResult({
     required this.importedDecisions,
     required this.importedRules,
+    this.importedPriceWatches = 0,
     required this.skippedConflicts,
     required this.budgetImported,
   });
 
   final int importedDecisions;
   final int importedRules;
+  final int importedPriceWatches;
   final int skippedConflicts;
   final bool budgetImported;
 }
@@ -94,7 +104,7 @@ class DataImporter {
     }
     final document = Map<String, dynamic>.from(decoded);
     final version = document['schema_version'];
-    if (version is! int || version < 1 || version > 4) {
+    if (version is! int || version < 1 || version > 5) {
       throw const DataImportException('不支持这个数据版本，请先升级应用');
     }
 
@@ -102,6 +112,12 @@ class DataImporter {
     final rules = _parseRules(document['rules'], version);
     final budget = _parseBudget(document['monthly_budget']);
     final patterns = _parsePatterns(document['personal_patterns'], version);
+    final priceWatches = _parsePriceWatches(document['price_watches'], version);
+    final priceHistory = _parsePriceHistory(
+      document['price_history'],
+      version,
+      priceWatches,
+    );
     await LegacyDataMigrator(_database).migrate();
 
     final existingDecisionIds =
@@ -110,6 +126,10 @@ class DataImporter {
             .toSet();
     final existingRuleIds =
         (await _database.select(_database.consumptionRules).get())
+            .map((row) => row.id)
+            .toSet();
+    final existingPriceWatchIds =
+        (await _database.select(_database.priceWatches).get())
             .map((row) => row.id)
             .toSet();
 
@@ -124,9 +144,14 @@ class DataImporter {
       ruleConflicts: rules
           .where((rule) => existingRuleIds.contains(rule.id))
           .length,
+      priceWatchConflicts: priceWatches
+          .where((watch) => existingPriceWatchIds.contains(watch.id))
+          .length,
       containsModelConfiguration: document['model'] is Map,
       containsRules: version >= 2,
       personalPatterns: patterns,
+      priceWatches: priceWatches,
+      priceHistory: priceHistory,
     );
   }
 
@@ -137,6 +162,8 @@ class DataImporter {
     await LegacyDataMigrator(_database).migrate();
     return _database.transaction(() async {
       if (mode == DataImportMode.replace) {
+        await _database.delete(_database.priceObservations).go();
+        await _database.delete(_database.priceWatches).go();
         await _database.delete(_database.decisionEvents).go();
         await _database.delete(_database.decisionReferences).go();
         await _database.delete(_database.decisionPatternReferences).go();
@@ -163,6 +190,7 @@ class DataImporter {
               .toSet();
       var importedDecisions = 0;
       var importedRules = 0;
+      var importedPriceWatches = 0;
       var skippedConflicts = 0;
 
       for (final record in preview.decisions) {
@@ -182,6 +210,50 @@ class DataImporter {
         await _insertRule(rule);
         existingRuleIds.add(rule.id);
         importedRules++;
+      }
+      final existingWatchIds =
+          (await _database.select(_database.priceWatches).get())
+              .map((row) => row.id)
+              .toSet();
+      for (final watch in preview.priceWatches) {
+        if (existingWatchIds.contains(watch.id)) {
+          skippedConflicts++;
+          continue;
+        }
+        await _database
+            .into(_database.priceWatches)
+            .insert(
+              PriceWatchesCompanion.insert(
+                id: watch.id,
+                decisionId: watch.decisionId,
+                itemName: watch.itemName,
+                platform: watch.platform.name,
+                itemId: watch.itemId,
+                productUrl: watch.productUrl.toString(),
+                targetPrice: watch.targetPrice,
+                createdAt: watch.createdAt,
+                enabled: Value(watch.enabled),
+                lastPrice: Value(watch.lastPrice),
+                lastCheckedAt: Value(watch.lastCheckedAt),
+                lastError: Value(watch.lastError),
+                notifiedAt: Value(watch.notifiedAt),
+              ),
+            );
+        for (final observation
+            in preview.priceHistory[watch.id] ?? const <PriceSnapshot>[]) {
+          await _database
+              .into(_database.priceObservations)
+              .insert(
+                PriceObservationsCompanion.insert(
+                  watchId: watch.id,
+                  observedAt: observation.observedAt,
+                  price: observation.price,
+                  source: observation.source,
+                ),
+              );
+        }
+        existingWatchIds.add(watch.id);
+        importedPriceWatches++;
       }
 
       var budgetImported = false;
@@ -226,6 +298,7 @@ class DataImporter {
       return DataImportResult(
         importedDecisions: importedDecisions,
         importedRules: importedRules,
+        importedPriceWatches: importedPriceWatches,
         skippedConflicts: skippedConflicts,
         budgetImported: budgetImported,
       );
@@ -387,6 +460,70 @@ class DataImporter {
     } on Object {
       throw const DataImportException('personal_patterns 格式有误');
     }
+  }
+
+  List<PriceWatch> _parsePriceWatches(Object? value, int version) {
+    if (value == null && version < 5) return const [];
+    if (value is! List) {
+      throw const DataImportException('price_watches 必须是数组');
+    }
+    final watches = <PriceWatch>[];
+    final ids = <String>{};
+    for (var index = 0; index < value.length; index++) {
+      try {
+        final item = value[index];
+        if (item is! Map) throw const FormatException();
+        final watch = PriceWatch.fromJson(Map<String, dynamic>.from(item));
+        if (watch.id.trim().isEmpty ||
+            watch.itemName.trim().isEmpty ||
+            watch.itemId.trim().isEmpty ||
+            watch.platform == ShoppingPlatform.unknown ||
+            watch.targetPrice <= 0 ||
+            !watch.targetPrice.isFinite ||
+            !ids.add(watch.id)) {
+          throw const FormatException();
+        }
+        watches.add(watch);
+      } on Object {
+        throw DataImportException('第 ${index + 1} 条价格监测格式有误');
+      }
+    }
+    return watches;
+  }
+
+  Map<String, List<PriceSnapshot>> _parsePriceHistory(
+    Object? value,
+    int version,
+    List<PriceWatch> watches,
+  ) {
+    if (value == null && version < 5) return const {};
+    if (value is! Map) {
+      throw const DataImportException('price_history 必须是对象');
+    }
+    final watchIds = watches.map((watch) => watch.id).toSet();
+    final result = <String, List<PriceSnapshot>>{};
+    for (final entry in value.entries) {
+      final watchId = '${entry.key}';
+      if (!watchIds.contains(watchId) || entry.value is! List) {
+        throw const DataImportException('价格历史引用了未知监测');
+      }
+      try {
+        result[watchId] = (entry.value as List).map((item) {
+          final json = Map<String, dynamic>.from(item as Map);
+          final price = (json['price'] as num).toDouble();
+          if (price <= 0 || !price.isFinite) throw const FormatException();
+          return PriceSnapshot(
+            watchId: watchId,
+            observedAt: DateTime.parse('${json['observedAt']}'),
+            price: price,
+            source: '${json['source']}',
+          );
+        }).toList();
+      } on Object {
+        throw DataImportException('价格监测 $watchId 的历史格式有误');
+      }
+    }
+    return result;
   }
 
   double? _parseBudget(Object? value) {

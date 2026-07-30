@@ -5,6 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shopping_guardian/src/export/data_exporter.dart';
 import 'package:shopping_guardian/src/history/decision_store.dart';
+import 'package:shopping_guardian/src/import/share_parser.dart';
+import 'package:shopping_guardian/src/prices/price_watch.dart';
+import 'package:shopping_guardian/src/prices/price_watch_store.dart';
 import 'package:shopping_guardian/src/rules/consumption_rule_store.dart';
 
 void main() {
@@ -32,6 +35,30 @@ void main() {
         regretReason: '使用太少',
       ),
     );
+    final savedDecision = (await const DecisionStore().readAll()).single;
+    final createdAt = DateTime(2026, 7, 12, 12);
+    await const PriceWatchStore().save(
+      PriceWatch(
+        id: 'watch-export',
+        decisionId: savedDecision.id,
+        itemName: '唱片',
+        platform: ShoppingPlatform.taobao,
+        itemId: '123456789',
+        productUrl: Uri.parse('https://item.taobao.com/item.htm?id=123456789'),
+        targetPrice: 280,
+        createdAt: createdAt,
+        lastPrice: 300,
+        lastCheckedAt: createdAt,
+      ),
+    );
+    await const PriceWatchStore().addObservation(
+      PriceSnapshot(
+        watchId: 'watch-export',
+        observedAt: createdAt,
+        price: 300,
+        source: 'justoneapi',
+      ),
+    );
     await const ConsumptionRuleStore().saveAll([
       const ConsumptionRule(id: 'rule-1', name: '等待', description: '大额消费等两天'),
     ]);
@@ -49,7 +76,7 @@ void main() {
 
     expect(await const DataExporter(channel: channel).export(), isTrue);
     final data = jsonDecode(exported!) as Map<String, dynamic>;
-    expect(data['schema_version'], 4);
+    expect(data['schema_version'], 5);
     expect(data['monthly_budget'], 2000);
     expect(data['decisions'], hasLength(1));
     final decision = (data['decisions'] as List).single as Map<String, dynamic>;
@@ -57,6 +84,9 @@ void main() {
     expect(decision['satisfaction'], 2);
     expect(decision['regretReason'], '使用太少');
     expect(data['rules'], hasLength(1));
+    expect(data['price_watches'], hasLength(1));
+    final history = data['price_history'] as Map<String, dynamic>;
+    expect(history['watch-export'], hasLength(1));
     expect(exported, isNot(contains('must-not-export')));
     expect(exported, isNot(contains('api_key')));
   });

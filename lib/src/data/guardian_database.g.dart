@@ -3007,6 +3007,1135 @@ class AppValuesCompanion extends UpdateCompanion<AppValue> {
   }
 }
 
+class $PriceWatchesTable extends PriceWatches
+    with TableInfo<$PriceWatchesTable, StoredPriceWatch> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PriceWatchesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _decisionIdMeta = const VerificationMeta(
+    'decisionId',
+  );
+  @override
+  late final GeneratedColumn<String> decisionId = GeneratedColumn<String>(
+    'decision_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _itemNameMeta = const VerificationMeta(
+    'itemName',
+  );
+  @override
+  late final GeneratedColumn<String> itemName = GeneratedColumn<String>(
+    'item_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _platformMeta = const VerificationMeta(
+    'platform',
+  );
+  @override
+  late final GeneratedColumn<String> platform = GeneratedColumn<String>(
+    'platform',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _itemIdMeta = const VerificationMeta('itemId');
+  @override
+  late final GeneratedColumn<String> itemId = GeneratedColumn<String>(
+    'item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _productUrlMeta = const VerificationMeta(
+    'productUrl',
+  );
+  @override
+  late final GeneratedColumn<String> productUrl = GeneratedColumn<String>(
+    'product_url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetPriceMeta = const VerificationMeta(
+    'targetPrice',
+  );
+  @override
+  late final GeneratedColumn<double> targetPrice = GeneratedColumn<double>(
+    'target_price',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _enabledMeta = const VerificationMeta(
+    'enabled',
+  );
+  @override
+  late final GeneratedColumn<bool> enabled = GeneratedColumn<bool>(
+    'enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _lastPriceMeta = const VerificationMeta(
+    'lastPrice',
+  );
+  @override
+  late final GeneratedColumn<double> lastPrice = GeneratedColumn<double>(
+    'last_price',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastCheckedAtMeta = const VerificationMeta(
+    'lastCheckedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastCheckedAt =
+      GeneratedColumn<DateTime>(
+        'last_checked_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
+  );
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notifiedAtMeta = const VerificationMeta(
+    'notifiedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> notifiedAt = GeneratedColumn<DateTime>(
+    'notified_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    decisionId,
+    itemName,
+    platform,
+    itemId,
+    productUrl,
+    targetPrice,
+    createdAt,
+    enabled,
+    lastPrice,
+    lastCheckedAt,
+    lastError,
+    notifiedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'price_watches';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StoredPriceWatch> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('decision_id')) {
+      context.handle(
+        _decisionIdMeta,
+        decisionId.isAcceptableOrUnknown(data['decision_id']!, _decisionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_decisionIdMeta);
+    }
+    if (data.containsKey('item_name')) {
+      context.handle(
+        _itemNameMeta,
+        itemName.isAcceptableOrUnknown(data['item_name']!, _itemNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_itemNameMeta);
+    }
+    if (data.containsKey('platform')) {
+      context.handle(
+        _platformMeta,
+        platform.isAcceptableOrUnknown(data['platform']!, _platformMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_platformMeta);
+    }
+    if (data.containsKey('item_id')) {
+      context.handle(
+        _itemIdMeta,
+        itemId.isAcceptableOrUnknown(data['item_id']!, _itemIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_itemIdMeta);
+    }
+    if (data.containsKey('product_url')) {
+      context.handle(
+        _productUrlMeta,
+        productUrl.isAcceptableOrUnknown(data['product_url']!, _productUrlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_productUrlMeta);
+    }
+    if (data.containsKey('target_price')) {
+      context.handle(
+        _targetPriceMeta,
+        targetPrice.isAcceptableOrUnknown(
+          data['target_price']!,
+          _targetPriceMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_targetPriceMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('enabled')) {
+      context.handle(
+        _enabledMeta,
+        enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta),
+      );
+    }
+    if (data.containsKey('last_price')) {
+      context.handle(
+        _lastPriceMeta,
+        lastPrice.isAcceptableOrUnknown(data['last_price']!, _lastPriceMeta),
+      );
+    }
+    if (data.containsKey('last_checked_at')) {
+      context.handle(
+        _lastCheckedAtMeta,
+        lastCheckedAt.isAcceptableOrUnknown(
+          data['last_checked_at']!,
+          _lastCheckedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
+      );
+    }
+    if (data.containsKey('notified_at')) {
+      context.handle(
+        _notifiedAtMeta,
+        notifiedAt.isAcceptableOrUnknown(data['notified_at']!, _notifiedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StoredPriceWatch map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StoredPriceWatch(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      decisionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}decision_id'],
+      )!,
+      itemName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_name'],
+      )!,
+      platform: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}platform'],
+      )!,
+      itemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_id'],
+      )!,
+      productUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}product_url'],
+      )!,
+      targetPrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}target_price'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      enabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}enabled'],
+      )!,
+      lastPrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}last_price'],
+      ),
+      lastCheckedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_checked_at'],
+      ),
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
+      ),
+      notifiedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}notified_at'],
+      ),
+    );
+  }
+
+  @override
+  $PriceWatchesTable createAlias(String alias) {
+    return $PriceWatchesTable(attachedDatabase, alias);
+  }
+}
+
+class StoredPriceWatch extends DataClass
+    implements Insertable<StoredPriceWatch> {
+  final String id;
+  final String decisionId;
+  final String itemName;
+  final String platform;
+  final String itemId;
+  final String productUrl;
+  final double targetPrice;
+  final DateTime createdAt;
+  final bool enabled;
+  final double? lastPrice;
+  final DateTime? lastCheckedAt;
+  final String? lastError;
+  final DateTime? notifiedAt;
+  const StoredPriceWatch({
+    required this.id,
+    required this.decisionId,
+    required this.itemName,
+    required this.platform,
+    required this.itemId,
+    required this.productUrl,
+    required this.targetPrice,
+    required this.createdAt,
+    required this.enabled,
+    this.lastPrice,
+    this.lastCheckedAt,
+    this.lastError,
+    this.notifiedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['decision_id'] = Variable<String>(decisionId);
+    map['item_name'] = Variable<String>(itemName);
+    map['platform'] = Variable<String>(platform);
+    map['item_id'] = Variable<String>(itemId);
+    map['product_url'] = Variable<String>(productUrl);
+    map['target_price'] = Variable<double>(targetPrice);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['enabled'] = Variable<bool>(enabled);
+    if (!nullToAbsent || lastPrice != null) {
+      map['last_price'] = Variable<double>(lastPrice);
+    }
+    if (!nullToAbsent || lastCheckedAt != null) {
+      map['last_checked_at'] = Variable<DateTime>(lastCheckedAt);
+    }
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
+    }
+    if (!nullToAbsent || notifiedAt != null) {
+      map['notified_at'] = Variable<DateTime>(notifiedAt);
+    }
+    return map;
+  }
+
+  PriceWatchesCompanion toCompanion(bool nullToAbsent) {
+    return PriceWatchesCompanion(
+      id: Value(id),
+      decisionId: Value(decisionId),
+      itemName: Value(itemName),
+      platform: Value(platform),
+      itemId: Value(itemId),
+      productUrl: Value(productUrl),
+      targetPrice: Value(targetPrice),
+      createdAt: Value(createdAt),
+      enabled: Value(enabled),
+      lastPrice: lastPrice == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastPrice),
+      lastCheckedAt: lastCheckedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastCheckedAt),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
+      notifiedAt: notifiedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notifiedAt),
+    );
+  }
+
+  factory StoredPriceWatch.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StoredPriceWatch(
+      id: serializer.fromJson<String>(json['id']),
+      decisionId: serializer.fromJson<String>(json['decisionId']),
+      itemName: serializer.fromJson<String>(json['itemName']),
+      platform: serializer.fromJson<String>(json['platform']),
+      itemId: serializer.fromJson<String>(json['itemId']),
+      productUrl: serializer.fromJson<String>(json['productUrl']),
+      targetPrice: serializer.fromJson<double>(json['targetPrice']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      enabled: serializer.fromJson<bool>(json['enabled']),
+      lastPrice: serializer.fromJson<double?>(json['lastPrice']),
+      lastCheckedAt: serializer.fromJson<DateTime?>(json['lastCheckedAt']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
+      notifiedAt: serializer.fromJson<DateTime?>(json['notifiedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'decisionId': serializer.toJson<String>(decisionId),
+      'itemName': serializer.toJson<String>(itemName),
+      'platform': serializer.toJson<String>(platform),
+      'itemId': serializer.toJson<String>(itemId),
+      'productUrl': serializer.toJson<String>(productUrl),
+      'targetPrice': serializer.toJson<double>(targetPrice),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'enabled': serializer.toJson<bool>(enabled),
+      'lastPrice': serializer.toJson<double?>(lastPrice),
+      'lastCheckedAt': serializer.toJson<DateTime?>(lastCheckedAt),
+      'lastError': serializer.toJson<String?>(lastError),
+      'notifiedAt': serializer.toJson<DateTime?>(notifiedAt),
+    };
+  }
+
+  StoredPriceWatch copyWith({
+    String? id,
+    String? decisionId,
+    String? itemName,
+    String? platform,
+    String? itemId,
+    String? productUrl,
+    double? targetPrice,
+    DateTime? createdAt,
+    bool? enabled,
+    Value<double?> lastPrice = const Value.absent(),
+    Value<DateTime?> lastCheckedAt = const Value.absent(),
+    Value<String?> lastError = const Value.absent(),
+    Value<DateTime?> notifiedAt = const Value.absent(),
+  }) => StoredPriceWatch(
+    id: id ?? this.id,
+    decisionId: decisionId ?? this.decisionId,
+    itemName: itemName ?? this.itemName,
+    platform: platform ?? this.platform,
+    itemId: itemId ?? this.itemId,
+    productUrl: productUrl ?? this.productUrl,
+    targetPrice: targetPrice ?? this.targetPrice,
+    createdAt: createdAt ?? this.createdAt,
+    enabled: enabled ?? this.enabled,
+    lastPrice: lastPrice.present ? lastPrice.value : this.lastPrice,
+    lastCheckedAt: lastCheckedAt.present
+        ? lastCheckedAt.value
+        : this.lastCheckedAt,
+    lastError: lastError.present ? lastError.value : this.lastError,
+    notifiedAt: notifiedAt.present ? notifiedAt.value : this.notifiedAt,
+  );
+  StoredPriceWatch copyWithCompanion(PriceWatchesCompanion data) {
+    return StoredPriceWatch(
+      id: data.id.present ? data.id.value : this.id,
+      decisionId: data.decisionId.present
+          ? data.decisionId.value
+          : this.decisionId,
+      itemName: data.itemName.present ? data.itemName.value : this.itemName,
+      platform: data.platform.present ? data.platform.value : this.platform,
+      itemId: data.itemId.present ? data.itemId.value : this.itemId,
+      productUrl: data.productUrl.present
+          ? data.productUrl.value
+          : this.productUrl,
+      targetPrice: data.targetPrice.present
+          ? data.targetPrice.value
+          : this.targetPrice,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      enabled: data.enabled.present ? data.enabled.value : this.enabled,
+      lastPrice: data.lastPrice.present ? data.lastPrice.value : this.lastPrice,
+      lastCheckedAt: data.lastCheckedAt.present
+          ? data.lastCheckedAt.value
+          : this.lastCheckedAt,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
+      notifiedAt: data.notifiedAt.present
+          ? data.notifiedAt.value
+          : this.notifiedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StoredPriceWatch(')
+          ..write('id: $id, ')
+          ..write('decisionId: $decisionId, ')
+          ..write('itemName: $itemName, ')
+          ..write('platform: $platform, ')
+          ..write('itemId: $itemId, ')
+          ..write('productUrl: $productUrl, ')
+          ..write('targetPrice: $targetPrice, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('enabled: $enabled, ')
+          ..write('lastPrice: $lastPrice, ')
+          ..write('lastCheckedAt: $lastCheckedAt, ')
+          ..write('lastError: $lastError, ')
+          ..write('notifiedAt: $notifiedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    decisionId,
+    itemName,
+    platform,
+    itemId,
+    productUrl,
+    targetPrice,
+    createdAt,
+    enabled,
+    lastPrice,
+    lastCheckedAt,
+    lastError,
+    notifiedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StoredPriceWatch &&
+          other.id == this.id &&
+          other.decisionId == this.decisionId &&
+          other.itemName == this.itemName &&
+          other.platform == this.platform &&
+          other.itemId == this.itemId &&
+          other.productUrl == this.productUrl &&
+          other.targetPrice == this.targetPrice &&
+          other.createdAt == this.createdAt &&
+          other.enabled == this.enabled &&
+          other.lastPrice == this.lastPrice &&
+          other.lastCheckedAt == this.lastCheckedAt &&
+          other.lastError == this.lastError &&
+          other.notifiedAt == this.notifiedAt);
+}
+
+class PriceWatchesCompanion extends UpdateCompanion<StoredPriceWatch> {
+  final Value<String> id;
+  final Value<String> decisionId;
+  final Value<String> itemName;
+  final Value<String> platform;
+  final Value<String> itemId;
+  final Value<String> productUrl;
+  final Value<double> targetPrice;
+  final Value<DateTime> createdAt;
+  final Value<bool> enabled;
+  final Value<double?> lastPrice;
+  final Value<DateTime?> lastCheckedAt;
+  final Value<String?> lastError;
+  final Value<DateTime?> notifiedAt;
+  final Value<int> rowid;
+  const PriceWatchesCompanion({
+    this.id = const Value.absent(),
+    this.decisionId = const Value.absent(),
+    this.itemName = const Value.absent(),
+    this.platform = const Value.absent(),
+    this.itemId = const Value.absent(),
+    this.productUrl = const Value.absent(),
+    this.targetPrice = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.enabled = const Value.absent(),
+    this.lastPrice = const Value.absent(),
+    this.lastCheckedAt = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.notifiedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PriceWatchesCompanion.insert({
+    required String id,
+    required String decisionId,
+    required String itemName,
+    required String platform,
+    required String itemId,
+    required String productUrl,
+    required double targetPrice,
+    required DateTime createdAt,
+    this.enabled = const Value.absent(),
+    this.lastPrice = const Value.absent(),
+    this.lastCheckedAt = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.notifiedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       decisionId = Value(decisionId),
+       itemName = Value(itemName),
+       platform = Value(platform),
+       itemId = Value(itemId),
+       productUrl = Value(productUrl),
+       targetPrice = Value(targetPrice),
+       createdAt = Value(createdAt);
+  static Insertable<StoredPriceWatch> custom({
+    Expression<String>? id,
+    Expression<String>? decisionId,
+    Expression<String>? itemName,
+    Expression<String>? platform,
+    Expression<String>? itemId,
+    Expression<String>? productUrl,
+    Expression<double>? targetPrice,
+    Expression<DateTime>? createdAt,
+    Expression<bool>? enabled,
+    Expression<double>? lastPrice,
+    Expression<DateTime>? lastCheckedAt,
+    Expression<String>? lastError,
+    Expression<DateTime>? notifiedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (decisionId != null) 'decision_id': decisionId,
+      if (itemName != null) 'item_name': itemName,
+      if (platform != null) 'platform': platform,
+      if (itemId != null) 'item_id': itemId,
+      if (productUrl != null) 'product_url': productUrl,
+      if (targetPrice != null) 'target_price': targetPrice,
+      if (createdAt != null) 'created_at': createdAt,
+      if (enabled != null) 'enabled': enabled,
+      if (lastPrice != null) 'last_price': lastPrice,
+      if (lastCheckedAt != null) 'last_checked_at': lastCheckedAt,
+      if (lastError != null) 'last_error': lastError,
+      if (notifiedAt != null) 'notified_at': notifiedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PriceWatchesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? decisionId,
+    Value<String>? itemName,
+    Value<String>? platform,
+    Value<String>? itemId,
+    Value<String>? productUrl,
+    Value<double>? targetPrice,
+    Value<DateTime>? createdAt,
+    Value<bool>? enabled,
+    Value<double?>? lastPrice,
+    Value<DateTime?>? lastCheckedAt,
+    Value<String?>? lastError,
+    Value<DateTime?>? notifiedAt,
+    Value<int>? rowid,
+  }) {
+    return PriceWatchesCompanion(
+      id: id ?? this.id,
+      decisionId: decisionId ?? this.decisionId,
+      itemName: itemName ?? this.itemName,
+      platform: platform ?? this.platform,
+      itemId: itemId ?? this.itemId,
+      productUrl: productUrl ?? this.productUrl,
+      targetPrice: targetPrice ?? this.targetPrice,
+      createdAt: createdAt ?? this.createdAt,
+      enabled: enabled ?? this.enabled,
+      lastPrice: lastPrice ?? this.lastPrice,
+      lastCheckedAt: lastCheckedAt ?? this.lastCheckedAt,
+      lastError: lastError ?? this.lastError,
+      notifiedAt: notifiedAt ?? this.notifiedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (decisionId.present) {
+      map['decision_id'] = Variable<String>(decisionId.value);
+    }
+    if (itemName.present) {
+      map['item_name'] = Variable<String>(itemName.value);
+    }
+    if (platform.present) {
+      map['platform'] = Variable<String>(platform.value);
+    }
+    if (itemId.present) {
+      map['item_id'] = Variable<String>(itemId.value);
+    }
+    if (productUrl.present) {
+      map['product_url'] = Variable<String>(productUrl.value);
+    }
+    if (targetPrice.present) {
+      map['target_price'] = Variable<double>(targetPrice.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (enabled.present) {
+      map['enabled'] = Variable<bool>(enabled.value);
+    }
+    if (lastPrice.present) {
+      map['last_price'] = Variable<double>(lastPrice.value);
+    }
+    if (lastCheckedAt.present) {
+      map['last_checked_at'] = Variable<DateTime>(lastCheckedAt.value);
+    }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
+    if (notifiedAt.present) {
+      map['notified_at'] = Variable<DateTime>(notifiedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PriceWatchesCompanion(')
+          ..write('id: $id, ')
+          ..write('decisionId: $decisionId, ')
+          ..write('itemName: $itemName, ')
+          ..write('platform: $platform, ')
+          ..write('itemId: $itemId, ')
+          ..write('productUrl: $productUrl, ')
+          ..write('targetPrice: $targetPrice, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('enabled: $enabled, ')
+          ..write('lastPrice: $lastPrice, ')
+          ..write('lastCheckedAt: $lastCheckedAt, ')
+          ..write('lastError: $lastError, ')
+          ..write('notifiedAt: $notifiedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PriceObservationsTable extends PriceObservations
+    with TableInfo<$PriceObservationsTable, PriceObservation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PriceObservationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _watchIdMeta = const VerificationMeta(
+    'watchId',
+  );
+  @override
+  late final GeneratedColumn<String> watchId = GeneratedColumn<String>(
+    'watch_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES price_watches (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _observedAtMeta = const VerificationMeta(
+    'observedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> observedAt = GeneratedColumn<DateTime>(
+    'observed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _priceMeta = const VerificationMeta('price');
+  @override
+  late final GeneratedColumn<double> price = GeneratedColumn<double>(
+    'price',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    watchId,
+    observedAt,
+    price,
+    source,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'price_observations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PriceObservation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('watch_id')) {
+      context.handle(
+        _watchIdMeta,
+        watchId.isAcceptableOrUnknown(data['watch_id']!, _watchIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_watchIdMeta);
+    }
+    if (data.containsKey('observed_at')) {
+      context.handle(
+        _observedAtMeta,
+        observedAt.isAcceptableOrUnknown(data['observed_at']!, _observedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_observedAtMeta);
+    }
+    if (data.containsKey('price')) {
+      context.handle(
+        _priceMeta,
+        price.isAcceptableOrUnknown(data['price']!, _priceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_priceMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PriceObservation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PriceObservation(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      watchId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}watch_id'],
+      )!,
+      observedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}observed_at'],
+      )!,
+      price: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}price'],
+      )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+    );
+  }
+
+  @override
+  $PriceObservationsTable createAlias(String alias) {
+    return $PriceObservationsTable(attachedDatabase, alias);
+  }
+}
+
+class PriceObservation extends DataClass
+    implements Insertable<PriceObservation> {
+  final int id;
+  final String watchId;
+  final DateTime observedAt;
+  final double price;
+  final String source;
+  const PriceObservation({
+    required this.id,
+    required this.watchId,
+    required this.observedAt,
+    required this.price,
+    required this.source,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['watch_id'] = Variable<String>(watchId);
+    map['observed_at'] = Variable<DateTime>(observedAt);
+    map['price'] = Variable<double>(price);
+    map['source'] = Variable<String>(source);
+    return map;
+  }
+
+  PriceObservationsCompanion toCompanion(bool nullToAbsent) {
+    return PriceObservationsCompanion(
+      id: Value(id),
+      watchId: Value(watchId),
+      observedAt: Value(observedAt),
+      price: Value(price),
+      source: Value(source),
+    );
+  }
+
+  factory PriceObservation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PriceObservation(
+      id: serializer.fromJson<int>(json['id']),
+      watchId: serializer.fromJson<String>(json['watchId']),
+      observedAt: serializer.fromJson<DateTime>(json['observedAt']),
+      price: serializer.fromJson<double>(json['price']),
+      source: serializer.fromJson<String>(json['source']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'watchId': serializer.toJson<String>(watchId),
+      'observedAt': serializer.toJson<DateTime>(observedAt),
+      'price': serializer.toJson<double>(price),
+      'source': serializer.toJson<String>(source),
+    };
+  }
+
+  PriceObservation copyWith({
+    int? id,
+    String? watchId,
+    DateTime? observedAt,
+    double? price,
+    String? source,
+  }) => PriceObservation(
+    id: id ?? this.id,
+    watchId: watchId ?? this.watchId,
+    observedAt: observedAt ?? this.observedAt,
+    price: price ?? this.price,
+    source: source ?? this.source,
+  );
+  PriceObservation copyWithCompanion(PriceObservationsCompanion data) {
+    return PriceObservation(
+      id: data.id.present ? data.id.value : this.id,
+      watchId: data.watchId.present ? data.watchId.value : this.watchId,
+      observedAt: data.observedAt.present
+          ? data.observedAt.value
+          : this.observedAt,
+      price: data.price.present ? data.price.value : this.price,
+      source: data.source.present ? data.source.value : this.source,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PriceObservation(')
+          ..write('id: $id, ')
+          ..write('watchId: $watchId, ')
+          ..write('observedAt: $observedAt, ')
+          ..write('price: $price, ')
+          ..write('source: $source')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, watchId, observedAt, price, source);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PriceObservation &&
+          other.id == this.id &&
+          other.watchId == this.watchId &&
+          other.observedAt == this.observedAt &&
+          other.price == this.price &&
+          other.source == this.source);
+}
+
+class PriceObservationsCompanion extends UpdateCompanion<PriceObservation> {
+  final Value<int> id;
+  final Value<String> watchId;
+  final Value<DateTime> observedAt;
+  final Value<double> price;
+  final Value<String> source;
+  const PriceObservationsCompanion({
+    this.id = const Value.absent(),
+    this.watchId = const Value.absent(),
+    this.observedAt = const Value.absent(),
+    this.price = const Value.absent(),
+    this.source = const Value.absent(),
+  });
+  PriceObservationsCompanion.insert({
+    this.id = const Value.absent(),
+    required String watchId,
+    required DateTime observedAt,
+    required double price,
+    required String source,
+  }) : watchId = Value(watchId),
+       observedAt = Value(observedAt),
+       price = Value(price),
+       source = Value(source);
+  static Insertable<PriceObservation> custom({
+    Expression<int>? id,
+    Expression<String>? watchId,
+    Expression<DateTime>? observedAt,
+    Expression<double>? price,
+    Expression<String>? source,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (watchId != null) 'watch_id': watchId,
+      if (observedAt != null) 'observed_at': observedAt,
+      if (price != null) 'price': price,
+      if (source != null) 'source': source,
+    });
+  }
+
+  PriceObservationsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? watchId,
+    Value<DateTime>? observedAt,
+    Value<double>? price,
+    Value<String>? source,
+  }) {
+    return PriceObservationsCompanion(
+      id: id ?? this.id,
+      watchId: watchId ?? this.watchId,
+      observedAt: observedAt ?? this.observedAt,
+      price: price ?? this.price,
+      source: source ?? this.source,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (watchId.present) {
+      map['watch_id'] = Variable<String>(watchId.value);
+    }
+    if (observedAt.present) {
+      map['observed_at'] = Variable<DateTime>(observedAt.value);
+    }
+    if (price.present) {
+      map['price'] = Variable<double>(price.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PriceObservationsCompanion(')
+          ..write('id: $id, ')
+          ..write('watchId: $watchId, ')
+          ..write('observedAt: $observedAt, ')
+          ..write('price: $price, ')
+          ..write('source: $source')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $MigrationQuarantineTable extends MigrationQuarantine
     with TableInfo<$MigrationQuarantineTable, MigrationQuarantineData> {
   @override
@@ -3385,6 +4514,9 @@ abstract class _$GuardianDatabase extends GeneratedDatabase {
     this,
   );
   late final $AppValuesTable appValues = $AppValuesTable(this);
+  late final $PriceWatchesTable priceWatches = $PriceWatchesTable(this);
+  late final $PriceObservationsTable priceObservations =
+      $PriceObservationsTable(this);
   late final $MigrationQuarantineTable migrationQuarantine =
       $MigrationQuarantineTable(this);
   @override
@@ -3400,6 +4532,8 @@ abstract class _$GuardianDatabase extends GeneratedDatabase {
     decisionTags,
     consumptionRules,
     appValues,
+    priceWatches,
+    priceObservations,
     migrationQuarantine,
   ];
   @override
@@ -3440,6 +4574,13 @@ abstract class _$GuardianDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('decision_tags', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'price_watches',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('price_observations', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -6248,6 +7389,812 @@ typedef $$AppValuesTableProcessedTableManager =
       AppValue,
       PrefetchHooks Function()
     >;
+typedef $$PriceWatchesTableCreateCompanionBuilder =
+    PriceWatchesCompanion Function({
+      required String id,
+      required String decisionId,
+      required String itemName,
+      required String platform,
+      required String itemId,
+      required String productUrl,
+      required double targetPrice,
+      required DateTime createdAt,
+      Value<bool> enabled,
+      Value<double?> lastPrice,
+      Value<DateTime?> lastCheckedAt,
+      Value<String?> lastError,
+      Value<DateTime?> notifiedAt,
+      Value<int> rowid,
+    });
+typedef $$PriceWatchesTableUpdateCompanionBuilder =
+    PriceWatchesCompanion Function({
+      Value<String> id,
+      Value<String> decisionId,
+      Value<String> itemName,
+      Value<String> platform,
+      Value<String> itemId,
+      Value<String> productUrl,
+      Value<double> targetPrice,
+      Value<DateTime> createdAt,
+      Value<bool> enabled,
+      Value<double?> lastPrice,
+      Value<DateTime?> lastCheckedAt,
+      Value<String?> lastError,
+      Value<DateTime?> notifiedAt,
+      Value<int> rowid,
+    });
+
+final class $$PriceWatchesTableReferences
+    extends
+        BaseReferences<
+          _$GuardianDatabase,
+          $PriceWatchesTable,
+          StoredPriceWatch
+        > {
+  $$PriceWatchesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$PriceObservationsTable, List<PriceObservation>>
+  _priceObservationsRefsTable(_$GuardianDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.priceObservations,
+        aliasName: 'price_watches__id__price_observations__watch_id',
+      );
+
+  $$PriceObservationsTableProcessedTableManager get priceObservationsRefs {
+    final manager = $$PriceObservationsTableTableManager(
+      $_db,
+      $_db.priceObservations,
+    ).filter((f) => f.watchId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _priceObservationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$PriceWatchesTableFilterComposer
+    extends Composer<_$GuardianDatabase, $PriceWatchesTable> {
+  $$PriceWatchesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get decisionId => $composableBuilder(
+    column: $table.decisionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemName => $composableBuilder(
+    column: $table.itemName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get platform => $composableBuilder(
+    column: $table.platform,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemId => $composableBuilder(
+    column: $table.itemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get productUrl => $composableBuilder(
+    column: $table.productUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get targetPrice => $composableBuilder(
+    column: $table.targetPrice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lastPrice => $composableBuilder(
+    column: $table.lastPrice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastCheckedAt => $composableBuilder(
+    column: $table.lastCheckedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get notifiedAt => $composableBuilder(
+    column: $table.notifiedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> priceObservationsRefs(
+    Expression<bool> Function($$PriceObservationsTableFilterComposer f) f,
+  ) {
+    final $$PriceObservationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.priceObservations,
+      getReferencedColumn: (t) => t.watchId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PriceObservationsTableFilterComposer(
+            $db: $db,
+            $table: $db.priceObservations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$PriceWatchesTableOrderingComposer
+    extends Composer<_$GuardianDatabase, $PriceWatchesTable> {
+  $$PriceWatchesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get decisionId => $composableBuilder(
+    column: $table.decisionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemName => $composableBuilder(
+    column: $table.itemName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get platform => $composableBuilder(
+    column: $table.platform,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get itemId => $composableBuilder(
+    column: $table.itemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get productUrl => $composableBuilder(
+    column: $table.productUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get targetPrice => $composableBuilder(
+    column: $table.targetPrice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lastPrice => $composableBuilder(
+    column: $table.lastPrice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastCheckedAt => $composableBuilder(
+    column: $table.lastCheckedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get notifiedAt => $composableBuilder(
+    column: $table.notifiedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PriceWatchesTableAnnotationComposer
+    extends Composer<_$GuardianDatabase, $PriceWatchesTable> {
+  $$PriceWatchesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get decisionId => $composableBuilder(
+    column: $table.decisionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get itemName =>
+      $composableBuilder(column: $table.itemName, builder: (column) => column);
+
+  GeneratedColumn<String> get platform =>
+      $composableBuilder(column: $table.platform, builder: (column) => column);
+
+  GeneratedColumn<String> get itemId =>
+      $composableBuilder(column: $table.itemId, builder: (column) => column);
+
+  GeneratedColumn<String> get productUrl => $composableBuilder(
+    column: $table.productUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get targetPrice => $composableBuilder(
+    column: $table.targetPrice,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get enabled =>
+      $composableBuilder(column: $table.enabled, builder: (column) => column);
+
+  GeneratedColumn<double> get lastPrice =>
+      $composableBuilder(column: $table.lastPrice, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastCheckedAt => $composableBuilder(
+    column: $table.lastCheckedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get notifiedAt => $composableBuilder(
+    column: $table.notifiedAt,
+    builder: (column) => column,
+  );
+
+  Expression<T> priceObservationsRefs<T extends Object>(
+    Expression<T> Function($$PriceObservationsTableAnnotationComposer a) f,
+  ) {
+    final $$PriceObservationsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.priceObservations,
+          getReferencedColumn: (t) => t.watchId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PriceObservationsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.priceObservations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$PriceWatchesTableTableManager
+    extends
+        RootTableManager<
+          _$GuardianDatabase,
+          $PriceWatchesTable,
+          StoredPriceWatch,
+          $$PriceWatchesTableFilterComposer,
+          $$PriceWatchesTableOrderingComposer,
+          $$PriceWatchesTableAnnotationComposer,
+          $$PriceWatchesTableCreateCompanionBuilder,
+          $$PriceWatchesTableUpdateCompanionBuilder,
+          (StoredPriceWatch, $$PriceWatchesTableReferences),
+          StoredPriceWatch,
+          PrefetchHooks Function({bool priceObservationsRefs})
+        > {
+  $$PriceWatchesTableTableManager(
+    _$GuardianDatabase db,
+    $PriceWatchesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PriceWatchesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PriceWatchesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PriceWatchesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> decisionId = const Value.absent(),
+                Value<String> itemName = const Value.absent(),
+                Value<String> platform = const Value.absent(),
+                Value<String> itemId = const Value.absent(),
+                Value<String> productUrl = const Value.absent(),
+                Value<double> targetPrice = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<bool> enabled = const Value.absent(),
+                Value<double?> lastPrice = const Value.absent(),
+                Value<DateTime?> lastCheckedAt = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<DateTime?> notifiedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PriceWatchesCompanion(
+                id: id,
+                decisionId: decisionId,
+                itemName: itemName,
+                platform: platform,
+                itemId: itemId,
+                productUrl: productUrl,
+                targetPrice: targetPrice,
+                createdAt: createdAt,
+                enabled: enabled,
+                lastPrice: lastPrice,
+                lastCheckedAt: lastCheckedAt,
+                lastError: lastError,
+                notifiedAt: notifiedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String decisionId,
+                required String itemName,
+                required String platform,
+                required String itemId,
+                required String productUrl,
+                required double targetPrice,
+                required DateTime createdAt,
+                Value<bool> enabled = const Value.absent(),
+                Value<double?> lastPrice = const Value.absent(),
+                Value<DateTime?> lastCheckedAt = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<DateTime?> notifiedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PriceWatchesCompanion.insert(
+                id: id,
+                decisionId: decisionId,
+                itemName: itemName,
+                platform: platform,
+                itemId: itemId,
+                productUrl: productUrl,
+                targetPrice: targetPrice,
+                createdAt: createdAt,
+                enabled: enabled,
+                lastPrice: lastPrice,
+                lastCheckedAt: lastCheckedAt,
+                lastError: lastError,
+                notifiedAt: notifiedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PriceWatchesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({priceObservationsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (priceObservationsRefs) db.priceObservations,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (priceObservationsRefs)
+                    await $_getPrefetchedData<
+                      StoredPriceWatch,
+                      $PriceWatchesTable,
+                      PriceObservation
+                    >(
+                      currentTable: table,
+                      referencedTable: $$PriceWatchesTableReferences
+                          ._priceObservationsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$PriceWatchesTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).priceObservationsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.watchId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PriceWatchesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GuardianDatabase,
+      $PriceWatchesTable,
+      StoredPriceWatch,
+      $$PriceWatchesTableFilterComposer,
+      $$PriceWatchesTableOrderingComposer,
+      $$PriceWatchesTableAnnotationComposer,
+      $$PriceWatchesTableCreateCompanionBuilder,
+      $$PriceWatchesTableUpdateCompanionBuilder,
+      (StoredPriceWatch, $$PriceWatchesTableReferences),
+      StoredPriceWatch,
+      PrefetchHooks Function({bool priceObservationsRefs})
+    >;
+typedef $$PriceObservationsTableCreateCompanionBuilder =
+    PriceObservationsCompanion Function({
+      Value<int> id,
+      required String watchId,
+      required DateTime observedAt,
+      required double price,
+      required String source,
+    });
+typedef $$PriceObservationsTableUpdateCompanionBuilder =
+    PriceObservationsCompanion Function({
+      Value<int> id,
+      Value<String> watchId,
+      Value<DateTime> observedAt,
+      Value<double> price,
+      Value<String> source,
+    });
+
+final class $$PriceObservationsTableReferences
+    extends
+        BaseReferences<
+          _$GuardianDatabase,
+          $PriceObservationsTable,
+          PriceObservation
+        > {
+  $$PriceObservationsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $PriceWatchesTable _watchIdTable(_$GuardianDatabase db) => db
+      .priceWatches
+      .createAlias('price_observations__watch_id__price_watches__id');
+
+  $$PriceWatchesTableProcessedTableManager get watchId {
+    final $_column = $_itemColumn<String>('watch_id')!;
+
+    final manager = $$PriceWatchesTableTableManager(
+      $_db,
+      $_db.priceWatches,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_watchIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PriceObservationsTableFilterComposer
+    extends Composer<_$GuardianDatabase, $PriceObservationsTable> {
+  $$PriceObservationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get observedAt => $composableBuilder(
+    column: $table.observedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get price => $composableBuilder(
+    column: $table.price,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$PriceWatchesTableFilterComposer get watchId {
+    final $$PriceWatchesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.watchId,
+      referencedTable: $db.priceWatches,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PriceWatchesTableFilterComposer(
+            $db: $db,
+            $table: $db.priceWatches,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PriceObservationsTableOrderingComposer
+    extends Composer<_$GuardianDatabase, $PriceObservationsTable> {
+  $$PriceObservationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get observedAt => $composableBuilder(
+    column: $table.observedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get price => $composableBuilder(
+    column: $table.price,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$PriceWatchesTableOrderingComposer get watchId {
+    final $$PriceWatchesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.watchId,
+      referencedTable: $db.priceWatches,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PriceWatchesTableOrderingComposer(
+            $db: $db,
+            $table: $db.priceWatches,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PriceObservationsTableAnnotationComposer
+    extends Composer<_$GuardianDatabase, $PriceObservationsTable> {
+  $$PriceObservationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get observedAt => $composableBuilder(
+    column: $table.observedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get price =>
+      $composableBuilder(column: $table.price, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  $$PriceWatchesTableAnnotationComposer get watchId {
+    final $$PriceWatchesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.watchId,
+      referencedTable: $db.priceWatches,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PriceWatchesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.priceWatches,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PriceObservationsTableTableManager
+    extends
+        RootTableManager<
+          _$GuardianDatabase,
+          $PriceObservationsTable,
+          PriceObservation,
+          $$PriceObservationsTableFilterComposer,
+          $$PriceObservationsTableOrderingComposer,
+          $$PriceObservationsTableAnnotationComposer,
+          $$PriceObservationsTableCreateCompanionBuilder,
+          $$PriceObservationsTableUpdateCompanionBuilder,
+          (PriceObservation, $$PriceObservationsTableReferences),
+          PriceObservation,
+          PrefetchHooks Function({bool watchId})
+        > {
+  $$PriceObservationsTableTableManager(
+    _$GuardianDatabase db,
+    $PriceObservationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PriceObservationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PriceObservationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PriceObservationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> watchId = const Value.absent(),
+                Value<DateTime> observedAt = const Value.absent(),
+                Value<double> price = const Value.absent(),
+                Value<String> source = const Value.absent(),
+              }) => PriceObservationsCompanion(
+                id: id,
+                watchId: watchId,
+                observedAt: observedAt,
+                price: price,
+                source: source,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String watchId,
+                required DateTime observedAt,
+                required double price,
+                required String source,
+              }) => PriceObservationsCompanion.insert(
+                id: id,
+                watchId: watchId,
+                observedAt: observedAt,
+                price: price,
+                source: source,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PriceObservationsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({watchId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (watchId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.watchId,
+                                referencedTable:
+                                    $$PriceObservationsTableReferences
+                                        ._watchIdTable(db),
+                                referencedColumn:
+                                    $$PriceObservationsTableReferences
+                                        ._watchIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PriceObservationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$GuardianDatabase,
+      $PriceObservationsTable,
+      PriceObservation,
+      $$PriceObservationsTableFilterComposer,
+      $$PriceObservationsTableOrderingComposer,
+      $$PriceObservationsTableAnnotationComposer,
+      $$PriceObservationsTableCreateCompanionBuilder,
+      $$PriceObservationsTableUpdateCompanionBuilder,
+      (PriceObservation, $$PriceObservationsTableReferences),
+      PriceObservation,
+      PrefetchHooks Function({bool watchId})
+    >;
 typedef $$MigrationQuarantineTableCreateCompanionBuilder =
     MigrationQuarantineCompanion Function({
       Value<int> id,
@@ -6483,6 +8430,10 @@ class $GuardianDatabaseManager {
       $$ConsumptionRulesTableTableManager(_db, _db.consumptionRules);
   $$AppValuesTableTableManager get appValues =>
       $$AppValuesTableTableManager(_db, _db.appValues);
+  $$PriceWatchesTableTableManager get priceWatches =>
+      $$PriceWatchesTableTableManager(_db, _db.priceWatches);
+  $$PriceObservationsTableTableManager get priceObservations =>
+      $$PriceObservationsTableTableManager(_db, _db.priceObservations);
   $$MigrationQuarantineTableTableManager get migrationQuarantine =>
       $$MigrationQuarantineTableTableManager(_db, _db.migrationQuarantine);
 }

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'home_shell.dart';
 import 'import/shared_text_receiver.dart';
+import 'prices/price_monitor_service.dart';
 import 'settings/api_key_store.dart';
 import 'theme.dart';
 
@@ -51,7 +52,13 @@ class _ShoppingGuardianAppState extends State<ShoppingGuardianApp> {
   Future<void> _loadApiKey() async {
     try {
       final saved = await const ApiKeyStore().readJustOneApiToken();
-      if (mounted && saved.isNotEmpty) setState(() => justOneApiToken = saved);
+      if (mounted && saved.isNotEmpty) {
+        setState(() => justOneApiToken = saved);
+        await const PriceMonitorService().checkAll(
+          token: saved,
+          minimumAge: Duration(hours: 6),
+        );
+      }
     } catch (_) {
       // Secure storage can be unavailable in widget tests.
     }

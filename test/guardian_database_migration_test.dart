@@ -4,7 +4,7 @@ import 'package:shopping_guardian/src/data/guardian_database.dart';
 
 void main() {
   test(
-    'migrates a v1 database through personal pattern references v4',
+    'migrates a v1 database through price tracking v5',
     () async {
       await GuardianDatabase.resetAfterTesting();
       final database = GuardianDatabase(
@@ -37,7 +37,7 @@ void main() {
           .get();
       final names = columns.map((row) => row.read<String>('name')).toSet();
 
-      expect(database.schemaVersion, 4);
+      expect(database.schemaVersion, 5);
       expect(
         names,
         containsAll([
@@ -52,7 +52,12 @@ void main() {
           .get();
       expect(
         tables.map((row) => row.read<String>('name')),
-        containsAll(['decision_tags', 'decision_pattern_references']),
+        containsAll([
+          'decision_tags',
+          'decision_pattern_references',
+          'price_watches',
+          'price_observations',
+        ]),
       );
     },
   );

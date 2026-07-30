@@ -6,6 +6,7 @@ import 'package:shopping_guardian/src/budget/budget_store.dart';
 import 'package:shopping_guardian/src/data/guardian_database.dart';
 import 'package:shopping_guardian/src/export/data_importer.dart';
 import 'package:shopping_guardian/src/history/decision_store.dart';
+import 'package:shopping_guardian/src/prices/price_watch_store.dart';
 import 'package:shopping_guardian/src/rules/consumption_rule_store.dart';
 
 Map<String, Object?> decisionJson({
@@ -38,6 +39,8 @@ String importJson({
   List<Map<String, Object?>>? rules,
   double budget = 2000,
   bool includeModel = true,
+  List<Map<String, Object?>>? priceWatches,
+  Map<String, Object?>? priceHistory,
 }) => jsonEncode({
   'schema_version': version,
   'monthly_budget': budget,
@@ -57,6 +60,9 @@ String importJson({
             'enabled': true,
           },
         ],
+  if (version >= 3) 'personal_patterns': [],
+  if (version >= 5) 'price_watches': priceWatches ?? [],
+  if (version >= 5) 'price_history': priceHistory ?? {},
 });
 
 void main() {
@@ -105,7 +111,7 @@ void main() {
     final importer = DataImporter();
 
     await expectLater(
-      importer.preview(importJson(version: 5)),
+      importer.preview(importJson(version: 6)),
       throwsA(
         isA<DataImportException>().having(
           (error) => error.message,
@@ -166,6 +172,55 @@ void main() {
       '本机记录',
     );
     expect((await const BudgetStore().snapshot()).limit, 888);
+  });
+
+  test('imports price watches and their real price history', () async {
+    SharedPreferences.setMockInitialValues({});
+    final observedAt = '2026-07-30T10:00:00.000';
+    final importer = DataImporter();
+    final preview = await importer.preview(
+      importJson(
+        version: 5,
+        priceWatches: [
+          {
+            'id': 'watch-imported',
+            'decisionId': 'imported-1',
+            'itemName': '导入的唱片',
+            'platform': 'taobao',
+            'itemId': '123456789',
+            'productUrl': 'https://item.taobao.com/item.htm?id=123456789',
+            'targetPrice': 280,
+            'createdAt': observedAt,
+            'enabled': true,
+            'lastPrice': 300,
+            'lastCheckedAt': observedAt,
+            'lastError': null,
+            'notifiedAt': null,
+          },
+        ],
+        priceHistory: {
+          'watch-imported': [
+            {
+              'watchId': 'watch-imported',
+              'observedAt': observedAt,
+              'price': 300,
+              'source': 'justoneapi',
+            },
+          ],
+        },
+      ),
+    );
+
+    expect(preview.priceWatches, hasLength(1));
+    expect(preview.priceHistory['watch-imported'], hasLength(1));
+    final result = await importer.apply(preview, DataImportMode.merge);
+
+    expect(result.importedPriceWatches, 1);
+    expect(await const PriceWatchStore().readAll(), hasLength(1));
+    expect(
+      await const PriceWatchStore().history('watch-imported'),
+      hasLength(1),
+    );
   });
 
   test('replace swaps decisions, rules, and budget in one operation', () async {
