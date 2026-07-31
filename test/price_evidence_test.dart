@@ -182,7 +182,7 @@ void main() {
     expect(evidence.manipulation.prePromotionPrice, 100);
     expect(evidence.manipulation.promotionPrice, 150);
     expect(evidence.manipulation.currentPrice, 102);
-    expect(evidence.manipulation.explanation, contains('先涨'));
+    expect(evidence.manipulation.prePromotionPrice, isNotNull);
   });
 
   test('does not flag normal price decrease as manipulation', () {

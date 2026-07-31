@@ -365,9 +365,14 @@ class _PriceEvidenceSummary extends StatelessWidget {
                 Expanded(
                   child: Text(
                     copy.t(
-                      manipulation.explanation ?? '可能存在先涨后降',
-                      manipulation.explanation ??
-                          'Possible price manipulation detected',
+                      '这个商品在促销前先涨价了 ¥${manipulation.promotionPrice?.toStringAsFixed(0)}，'
+                      '现在"降"回 ¥${manipulation.currentPrice?.toStringAsFixed(0)}，'
+                      '和之前 ¥${manipulation.prePromotionPrice?.toStringAsFixed(0)} 差不多。'
+                      '所谓的折扣可能不是真的便宜。',
+                      'This item was raised to ¥${manipulation.promotionPrice?.toStringAsFixed(0)} before the sale, '
+                      'then "dropped" to ¥${manipulation.currentPrice?.toStringAsFixed(0)} — '
+                      'about the same as the earlier ¥${manipulation.prePromotionPrice?.toStringAsFixed(0)}. '
+                      'The "discount" may not be a real deal.',
                     ),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onErrorContainer,

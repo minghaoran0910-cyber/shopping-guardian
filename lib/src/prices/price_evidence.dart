@@ -11,7 +11,6 @@ class PriceManipulation {
     this.prePromotionPrice,
     this.promotionPrice,
     this.currentPrice,
-    this.explanation,
   });
 
   /// Whether a likely manipulation pattern was found.
@@ -25,9 +24,6 @@ class PriceManipulation {
 
   /// The current (post-"drop") price.
   final double? currentPrice;
-
-  /// Human-readable explanation in the user's locale.
-  final String? explanation;
 
   static const none = PriceManipulation(detected: false);
 }
@@ -167,11 +163,6 @@ class PriceEvidence {
       prePromotionPrice: minPrice,
       promotionPrice: maxPrice,
       currentPrice: currentPrice,
-      explanation:
-          '这个商品在促销前先涨价了 ¥${maxPrice.toStringAsFixed(0)}，'
-          '现在"降"回 ¥${currentPrice.toStringAsFixed(0)}，'
-          '和之前 ¥${minPrice.toStringAsFixed(0)} 差不多。'
-          '所谓的折扣可能不是真的便宜。',
     );
   }
 }
