@@ -31,6 +31,7 @@ import 'prices/price_monitor_service.dart';
 import 'prices/price_evidence.dart';
 import 'prices/price_watch.dart';
 import 'prices/price_watch_store.dart';
+import 'prices/price_sparkline.dart';
 import 'profile/consumer_profile.dart';
 import 'profile/consumer_profile_generator.dart';
 import 'profile/consumer_profile_store.dart';

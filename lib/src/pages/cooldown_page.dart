@@ -323,6 +323,7 @@ class _PriceEvidenceSummary extends StatelessWidget {
     final current = evidence.current;
     final reference = evidence.reference;
     final recentLow = evidence.recentLow;
+    final manipulation = evidence.manipulation;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -333,10 +334,52 @@ class _PriceEvidenceSummary extends StatelessWidget {
               '目标 ¥${watch.targetPrice.toStringAsFixed(2)}',
               'Target ¥${watch.targetPrice.toStringAsFixed(2)}',
             ),
-            if (watch.lastError != null) copy.t('上次检查失败', 'Last check failed'),
+            if (watch.lastError != null)
+              copy.t('上次检查失败', 'Last check failed'),
           ].join(' · '),
         ),
         const SizedBox(height: 8),
+        // Sparkline
+        if (evidence.recentHistory.length >= 2) ...[
+          PriceSparkline(snapshots: evidence.recentHistory),
+          const SizedBox(height: 6),
+        ],
+        // Manipulation warning
+        if (manipulation.detected) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Theme.of(context).colorScheme.onErrorContainer,
+                  size: 18,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    copy.t(
+                      manipulation.explanation ?? '可能存在先涨后降',
+                      manipulation.explanation ??
+                          'Possible price manipulation detected',
+                    ),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+        ],
         _PriceEvidenceLine(
           label: copy.t('当前价', 'Current'),
           snapshot: current,
@@ -402,7 +445,7 @@ class _PriceEvidenceLine extends StatelessWidget {
   }
 
   String _sourceName(String source) => switch (source) {
-    'justoneapi' => 'JustOneAPI',
-    _ => source,
-  };
+        'justoneapi' => 'JustOneAPI',
+        _ => source,
+      };
 }
