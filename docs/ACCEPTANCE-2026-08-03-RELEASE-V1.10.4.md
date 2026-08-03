@@ -1,7 +1,8 @@
 # v1.10.4 发布验收
 
 发布日期：2026-08-03  
-发布目标：待创建 tag 的 `main` HEAD。
+Release：[v1.10.4](https://github.com/minghaoran0910-cyber/shopping-guardian/releases/tag/v1.10.4)  
+发布目标：`43f337beed6226f6c1ac4d977e66a643a5dbd3c9`。
 
 ## 本轮内容
 
@@ -18,6 +19,7 @@
 - iOS Simulator：已有物品、消费人格保存与分享卡、可选外部历史价格设置已人工验收。
 - 本地 Android Release APK、macOS Release App 与 iOS Simulator App 均验证版本为 `1.10.4+39`。
 - macOS 发布 ZIP 压缩包完整性校验通过。
+- GitHub Actions 全部通过：Apple [#30798474448](https://github.com/minghaoran0910-cyber/shopping-guardian/actions/runs/30798474448)、Android [#30798474411](https://github.com/minghaoran0910-cyber/shopping-guardian/actions/runs/30798474411)、Windows [#30798474529](https://github.com/minghaoran0910-cyber/shopping-guardian/actions/runs/30798474529)。
 
 ## 发布资产
 
