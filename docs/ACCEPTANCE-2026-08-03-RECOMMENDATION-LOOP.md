@@ -33,4 +33,4 @@
 - Android Release：成功，APK 96.2MB。首轮环境中取消的 Gradle daemon 未释放 busy 状态；停止失效 daemon、显式使用 JDK 17 后重建成功。
 - macOS Release：成功，应用 55.0MB；仅有既有的 objective_c/sqlite3 framework 命名警告。
 - iOS Simulator：Xcode 构建成功。
-- Windows Release：待 GitHub Windows Runner 对最终提交验证。
+- 最终提交 `bdf0882` 的三条 GitHub Actions 均通过：Android `30781746149`、Apple `30781746163`、Windows `30781746174`。Windows Runner 完成静态检查、217 项测试、Release 编译、便携 ZIP 打包和 artifact 上传。
