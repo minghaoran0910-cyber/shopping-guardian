@@ -8,6 +8,7 @@ class PurchaseListDraft {
     this.purchasePrice,
     this.acquiredAt,
     this.notes,
+    this.itemType,
     this.included = true,
     this.error,
   });
@@ -18,6 +19,7 @@ class PurchaseListDraft {
   final double? purchasePrice;
   final DateTime? acquiredAt;
   final String? notes;
+  final String? itemType;
   final bool included;
   final String? error;
 
@@ -30,6 +32,7 @@ class PurchaseListDraft {
     double? purchasePrice,
     DateTime? acquiredAt,
     String? notes,
+    String? itemType,
     bool? included,
     String? error,
     bool clearPrice = false,
@@ -42,6 +45,7 @@ class PurchaseListDraft {
     purchasePrice: clearPrice ? null : purchasePrice ?? this.purchasePrice,
     acquiredAt: clearDate ? null : acquiredAt ?? this.acquiredAt,
     notes: notes ?? this.notes,
+    itemType: itemType ?? this.itemType,
     included: included ?? this.included,
     error: clearError ? null : error ?? this.error,
   );
@@ -79,9 +83,8 @@ class PurchaseListParser {
           status: status,
           purchasePrice: price,
           acquiredAt: date,
-          notes: fields.length > 5
-              ? fields.sublist(5).join(separator).trim()
-              : null,
+          notes: fields.elementAtOrNull(5),
+          itemType: _itemType(category, fields.elementAtOrNull(6)),
           error: errors.isEmpty ? null : errors.join(','),
         ),
       );
@@ -106,6 +109,15 @@ class PurchaseListParser {
       '已退货' || '退货' || 'returned' => 'returned',
       _ => 'unknown',
     };
+  }
+
+  static String? _itemType(String category, String? value) {
+    final normalized = value?.trim();
+    return OwnedItemTemplates.supportsItemType(category, normalized)
+        ? normalized?.isEmpty == true
+              ? null
+              : normalized
+        : null;
   }
 
   static double? _price(String? value) {

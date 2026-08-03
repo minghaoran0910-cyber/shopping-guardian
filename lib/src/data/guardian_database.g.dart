@@ -3415,6 +3415,17 @@ class $OwnedItemsTable extends OwnedItems
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _itemTypeMeta = const VerificationMeta(
+    'itemType',
+  );
+  @override
+  late final GeneratedColumn<String> itemType = GeneratedColumn<String>(
+    'item_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _purchasePriceMeta = const VerificationMeta(
     'purchasePrice',
   );
@@ -3467,6 +3478,7 @@ class $OwnedItemsTable extends OwnedItems
     status,
     quantity,
     notes,
+    itemType,
     purchasePrice,
     acquiredAt,
     createdAt,
@@ -3523,6 +3535,12 @@ class $OwnedItemsTable extends OwnedItems
       context.handle(
         _notesMeta,
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('item_type')) {
+      context.handle(
+        _itemTypeMeta,
+        itemType.isAcceptableOrUnknown(data['item_type']!, _itemTypeMeta),
       );
     }
     if (data.containsKey('purchase_price')) {
@@ -3589,6 +3607,10 @@ class $OwnedItemsTable extends OwnedItems
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      itemType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}item_type'],
+      ),
       purchasePrice: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}purchase_price'],
@@ -3621,6 +3643,7 @@ class StoredOwnedItem extends DataClass implements Insertable<StoredOwnedItem> {
   final String status;
   final int quantity;
   final String? notes;
+  final String? itemType;
   final double? purchasePrice;
   final DateTime? acquiredAt;
   final DateTime createdAt;
@@ -3632,6 +3655,7 @@ class StoredOwnedItem extends DataClass implements Insertable<StoredOwnedItem> {
     required this.status,
     required this.quantity,
     this.notes,
+    this.itemType,
     this.purchasePrice,
     this.acquiredAt,
     required this.createdAt,
@@ -3647,6 +3671,9 @@ class StoredOwnedItem extends DataClass implements Insertable<StoredOwnedItem> {
     map['quantity'] = Variable<int>(quantity);
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || itemType != null) {
+      map['item_type'] = Variable<String>(itemType);
     }
     if (!nullToAbsent || purchasePrice != null) {
       map['purchase_price'] = Variable<double>(purchasePrice);
@@ -3669,6 +3696,9 @@ class StoredOwnedItem extends DataClass implements Insertable<StoredOwnedItem> {
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      itemType: itemType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(itemType),
       purchasePrice: purchasePrice == null && nullToAbsent
           ? const Value.absent()
           : Value(purchasePrice),
@@ -3692,6 +3722,7 @@ class StoredOwnedItem extends DataClass implements Insertable<StoredOwnedItem> {
       status: serializer.fromJson<String>(json['status']),
       quantity: serializer.fromJson<int>(json['quantity']),
       notes: serializer.fromJson<String?>(json['notes']),
+      itemType: serializer.fromJson<String?>(json['itemType']),
       purchasePrice: serializer.fromJson<double?>(json['purchasePrice']),
       acquiredAt: serializer.fromJson<DateTime?>(json['acquiredAt']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -3708,6 +3739,7 @@ class StoredOwnedItem extends DataClass implements Insertable<StoredOwnedItem> {
       'status': serializer.toJson<String>(status),
       'quantity': serializer.toJson<int>(quantity),
       'notes': serializer.toJson<String?>(notes),
+      'itemType': serializer.toJson<String?>(itemType),
       'purchasePrice': serializer.toJson<double?>(purchasePrice),
       'acquiredAt': serializer.toJson<DateTime?>(acquiredAt),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -3722,6 +3754,7 @@ class StoredOwnedItem extends DataClass implements Insertable<StoredOwnedItem> {
     String? status,
     int? quantity,
     Value<String?> notes = const Value.absent(),
+    Value<String?> itemType = const Value.absent(),
     Value<double?> purchasePrice = const Value.absent(),
     Value<DateTime?> acquiredAt = const Value.absent(),
     DateTime? createdAt,
@@ -3733,6 +3766,7 @@ class StoredOwnedItem extends DataClass implements Insertable<StoredOwnedItem> {
     status: status ?? this.status,
     quantity: quantity ?? this.quantity,
     notes: notes.present ? notes.value : this.notes,
+    itemType: itemType.present ? itemType.value : this.itemType,
     purchasePrice: purchasePrice.present
         ? purchasePrice.value
         : this.purchasePrice,
@@ -3748,6 +3782,7 @@ class StoredOwnedItem extends DataClass implements Insertable<StoredOwnedItem> {
       status: data.status.present ? data.status.value : this.status,
       quantity: data.quantity.present ? data.quantity.value : this.quantity,
       notes: data.notes.present ? data.notes.value : this.notes,
+      itemType: data.itemType.present ? data.itemType.value : this.itemType,
       purchasePrice: data.purchasePrice.present
           ? data.purchasePrice.value
           : this.purchasePrice,
@@ -3768,6 +3803,7 @@ class StoredOwnedItem extends DataClass implements Insertable<StoredOwnedItem> {
           ..write('status: $status, ')
           ..write('quantity: $quantity, ')
           ..write('notes: $notes, ')
+          ..write('itemType: $itemType, ')
           ..write('purchasePrice: $purchasePrice, ')
           ..write('acquiredAt: $acquiredAt, ')
           ..write('createdAt: $createdAt, ')
@@ -3784,6 +3820,7 @@ class StoredOwnedItem extends DataClass implements Insertable<StoredOwnedItem> {
     status,
     quantity,
     notes,
+    itemType,
     purchasePrice,
     acquiredAt,
     createdAt,
@@ -3799,6 +3836,7 @@ class StoredOwnedItem extends DataClass implements Insertable<StoredOwnedItem> {
           other.status == this.status &&
           other.quantity == this.quantity &&
           other.notes == this.notes &&
+          other.itemType == this.itemType &&
           other.purchasePrice == this.purchasePrice &&
           other.acquiredAt == this.acquiredAt &&
           other.createdAt == this.createdAt &&
@@ -3812,6 +3850,7 @@ class OwnedItemsCompanion extends UpdateCompanion<StoredOwnedItem> {
   final Value<String> status;
   final Value<int> quantity;
   final Value<String?> notes;
+  final Value<String?> itemType;
   final Value<double?> purchasePrice;
   final Value<DateTime?> acquiredAt;
   final Value<DateTime> createdAt;
@@ -3824,6 +3863,7 @@ class OwnedItemsCompanion extends UpdateCompanion<StoredOwnedItem> {
     this.status = const Value.absent(),
     this.quantity = const Value.absent(),
     this.notes = const Value.absent(),
+    this.itemType = const Value.absent(),
     this.purchasePrice = const Value.absent(),
     this.acquiredAt = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -3837,6 +3877,7 @@ class OwnedItemsCompanion extends UpdateCompanion<StoredOwnedItem> {
     required String status,
     this.quantity = const Value.absent(),
     this.notes = const Value.absent(),
+    this.itemType = const Value.absent(),
     this.purchasePrice = const Value.absent(),
     this.acquiredAt = const Value.absent(),
     required DateTime createdAt,
@@ -3855,6 +3896,7 @@ class OwnedItemsCompanion extends UpdateCompanion<StoredOwnedItem> {
     Expression<String>? status,
     Expression<int>? quantity,
     Expression<String>? notes,
+    Expression<String>? itemType,
     Expression<double>? purchasePrice,
     Expression<DateTime>? acquiredAt,
     Expression<DateTime>? createdAt,
@@ -3868,6 +3910,7 @@ class OwnedItemsCompanion extends UpdateCompanion<StoredOwnedItem> {
       if (status != null) 'status': status,
       if (quantity != null) 'quantity': quantity,
       if (notes != null) 'notes': notes,
+      if (itemType != null) 'item_type': itemType,
       if (purchasePrice != null) 'purchase_price': purchasePrice,
       if (acquiredAt != null) 'acquired_at': acquiredAt,
       if (createdAt != null) 'created_at': createdAt,
@@ -3883,6 +3926,7 @@ class OwnedItemsCompanion extends UpdateCompanion<StoredOwnedItem> {
     Value<String>? status,
     Value<int>? quantity,
     Value<String?>? notes,
+    Value<String?>? itemType,
     Value<double?>? purchasePrice,
     Value<DateTime?>? acquiredAt,
     Value<DateTime>? createdAt,
@@ -3896,6 +3940,7 @@ class OwnedItemsCompanion extends UpdateCompanion<StoredOwnedItem> {
       status: status ?? this.status,
       quantity: quantity ?? this.quantity,
       notes: notes ?? this.notes,
+      itemType: itemType ?? this.itemType,
       purchasePrice: purchasePrice ?? this.purchasePrice,
       acquiredAt: acquiredAt ?? this.acquiredAt,
       createdAt: createdAt ?? this.createdAt,
@@ -3925,6 +3970,9 @@ class OwnedItemsCompanion extends UpdateCompanion<StoredOwnedItem> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (itemType.present) {
+      map['item_type'] = Variable<String>(itemType.value);
+    }
     if (purchasePrice.present) {
       map['purchase_price'] = Variable<double>(purchasePrice.value);
     }
@@ -3952,6 +4000,7 @@ class OwnedItemsCompanion extends UpdateCompanion<StoredOwnedItem> {
           ..write('status: $status, ')
           ..write('quantity: $quantity, ')
           ..write('notes: $notes, ')
+          ..write('itemType: $itemType, ')
           ..write('purchasePrice: $purchasePrice, ')
           ..write('acquiredAt: $acquiredAt, ')
           ..write('createdAt: $createdAt, ')
@@ -8850,6 +8899,7 @@ typedef $$OwnedItemsTableCreateCompanionBuilder =
       required String status,
       Value<int> quantity,
       Value<String?> notes,
+      Value<String?> itemType,
       Value<double?> purchasePrice,
       Value<DateTime?> acquiredAt,
       required DateTime createdAt,
@@ -8864,6 +8914,7 @@ typedef $$OwnedItemsTableUpdateCompanionBuilder =
       Value<String> status,
       Value<int> quantity,
       Value<String?> notes,
+      Value<String?> itemType,
       Value<double?> purchasePrice,
       Value<DateTime?> acquiredAt,
       Value<DateTime> createdAt,
@@ -8907,6 +8958,11 @@ class $$OwnedItemsTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get itemType => $composableBuilder(
+    column: $table.itemType,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8970,6 +9026,11 @@ class $$OwnedItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get itemType => $composableBuilder(
+    column: $table.itemType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get purchasePrice => $composableBuilder(
     column: $table.purchasePrice,
     builder: (column) => ColumnOrderings(column),
@@ -9017,6 +9078,9 @@ class $$OwnedItemsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get itemType =>
+      $composableBuilder(column: $table.itemType, builder: (column) => column);
 
   GeneratedColumn<double> get purchasePrice => $composableBuilder(
     column: $table.purchasePrice,
@@ -9076,6 +9140,7 @@ class $$OwnedItemsTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<int> quantity = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> itemType = const Value.absent(),
                 Value<double?> purchasePrice = const Value.absent(),
                 Value<DateTime?> acquiredAt = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -9088,6 +9153,7 @@ class $$OwnedItemsTableTableManager
                 status: status,
                 quantity: quantity,
                 notes: notes,
+                itemType: itemType,
                 purchasePrice: purchasePrice,
                 acquiredAt: acquiredAt,
                 createdAt: createdAt,
@@ -9102,6 +9168,7 @@ class $$OwnedItemsTableTableManager
                 required String status,
                 Value<int> quantity = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> itemType = const Value.absent(),
                 Value<double?> purchasePrice = const Value.absent(),
                 Value<DateTime?> acquiredAt = const Value.absent(),
                 required DateTime createdAt,
@@ -9114,6 +9181,7 @@ class $$OwnedItemsTableTableManager
                 status: status,
                 quantity: quantity,
                 notes: notes,
+                itemType: itemType,
                 purchasePrice: purchasePrice,
                 acquiredAt: acquiredAt,
                 createdAt: createdAt,

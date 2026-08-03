@@ -124,6 +124,7 @@ class OwnedItems extends Table {
   TextColumn get status => text()();
   IntColumn get quantity => integer().withDefault(const Constant(1))();
   TextColumn get notes => text().nullable()();
+  TextColumn get itemType => text().nullable()();
   RealColumn get purchasePrice => real().nullable()();
   DateTimeColumn get acquiredAt => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
@@ -211,7 +212,7 @@ class GuardianDatabase extends _$GuardianDatabase {
   }
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -249,6 +250,11 @@ class GuardianDatabase extends _$GuardianDatabase {
       }
       if (from < 8) {
         await migrator.addColumn(decisions, decisions.priceTimingEvidence);
+      }
+      // Tables created while upgrading pre-v6 databases already use the
+      // current shape. Only the historical v6-v8 owned_items table lacks it.
+      if (from >= 6 && from < 9) {
+        await migrator.addColumn(ownedItems, ownedItems.itemType);
       }
     },
     beforeOpen: (details) async {

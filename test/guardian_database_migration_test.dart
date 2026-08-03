@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shopping_guardian/src/data/guardian_database.dart';
 
 void main() {
-  test('migrates a v1 database through price evidence v8', () async {
+  test('migrates a v1 database through item-type taxonomy v9', () async {
     await GuardianDatabase.resetAfterTesting();
     final database = GuardianDatabase(
       NativeDatabase.memory(
@@ -35,7 +35,7 @@ void main() {
         .get();
     final names = columns.map((row) => row.read<String>('name')).toSet();
 
-    expect(database.schemaVersion, 8);
+    expect(database.schemaVersion, 9);
     expect(
       names,
       containsAll([
@@ -45,6 +45,13 @@ void main() {
         'category',
         'price_timing_evidence',
       ]),
+    );
+    final ownedColumns = await database
+        .customSelect("PRAGMA table_info('owned_items')")
+        .get();
+    expect(
+      ownedColumns.map((row) => row.read<String>('name')),
+      contains('item_type'),
     );
     final priceColumns = await database
         .customSelect("PRAGMA table_info('price_observations')")
@@ -103,6 +110,20 @@ void main() {
               source TEXT NOT NULL
             )
           ''');
+          raw.execute('''
+            CREATE TABLE owned_items (
+              id TEXT NOT NULL PRIMARY KEY,
+              name TEXT NOT NULL,
+              category TEXT NOT NULL,
+              status TEXT NOT NULL,
+              quantity INTEGER NOT NULL,
+              notes TEXT,
+              purchase_price REAL,
+              acquired_at INTEGER,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            )
+          ''');
           raw.execute('PRAGMA user_version = 6');
         },
       ),
@@ -116,6 +137,13 @@ void main() {
     expect(
       columns.map((row) => row.read<String>('name')),
       contains('match_confidence'),
+    );
+    final ownedColumns = await database
+        .customSelect("PRAGMA table_info('owned_items')")
+        .get();
+    expect(
+      ownedColumns.map((row) => row.read<String>('name')),
+      contains('item_type'),
     );
   });
 }

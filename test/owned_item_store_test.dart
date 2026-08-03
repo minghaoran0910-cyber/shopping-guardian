@@ -20,6 +20,7 @@ void main() {
       id: 'owned-1',
       name: '宁芝键盘',
       category: '数码',
+      itemType: '键盘 / 鼠标',
       status: 'in_use',
       quantity: 1,
       notes: '办公室使用',
@@ -33,6 +34,7 @@ void main() {
         id: item.id,
         name: item.name,
         category: item.category,
+        itemType: item.itemType,
         status: 'backup',
         quantity: 2,
         notes: item.notes,
@@ -45,6 +47,7 @@ void main() {
     final saved = (await store.readAll()).single;
     expect(saved.status, 'backup');
     expect(saved.quantity, 2);
+    expect(saved.itemType, '键盘 / 鼠标');
     await store.delete(item.id);
     expect(await store.readAll(), isEmpty);
   });
@@ -108,6 +111,21 @@ void main() {
     expect(() => store.save(item(status: 'lost')), throwsArgumentError);
     expect(() => store.save(item(quantity: 0)), throwsArgumentError);
     expect(() => store.save(item(price: -1)), throwsArgumentError);
+    expect(
+      () => store.save(
+        OwnedItem(
+          id: 'wrong-type',
+          name: '耳机',
+          category: '数码',
+          itemType: '护肤',
+          status: 'in_use',
+          quantity: 1,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      ),
+      throwsArgumentError,
+    );
   });
 
   test('saveAll validates every row before writing any row', () async {

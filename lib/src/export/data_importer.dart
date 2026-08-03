@@ -119,7 +119,7 @@ class DataImporter {
     }
     final document = Map<String, dynamic>.from(decoded);
     final version = document['schema_version'];
-    if (version is! int || version < 1 || version > 9) {
+    if (version is! int || version < 1 || version > 10) {
       throw const DataImportException('不支持这个数据版本，请先升级应用');
     }
 
@@ -313,6 +313,7 @@ class DataImporter {
                 status: item.status,
                 quantity: Value(item.quantity),
                 notes: Value(item.notes),
+                itemType: Value(item.itemType),
                 purchasePrice: Value(item.purchasePrice),
                 acquiredAt: Value(item.acquiredAt),
                 createdAt: item.createdAt,

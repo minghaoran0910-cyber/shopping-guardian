@@ -271,6 +271,7 @@ void main() {
         id: 'analysis-current-headphones',
         name: '正在用的耳机',
         category: '数码',
+        itemType: '耳机 / 音频',
         status: 'in_use',
         quantity: 1,
         notes: '通勤降噪一般',
@@ -281,6 +282,7 @@ void main() {
         id: 'analysis-current-keyboard',
         name: '正在用的键盘',
         category: '数码',
+        itemType: '键盘 / 鼠标',
         status: 'in_use',
         quantity: 1,
         createdAt: now,
@@ -305,16 +307,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('选择要对照的现有物品（0）'), findsOneWidget);
-    await tester.tap(find.text('数码').last);
+    await tester.tap(find.byType(DropdownButtonFormField<String>).last);
     await tester.pumpAndSettle();
-    expect(find.text('选择要对照的现有物品（2）'), findsOneWidget);
-    await tester.tap(find.text('选择要对照的现有物品（2）'));
+    await tester.tap(find.text('耳机 / 音频').last);
+    await tester.pumpAndSettle();
+    expect(find.text('选择要对照的现有物品（1）'), findsOneWidget);
+    await tester.tap(find.text('选择要对照的现有物品（1）'));
     await tester.pumpAndSettle();
     expect(find.text('正在用的耳机'), findsOneWidget);
     expect(find.text('正在用的键盘'), findsOneWidget);
     await tester.tap(find.text('正在用的键盘'));
     await tester.pumpAndSettle();
-    expect(find.text('选择要对照的现有物品（1）'), findsOneWidget);
+    expect(find.text('选择要对照的现有物品（2）'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

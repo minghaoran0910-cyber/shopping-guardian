@@ -8,6 +8,7 @@ class OwnedItem {
     required this.createdAt,
     required this.updatedAt,
     this.notes,
+    this.itemType,
     this.purchasePrice,
     this.acquiredAt,
   });
@@ -18,6 +19,7 @@ class OwnedItem {
   final String status;
   final int quantity;
   final String? notes;
+  final String? itemType;
   final double? purchasePrice;
   final DateTime? acquiredAt;
   final DateTime createdAt;
@@ -32,6 +34,7 @@ class OwnedItem {
     'status': status,
     'quantity': quantity,
     'notes': notes,
+    'itemType': itemType,
     'purchasePrice': purchasePrice,
     'acquiredAt': acquiredAt?.toIso8601String(),
     'createdAt': createdAt.toIso8601String(),
@@ -45,6 +48,7 @@ class OwnedItem {
     status: '${json['status']}',
     quantity: (json['quantity'] as num).toInt(),
     notes: json['notes']?.toString(),
+    itemType: json['itemType']?.toString(),
     purchasePrice: (json['purchasePrice'] as num?)?.toDouble(),
     acquiredAt: json['acquiredAt'] == null
         ? null
@@ -72,4 +76,30 @@ abstract final class OwnedItemTemplates {
     'returned',
     'unknown',
   ];
+
+  static const itemTypesByCategory = <String, List<String>>{
+    '数码': [
+      '耳机 / 音频',
+      '键盘 / 鼠标',
+      '手机 / 平板',
+      '电脑',
+      '显示器 / 投影',
+      '相机 / 智能穿戴',
+      '网络 / 存储',
+    ],
+    '服饰': ['上衣', '裤装', '鞋靴', '包袋', '配饰'],
+    '家居': ['家具', '厨具', '清洁', '家电', '照明 / 收纳'],
+    '兴趣收藏': ['唱片 / 图书', '乐器', '游戏', '模型 / 收藏'],
+    '运动': ['服装', '鞋类', '器材', '户外'],
+    '美妆护理': ['护肤', '彩妆', '个护', '香水'],
+    '其他': [],
+  };
+
+  static List<String> itemTypesFor(String category) =>
+      itemTypesByCategory[category] ?? const [];
+
+  static bool supportsItemType(String category, String? itemType) =>
+      itemType == null ||
+      itemType.trim().isEmpty ||
+      itemTypesFor(category).contains(itemType.trim());
 }

@@ -41,6 +41,7 @@ class OwnedItemStore {
             status: item.status,
             quantity: Value(item.quantity),
             notes: Value(_nullable(item.notes)),
+            itemType: Value(_nullable(item.itemType)),
             purchasePrice: Value(item.purchasePrice),
             acquiredAt: Value(item.acquiredAt),
             createdAt: item.createdAt,
@@ -65,6 +66,7 @@ class OwnedItemStore {
                 status: item.status,
                 quantity: Value(item.quantity),
                 notes: Value(_nullable(item.notes)),
+                itemType: Value(_nullable(item.itemType)),
                 purchasePrice: Value(item.purchasePrice),
                 acquiredAt: Value(item.acquiredAt),
                 createdAt: item.createdAt,
@@ -88,6 +90,9 @@ class OwnedItemStore {
     }
     if (!OwnedItemTemplates.statuses.contains(item.status)) {
       throw ArgumentError.value(item.status, 'status', 'unsupported');
+    }
+    if (!OwnedItemTemplates.supportsItemType(item.category, item.itemType)) {
+      throw ArgumentError.value(item.itemType, 'itemType', 'unsupported');
     }
     if (item.quantity < 1 || item.quantity > 999) {
       throw ArgumentError.value(item.quantity, 'quantity', 'must be 1..999');
@@ -114,6 +119,7 @@ class OwnedItemStore {
     status: row.status,
     quantity: row.quantity,
     notes: row.notes,
+    itemType: row.itemType,
     purchasePrice: row.purchasePrice,
     acquiredAt: row.acquiredAt,
     createdAt: row.createdAt,

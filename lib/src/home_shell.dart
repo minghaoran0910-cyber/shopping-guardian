@@ -1108,6 +1108,7 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
   final reason = TextEditingController();
   final budget = TextEditingController();
   final category = TextEditingController();
+  final itemType = TextEditingController();
   final tags = TextEditingController();
   final selectedOwnedItemIds = <String>{};
   bool ownedItemSelectionTouched = false;
@@ -1122,6 +1123,7 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
     reason.dispose();
     budget.dispose();
     category.dispose();
+    itemType.dispose();
     tags.dispose();
     super.dispose();
   }
@@ -1168,6 +1170,9 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
       final selectedCategory = category.text.trim().isEmpty
           ? null
           : category.text.trim();
+      final selectedItemType = itemType.text.trim().isEmpty
+          ? null
+          : itemType.text.trim();
       final allOwnedItems = await const OwnedItemStore().readAll();
       final ownedItems = ownedItemSelectionTouched
           ? allOwnedItems
@@ -1181,14 +1186,17 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
                 .where(
                   (item) =>
                       item.countsAsCurrentlyOwned &&
-                      selectedCategory != null &&
-                      item.category.trim() == selectedCategory,
+                      (selectedItemType != null
+                          ? item.itemType?.trim() == selectedItemType
+                          : selectedCategory != null &&
+                                item.category.trim() == selectedCategory),
                 )
                 .toList();
       final ownedSummariesByName = <String, String>{
         for (final item in ownedItems)
           item.name.trim().toLowerCase():
               '${item.name} ×${item.quantity}（${_InsightsPageState._statusLabel(copy, item.status)}'
+              '${item.itemType?.isNotEmpty == true ? '；${_InsightsPageState._itemTypeLabel(copy, item.itemType!)}' : ''}'
               '${item.notes?.isNotEmpty == true ? '；${item.notes}' : ''}）',
       };
       for (final record in decisionRecords.where(
@@ -1373,11 +1381,13 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
                     );
                   }
                   final selectedCategory = category.text.trim();
+                  final selectedItemType = itemType.text.trim();
                   final automaticIds = currentItems
                       .where(
-                        (item) =>
-                            selectedCategory.isNotEmpty &&
-                            item.category.trim() == selectedCategory,
+                        (item) => selectedItemType.isNotEmpty
+                            ? item.itemType?.trim() == selectedItemType
+                            : selectedCategory.isNotEmpty &&
+                                  item.category.trim() == selectedCategory,
                       )
                       .map((item) => item.id)
                       .toSet();
@@ -1408,6 +1418,7 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
                             title: Text(ownedItem.name),
                             subtitle: Text(
                               '${_InsightsPageState._categoryLabel(copy, ownedItem.category)} · '
+                              '${ownedItem.itemType?.isNotEmpty == true ? '${_InsightsPageState._itemTypeLabel(copy, ownedItem.itemType!)} · ' : ''}'
                               '${_InsightsPageState._statusLabel(copy, ownedItem.status)}',
                             ),
                             onChanged: analyzing
@@ -1493,6 +1504,27 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                initialValue: itemType.text.isEmpty ? null : itemType.text,
+                decoration: InputDecoration(
+                  labelText: copy.t('细分类（选填）', 'Item type (optional)'),
+                ),
+                items: OwnedItemTemplates.itemTypesFor('数码')
+                    .map(
+                      (value) => DropdownMenuItem(
+                        value: value,
+                        child: Text(
+                          _InsightsPageState._itemTypeLabel(copy, value),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) => setState(() {
+                  itemType.text = value ?? '';
+                  if (value != null) category.text = '数码';
+                }),
               ),
               const SizedBox(height: 14),
               TextField(

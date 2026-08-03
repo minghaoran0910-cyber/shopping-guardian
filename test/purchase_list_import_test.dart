@@ -6,7 +6,7 @@ void main() {
 
   test('parses purchase history without assuming current ownership', () {
     final items = parser.parse(
-      'AirPods Pro | 数码 | 仍在使用 | ¥1,499 | 2024-06-18 | 通勤\n'
+      'AirPods Pro | 数码 | 仍在使用 | ¥1,499 | 2024-06-18 | 通勤 | 耳机 / 音频\n'
       '旧键盘 | 数码 | 已转卖 | 399 | 2022-03-01\n'
       '买过的唱片',
     );
@@ -16,6 +16,7 @@ void main() {
     expect(items[0].purchasePrice, 1499);
     expect(items[0].acquiredAt, DateTime(2024, 6, 18));
     expect(items[0].notes, '通勤');
+    expect(items[0].itemType, '耳机 / 音频');
     expect(items[1].status, 'retired');
     expect(items[2].status, 'unknown');
     expect(items[2].category, '其他');
@@ -43,5 +44,13 @@ void main() {
     expect(items, hasLength(1));
     expect(items.single.category, '其他');
     expect(items.single.status, 'unknown');
+  });
+
+  test('drops an item type that does not belong to its category', () {
+    final item = parser
+        .parse('台灯 | 家居 | 仍在使用 | 99 | 2025-01-01 | 卧室 | 耳机 / 音频')
+        .single;
+
+    expect(item.itemType, isNull);
   });
 }

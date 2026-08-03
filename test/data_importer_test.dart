@@ -121,7 +121,7 @@ void main() {
     final importer = DataImporter();
 
     await expectLater(
-      importer.preview(importJson(version: 10)),
+      importer.preview(importJson(version: 11)),
       throwsA(
         isA<DataImportException>().having(
           (error) => error.message,

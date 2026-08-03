@@ -351,6 +351,7 @@ class _InsightsPageState extends State<InsightsPage> {
       text: existing?.purchasePrice?.toString(),
     );
     var category = existing?.category ?? OwnedItemTemplates.categories.first;
+    var itemType = existing?.itemType;
     var status = existing?.status ?? 'in_use';
     var quantity = existing?.quantity ?? 1;
     final saved = await showDialog<bool>(
@@ -391,8 +392,31 @@ class _InsightsPageState extends State<InsightsPage> {
                           ),
                         )
                         .toList(),
+                    onChanged: (value) => setDialogState(() {
+                      category = value ?? category;
+                      itemType = null;
+                    }),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String?>(
+                    initialValue: itemType,
+                    decoration: InputDecoration(
+                      labelText: copy.t('细分类（选填）', 'Item type (optional)'),
+                    ),
+                    items: [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text(copy.t('暂不填写', 'Not specified')),
+                      ),
+                      ...OwnedItemTemplates.itemTypesFor(category).map(
+                        (value) => DropdownMenuItem<String?>(
+                          value: value,
+                          child: Text(_itemTypeLabel(copy, value)),
+                        ),
+                      ),
+                    ],
                     onChanged: (value) =>
-                        setDialogState(() => category = value ?? category),
+                        setDialogState(() => itemType = value),
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
@@ -500,6 +524,7 @@ class _InsightsPageState extends State<InsightsPage> {
             status: status,
             quantity: quantity,
             notes: notes.text,
+            itemType: itemType,
             purchasePrice: parsedPrice,
             acquiredAt: existing?.acquiredAt,
             createdAt: existing?.createdAt ?? now,
@@ -561,6 +586,7 @@ class _InsightsPageState extends State<InsightsPage> {
     );
     final notes = TextEditingController(text: draft.notes);
     var category = draft.category;
+    var itemType = draft.itemType;
     var status = draft.status;
     String? validationError;
     return showDialog<PurchaseListDraft>(
@@ -600,6 +626,27 @@ class _InsightsPageState extends State<InsightsPage> {
                         .toList(),
                     onChanged: (value) =>
                         setDialogState(() => category = value ?? category),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String?>(
+                    initialValue: itemType,
+                    decoration: InputDecoration(
+                      labelText: copy.t('细分类（选填）', 'Item type (optional)'),
+                    ),
+                    items: [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text(copy.t('暂不填写', 'Not specified')),
+                      ),
+                      ...OwnedItemTemplates.itemTypesFor(category).map(
+                        (value) => DropdownMenuItem<String?>(
+                          value: value,
+                          child: Text(_itemTypeLabel(copy, value)),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) =>
+                        setDialogState(() => itemType = value),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
@@ -674,7 +721,7 @@ class _InsightsPageState extends State<InsightsPage> {
                       final safeNotes = notes.text.replaceAll('|', '／');
                       final parsed = const PurchaseListParser().parse(
                         '${name.text.replaceAll('|', '／')} | $category | '
-                        '$status | ${price.text} | ${date.text} | $safeNotes',
+                        '$status | ${price.text} | ${date.text} | $safeNotes | ${itemType ?? ''}',
                       );
                       if (parsed.isEmpty || !parsed.single.isValid) {
                         setDialogState(() {
@@ -739,6 +786,7 @@ class _InsightsPageState extends State<InsightsPage> {
               draft.purchasePrice?.toString() ?? '',
               '',
               safe(draft.notes),
+              draft.itemType ?? '',
             ].join(' | '),
           )
           .join('\n');
@@ -779,8 +827,8 @@ class _InsightsPageState extends State<InsightsPage> {
                   children: [
                     Text(
                       copy.t(
-                        '每行一件，用“|”分隔：名称 | 分类 | 当前状态 | 当时价格 | 日期 | 备注',
-                        'One item per line, separated by “|”: name | category | current status | price | date | notes',
+                        '每行一件，用“|”分隔：名称 | 分类 | 当前状态 | 当时价格 | 日期 | 备注 | 细分类',
+                        'One item per line: name | category | status | price | date | notes | item type',
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -801,9 +849,9 @@ class _InsightsPageState extends State<InsightsPage> {
                       decoration: InputDecoration(
                         hintText: copy.t(
                           'AirPods Pro | 数码 | 仍在使用 | 1499 | 2024-06-18 | 通勤\n'
-                              '旧键盘 | 数码 | 已转卖 | 399 | 2022-03-01',
-                          'AirPods Pro | 数码 | in_use | 1499 | 2024-06-18 | commute\n'
-                              'Old keyboard | 数码 | retired | 399 | 2022-03-01',
+                              '旧键盘 | 数码 | 已转卖 | 399 | 2022-03-01 | 办公 | 键盘 / 鼠标',
+                          'AirPods Pro | 数码 | in_use | 1499 | 2024-06-18 | commute | 耳机 / 音频\n'
+                              'Old keyboard | 数码 | retired | 399 | 2022-03-01 | work | 键盘 / 鼠标',
                         ),
                       ),
                     ),
@@ -1024,6 +1072,7 @@ class _InsightsPageState extends State<InsightsPage> {
           status: draft.status,
           quantity: 1,
           notes: draft.notes,
+          itemType: draft.itemType,
           purchasePrice: draft.purchasePrice,
           acquiredAt: draft.acquiredAt,
           createdAt: now,
@@ -1065,6 +1114,17 @@ class _InsightsPageState extends State<InsightsPage> {
         '运动' => copy.t('运动', 'Sports'),
         '美妆护理' => copy.t('美妆护理', 'Beauty'),
         _ => copy.t('其他', 'Other'),
+      };
+
+  static String _itemTypeLabel(GuardianCopy copy, String itemType) =>
+      switch (itemType) {
+        '耳机 / 音频' => copy.t('耳机 / 音频', 'Headphones / audio'),
+        '键盘 / 鼠标' => copy.t('键盘 / 鼠标', 'Keyboard / mouse'),
+        '手机 / 平板' => copy.t('手机 / 平板', 'Phone / tablet'),
+        '显示器 / 投影' => copy.t('显示器 / 投影', 'Display / projector'),
+        '相机 / 智能穿戴' => copy.t('相机 / 智能穿戴', 'Camera / wearables'),
+        '网络 / 存储' => copy.t('网络 / 存储', 'Network / storage'),
+        _ => itemType,
       };
 
   static String _statusLabel(GuardianCopy copy, String status) =>
@@ -1151,6 +1211,8 @@ class _InsightsPageState extends State<InsightsPage> {
                           subtitle: Text(
                             [
                               _categoryLabel(copy, item.category),
+                              if (item.itemType?.isNotEmpty == true)
+                                _itemTypeLabel(copy, item.itemType!),
                               _statusLabel(copy, item.status),
                               if (item.notes?.isNotEmpty == true) item.notes!,
                             ].join(' · '),

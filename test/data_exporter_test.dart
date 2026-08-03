@@ -101,7 +101,7 @@ void main() {
 
     expect(await const DataExporter(channel: channel).export(), isTrue);
     final data = jsonDecode(exported!) as Map<String, dynamic>;
-    expect(data['schema_version'], 9);
+    expect(data['schema_version'], 10);
     expect(data['monthly_budget'], 2000);
     expect(data['decisions'], hasLength(1));
     final decision = (data['decisions'] as List).single as Map<String, dynamic>;
