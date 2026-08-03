@@ -213,10 +213,12 @@ void main() {
       expect(field.enableSuggestions, isFalse);
       expect(field.textCapitalization, TextCapitalization.none);
     }
+    await tester.ensureVisible(find.text('English'));
     await tester.tap(find.text('English'));
     await tester.pumpAndSettle();
     expect(find.text('Appearance'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Dark'));
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
     expect(

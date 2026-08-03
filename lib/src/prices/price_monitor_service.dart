@@ -1,9 +1,13 @@
 import '../notifications/local_notification_service.dart';
+import 'external_price_history_config.dart';
+import 'external_price_history_provider.dart';
 import 'price_provider.dart';
 import 'price_watch.dart';
 import 'price_watch_store.dart';
 
 typedef PriceLoader = Future<PriceQuote?> Function(PriceWatch watch);
+typedef ExternalHistoryLoader =
+    Future<List<PriceSnapshot>> Function(PriceWatch watch);
 typedef PriceAlert =
     Future<bool> Function({
       required String id,
@@ -29,6 +33,7 @@ class PriceMonitorService {
     this.notifications = const LocalNotificationService(),
     this.provider = const JustOneApiPriceProvider(),
     this.loader,
+    this.externalHistoryLoader,
     this.alert,
   });
 
@@ -36,6 +41,7 @@ class PriceMonitorService {
   final LocalNotificationService notifications;
   final PriceProvider provider;
   final PriceLoader? loader;
+  final ExternalHistoryLoader? externalHistoryLoader;
   final PriceAlert? alert;
 
   Future<PriceCheckResult> checkAll({
@@ -59,6 +65,18 @@ class PriceMonitorService {
               checkedAt.difference(watch.lastCheckedAt!) >= minimumAge),
     )) {
       try {
+        // History is supplementary evidence only. An unavailable history
+        // endpoint must never make the current price, target alert, or local
+        // ledger fail.
+        final historyLoader =
+            externalHistoryLoader ?? await _configuredHistoryLoader();
+        if (historyLoader != null) {
+          try {
+            await store.addHistoryIfNew(await historyLoader(watch));
+          } on Object {
+            // The current-price result below remains the authoritative check.
+          }
+        }
         final quote = loader == null
             ? await provider.fetch(
                 watch,
@@ -138,5 +156,22 @@ class PriceMonitorService {
       reachedTarget: reached,
       failed: failed,
     );
+  }
+
+  Future<ExternalHistoryLoader?> _configuredHistoryLoader() async {
+    try {
+      final config = await const ExternalPriceHistoryConfigStore().read();
+      final endpoint = config.endpoint;
+      if (endpoint == null) return null;
+      final provider = ExternalPriceHistoryProvider(
+        endpoint: endpoint,
+        token: config.token,
+      );
+      return provider.fetch;
+    } on Object {
+      // Secure preferences can be unavailable during an early app startup or
+      // in a platform test. That is equivalent to the opt-in being disabled.
+      return null;
+    }
   }
 }

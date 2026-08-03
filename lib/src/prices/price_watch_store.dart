@@ -68,6 +68,30 @@ class PriceWatchStore {
         );
   }
 
+  /// Adds externally supplied observations once. Repeated manual checks must
+  /// not turn an unchanged third-party history response into fake trend data.
+  Future<int> addHistoryIfNew(Iterable<PriceSnapshot> observations) async {
+    var added = 0;
+    for (final observation in observations) {
+      final exists =
+          await (_database.select(_database.priceObservations)
+                ..where(
+                  (row) =>
+                      row.watchId.equals(observation.watchId) &
+                      row.observedAt.equals(observation.observedAt) &
+                      row.price.equals(observation.price) &
+                      row.source.equals(observation.source),
+                )
+                ..limit(1))
+              .getSingleOrNull();
+      if (exists == null) {
+        await addObservation(observation);
+        added++;
+      }
+    }
+    return added;
+  }
+
   Future<List<PriceSnapshot>> history(String watchId) async {
     final rows =
         await (_database.select(_database.priceObservations)

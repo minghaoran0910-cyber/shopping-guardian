@@ -29,6 +29,7 @@ import 'patterns/confirmed_pattern_reference.dart';
 import 'patterns/pattern_store.dart';
 import 'patterns/personal_pattern.dart';
 import 'prices/price_monitor_service.dart';
+import 'prices/external_price_history_config.dart';
 import 'prices/price_evidence.dart';
 import 'prices/price_watch.dart';
 import 'prices/price_watch_store.dart';

@@ -8,6 +8,7 @@ class ApiKeyStore {
 
   static const _justOneApiKey = 'justoneapi_token';
   static const _modelApiKey = 'model_api_key';
+  static const _externalPriceHistoryKey = 'external_price_history_token';
   final FlutterSecureStorage storage;
 
   Future<String> readJustOneApiToken() => _read(_justOneApiKey);
@@ -19,6 +20,12 @@ class ApiKeyStore {
   Future<String> readModelApiKey() => _read(_modelApiKey);
 
   Future<void> writeModelApiKey(String value) => _write(_modelApiKey, value);
+
+  Future<String> readExternalPriceHistoryToken() =>
+      _read(_externalPriceHistoryKey);
+
+  Future<void> writeExternalPriceHistoryToken(String value) =>
+      _write(_externalPriceHistoryKey, value);
 
   Future<String> _read(String key) async {
     if (Platform.isMacOS) {

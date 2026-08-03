@@ -428,4 +428,30 @@ void main() {
       });
     },
   );
+
+  test(
+    'keeps current-price monitoring working when external history fails',
+    () async {
+      final now = DateTime(2026, 8, 3, 10);
+      final watch = PriceWatch(
+        id: 'watch-external-history',
+        decisionId: 'decision-external-history',
+        itemName: '测试耳机',
+        platform: ShoppingPlatform.jd,
+        itemId: '123456789',
+        productUrl: Uri.parse('https://item.jd.com/123456789.html'),
+        targetPrice: 800,
+        createdAt: now,
+      );
+      await store.save(watch);
+      final result = await PriceMonitorService(
+        store: store,
+        loader: (_) async => quote(900, now),
+        externalHistoryLoader: (_) async => throw StateError('history offline'),
+      ).checkAll(token: 'test', now: now);
+
+      expect(result.checked, 1);
+      expect((await store.history(watch.id)).single.price, 900);
+    },
+  );
 }

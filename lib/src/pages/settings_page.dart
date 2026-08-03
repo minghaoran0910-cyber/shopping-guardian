@@ -33,6 +33,8 @@ class SettingsPage extends StatelessWidget {
             onSaved: onJustOneApiTokenChanged,
           ),
           const SizedBox(height: 16),
+          const _ExternalPriceHistorySettings(),
+          const SizedBox(height: 16),
           _SettingsSection(
             title: copy.t('关于', 'About'),
             icon: Icons.info_outline,
@@ -592,6 +594,117 @@ class SettingsPage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ExternalPriceHistorySettings extends StatefulWidget {
+  const _ExternalPriceHistorySettings();
+  @override
+  State<_ExternalPriceHistorySettings> createState() =>
+      _ExternalPriceHistorySettingsState();
+}
+
+class _ExternalPriceHistorySettingsState
+    extends State<_ExternalPriceHistorySettings> {
+  final endpoint = TextEditingController();
+  final token = TextEditingController();
+  bool loading = true;
+  bool saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final config = await const ExternalPriceHistoryConfigStore().read();
+      endpoint.text = config.endpoint?.toString() ?? '';
+      token.text = config.token;
+    } on Object {
+      // Platform storage is intentionally absent from screenshot/widget tests.
+      // Treat it like the opt-in has not been configured yet.
+    }
+    if (mounted) setState(() => loading = false);
+  }
+
+  @override
+  void dispose() {
+    endpoint.dispose();
+    token.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = GuardianCopy.of(context);
+    return _SettingsSection(
+      title: copy.t('外部历史价格（可选）', 'External price history (optional)'),
+      icon: Icons.history_outlined,
+      children: [
+        Text(
+          copy.t(
+            '默认关闭。仅在你主动检查价格时，向你配置的服务发送平台和商品 ID；服务必须回传同一商品身份。未配置时仅显示本机记录低价。',
+            'Off by default. Only manual checks send the platform and item ID to your configured service; it must echo the same identity. Without it, lows are local records only.',
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: endpoint,
+          enabled: !loading && !saving,
+          keyboardType: TextInputType.url,
+          decoration: InputDecoration(
+            labelText: copy.t('历史价格服务地址', 'History service URL'),
+            hintText: 'https://example.com/v1/price-history',
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: token,
+          enabled: !loading && !saving,
+          obscureText: true,
+          decoration: InputDecoration(
+            labelText: copy.t('服务令牌（可选）', 'Service token (optional)'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        FilledButton.tonal(
+          onPressed: loading || saving
+              ? null
+              : () async {
+                  setState(() => saving = true);
+                  try {
+                    await const ExternalPriceHistoryConfigStore().save(
+                      endpoint: endpoint.text,
+                      token: token.text,
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            copy.t(
+                              '历史价格服务设置已保存。',
+                              'History service settings saved.',
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  } on FormatException catch (error) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text(error.message)));
+                    }
+                  } finally {
+                    if (mounted) setState(() => saving = false);
+                  }
+                },
+          child: Text(copy.t('保存历史价格设置', 'Save history settings')),
+        ),
+      ],
     );
   }
 }
