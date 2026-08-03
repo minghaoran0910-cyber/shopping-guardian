@@ -130,7 +130,11 @@ class _CooldownPageState extends State<CooldownPage> {
     if (widget.justOneApiToken.trim().isNotEmpty) {
       await const PriceMonitorService().checkAll(token: widget.justOneApiToken);
     }
-    if (mounted) setState(() => data = _load());
+    if (mounted) {
+      setState(() {
+        data = _load();
+      });
+    }
   }
 
   Future<void> _deleteWatch(PriceWatch watch) async {
@@ -334,8 +338,7 @@ class _PriceEvidenceSummary extends StatelessWidget {
               '目标 ¥${watch.targetPrice.toStringAsFixed(2)}',
               'Target ¥${watch.targetPrice.toStringAsFixed(2)}',
             ),
-            if (watch.lastError != null)
-              copy.t('上次检查失败', 'Last check failed'),
+            if (watch.lastError != null) copy.t('上次检查失败', 'Last check failed'),
           ].join(' · '),
         ),
         const SizedBox(height: 8),
@@ -366,13 +369,13 @@ class _PriceEvidenceSummary extends StatelessWidget {
                   child: Text(
                     copy.t(
                       '这个商品在促销前先涨价了 ¥${manipulation.promotionPrice?.toStringAsFixed(0)}，'
-                      '现在"降"回 ¥${manipulation.currentPrice?.toStringAsFixed(0)}，'
-                      '和之前 ¥${manipulation.prePromotionPrice?.toStringAsFixed(0)} 差不多。'
-                      '所谓的折扣可能不是真的便宜。',
+                          '现在"降"回 ¥${manipulation.currentPrice?.toStringAsFixed(0)}，'
+                          '和之前 ¥${manipulation.prePromotionPrice?.toStringAsFixed(0)} 差不多。'
+                          '所谓的折扣可能不是真的便宜。',
                       'This item was raised to ¥${manipulation.promotionPrice?.toStringAsFixed(0)} before the sale, '
-                      'then "dropped" to ¥${manipulation.currentPrice?.toStringAsFixed(0)} — '
-                      'about the same as the earlier ¥${manipulation.prePromotionPrice?.toStringAsFixed(0)}. '
-                      'The "discount" may not be a real deal.',
+                          'then "dropped" to ¥${manipulation.currentPrice?.toStringAsFixed(0)} — '
+                          'about the same as the earlier ¥${manipulation.prePromotionPrice?.toStringAsFixed(0)}. '
+                          'The "discount" may not be a real deal.',
                     ),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onErrorContainer,
@@ -450,7 +453,7 @@ class _PriceEvidenceLine extends StatelessWidget {
   }
 
   String _sourceName(String source) => switch (source) {
-        'justoneapi' => 'JustOneAPI',
-        _ => source,
-      };
+    'justoneapi' => 'JustOneAPI',
+    _ => source,
+  };
 }

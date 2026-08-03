@@ -53,7 +53,11 @@ class _InsightsPageState extends State<InsightsPage> {
     final edited = await _editProfile(profile);
     if (edited == null) return;
     await const ConsumerProfileStore().save(edited);
-    if (mounted) setState(() => data = _load());
+    if (mounted) {
+      setState(() {
+        data = _load();
+      });
+    }
   }
 
   Future<List<int>?> _showProfileQuiz() async {
@@ -1431,7 +1435,11 @@ class _InsightsPageState extends State<InsightsPage> {
                             final edited = await _editProfile(profile);
                             if (edited == null) return;
                             await const ConsumerProfileStore().save(edited);
-                            if (mounted) setState(() => data = _load());
+                            if (mounted) {
+                              setState(() {
+                                data = _load();
+                              });
+                            }
                           },
                           icon: const Icon(Icons.edit_outlined),
                           label: Text(copy.t('修改', 'Edit')),
