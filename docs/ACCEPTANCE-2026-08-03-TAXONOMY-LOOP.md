@@ -21,4 +21,7 @@
 - 物品库拒绝“家居 → 耳机/音频”这类跨分类类型。
 - 清单解析保留有效的耳机/音频类型，丢弃不匹配类型。
 - Widget 路径验证：新耳机只自动预选旧耳机，键盘必须由用户显式加入。
-- 全量 Flutter 测试 218 项通过，静态检查与平台构建/CI结果待发布验收补充。
+- `dart analyze lib test integration_test tool` 通过（0 个 issue）。
+- 全量 Flutter 测试 218/218 通过（排除真机集成标签）。
+- 本地 Release 构建通过：Android APK、macOS App、iOS Simulator App 均为 `1.10.3+38`；APK 已通过 v2 签名校验。
+- GitHub Actions 三端均通过：Apple builds（#30789940550）、Android build（#30789940467）、Windows build（#30789940454）。
