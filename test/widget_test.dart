@@ -6,12 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:shopping_guardian/main.dart';
+import 'package:shopping_guardian/src/data/guardian_database.dart';
 import 'package:shopping_guardian/src/history/decision_store.dart';
 import 'package:shopping_guardian/src/import/share_parser.dart';
 import 'package:shopping_guardian/src/import/shared_text_receiver.dart';
+import 'package:shopping_guardian/src/owned/owned_item.dart';
 import 'package:shopping_guardian/src/owned/owned_item_store.dart';
 import 'package:shopping_guardian/src/prices/price_watch.dart';
 import 'package:shopping_guardian/src/prices/price_watch_store.dart';
+import 'package:shopping_guardian/src/profile/consumer_profile.dart';
+import 'package:shopping_guardian/src/profile/consumer_profile_store.dart';
 
 void main() {
   testWidgets('shows setup choices on first launch', (tester) async {
@@ -250,6 +254,68 @@ void main() {
     expect(find.text('本月剩余预算（选填）'), findsOneWidget);
     expect(find.text('分类（选填）'), findsOneWidget);
     expect(find.text('标签（选填）'), findsOneWidget);
+  });
+
+  testWidgets('lets the user choose the current item used for comparison', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    const store = OwnedItemStore();
+    final now = DateTime.now();
+    for (final item in [
+      OwnedItem(
+        id: 'analysis-current-headphones',
+        name: '正在用的耳机',
+        category: '数码',
+        status: 'in_use',
+        quantity: 1,
+        notes: '通勤降噪一般',
+        createdAt: now,
+        updatedAt: now,
+      ),
+      OwnedItem(
+        id: 'analysis-current-keyboard',
+        name: '正在用的键盘',
+        category: '数码',
+        status: 'in_use',
+        quantity: 1,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ]) {
+      await store.save(item);
+    }
+    addTearDown(() async {
+      await store.delete('analysis-current-headphones');
+      await store.delete('analysis-current-keyboard');
+    });
+
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.tap(find.text('手动填写'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, '商品名称 *'), '新耳机');
+    await tester.enterText(find.widgetWithText(TextField, '价格 *'), '999');
+    await tester.tap(find.text('下一步'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('继续分析'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('选择要对照的现有物品（0）'), findsOneWidget);
+    await tester.tap(find.text('数码').last);
+    await tester.pumpAndSettle();
+    expect(find.text('选择要对照的现有物品（2）'), findsOneWidget);
+    await tester.tap(find.text('选择要对照的现有物品（2）'));
+    await tester.pumpAndSettle();
+    expect(find.text('正在用的耳机'), findsOneWidget);
+    expect(find.text('正在用的键盘'), findsOneWidget);
+    await tester.tap(find.text('正在用的键盘'));
+    await tester.pumpAndSettle();
+    expect(find.text('选择要对照的现有物品（1）'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('previews a manually entered product', (tester) async {
@@ -605,5 +671,38 @@ void main() {
     final imported = items.singleWhere((item) => item.name == '修正后的耳机');
     expect(imported.status, 'unknown');
     expect(imported.purchasePrice, 899);
+  });
+
+  testWidgets('offers both system sharing and image-save fallback', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'onboarding_seen': true});
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await const ConsumerProfileStore().save(
+      ConsumerProfile(
+        title: '冷静规划派',
+        traits: const ['先列清单', '先检查已有物品', '优惠也愿意等一晚'],
+        reminder: '价格再好，也先确认会被真正使用。',
+        source: 'quiz',
+        updatedAt: DateTime(2026, 8, 3),
+      ),
+    );
+    addTearDown(() async {
+      await (GuardianDatabase.instance.delete(
+        GuardianDatabase.instance.appValues,
+      )..where((row) => row.key.equals(ConsumerProfileStore.key))).go();
+    });
+
+    await tester.pumpWidget(const ShoppingGuardianApp());
+    await tester.tap(find.text('习惯'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('冷静规划派'), findsOneWidget);
+    expect(find.text('保存分享卡'), findsOneWidget);
+    expect(find.text('分享'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

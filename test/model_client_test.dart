@@ -143,6 +143,57 @@ void main() {
     expect(advice.summary, contains('重复'));
   });
 
+  test(
+    'cannot recommend buy before comparing a provided current item',
+    () async {
+      final client = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {
+                  'content': jsonEncode({
+                    'verdict': 'buy',
+                    'risk': 'low',
+                    'confidence': 'high',
+                    'summary': '价格不错，可以购买。',
+                    'reasons': ['近期低价'],
+                    'budget_impact': '预算内',
+                    'alternatives': <String>[],
+                    'missing_information': <String>[],
+                    'wait_days': null,
+                    'candidate_facts': <Object>[],
+                    'need_assessment': 'established',
+                    'ownership_relation': 'insufficient',
+                  }),
+                },
+              },
+            ],
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+
+      final advice =
+          await ModelClient(
+            endpoint: 'https://example.com/v1/chat/completions',
+            apiKey: 'test',
+            model: 'test',
+            client: client,
+          ).analyze(
+            itemName: '新耳机',
+            price: 999,
+            reason: '通勤降噪',
+            ownedItems: const ['正在用的耳机（通勤降噪一般）'],
+          );
+
+      expect(advice.verdict, PurchaseVerdict.wait);
+      expect(advice.summary, contains('替代、补充还是重复'));
+      expect(advice.reasons, contains('缺少与现有物品的明确对比'));
+    },
+  );
+
   test('parses structured purchase advice', () async {
     final client = MockClient(
       (request) async => http.Response(

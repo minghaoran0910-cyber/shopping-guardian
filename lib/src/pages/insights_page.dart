@@ -218,22 +218,27 @@ class _InsightsPageState extends State<InsightsPage> {
     return result;
   }
 
+  Future<Uint8List> _profileCardPng() async {
+    final boundary =
+        profileCardKey.currentContext?.findRenderObject()
+            as RenderRepaintBoundary?;
+    if (boundary == null) throw const FormatException();
+    final image = await boundary.toImage(pixelRatio: 3);
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    if (data == null) throw const FormatException();
+    return data.buffer.asUint8List();
+  }
+
   Future<void> _saveProfileCard() async {
     final copy = GuardianCopy.of(context);
     try {
-      final boundary =
-          profileCardKey.currentContext?.findRenderObject()
-              as RenderRepaintBoundary?;
-      if (boundary == null) throw const FormatException();
-      final image = await boundary.toImage(pixelRatio: 3);
-      final data = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (data == null) throw const FormatException();
+      final bytes = await _profileCardPng();
       final location = await getSaveLocation(
         suggestedName: 'shopping-guardian-profile.png',
       );
       if (location == null) return;
       await XFile.fromData(
-        data.buffer.asUint8List(),
+        bytes,
         mimeType: 'image/png',
         name: 'shopping-guardian-profile.png',
       ).saveTo(location.path);
@@ -247,6 +252,49 @@ class _InsightsPageState extends State<InsightsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(copy.t('这台设备暂时无法保存分享卡。', 'Could not save the card.')),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _shareProfileCard(ConsumerProfile profile) async {
+    final copy = GuardianCopy.of(context);
+    try {
+      final bytes = await _profileCardPng();
+      final box =
+          profileCardKey.currentContext?.findRenderObject() as RenderBox?;
+      final origin = box == null
+          ? null
+          : box.localToGlobal(Offset.zero) & box.size;
+      await SharePlus.instance.share(
+        ShareParams(
+          title: copy.t('我的消费人格', 'My spending persona'),
+          text: copy.t(
+            '我的消费人格是“${profile.title}”。娱乐性总结，不是心理或科学测评。${ConsumerProfile.projectUrl}',
+            'My spending persona is “${profile.title}”. For entertainment only, not a psychological or scientific assessment. ${ConsumerProfile.projectUrl}',
+          ),
+          files: [
+            XFile.fromData(
+              bytes,
+              mimeType: 'image/png',
+              name: 'shopping-guardian-profile.png',
+            ),
+          ],
+          fileNameOverrides: const ['shopping-guardian-profile.png'],
+          sharePositionOrigin: origin,
+        ),
+      );
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              copy.t(
+                '这台设备暂时无法打开分享面板，可先保存分享卡。',
+                'Could not open sharing. Save the card instead.',
+              ),
+            ),
           ),
         );
       }
@@ -1326,10 +1374,15 @@ class _InsightsPageState extends State<InsightsPage> {
                           icon: const Icon(Icons.edit_outlined),
                           label: Text(copy.t('修改', 'Edit')),
                         ),
-                        FilledButton.icon(
+                        OutlinedButton.icon(
                           onPressed: _saveProfileCard,
-                          icon: const Icon(Icons.ios_share_outlined),
+                          icon: const Icon(Icons.download_outlined),
                           label: Text(copy.t('保存分享卡', 'Save share card')),
+                        ),
+                        FilledButton.icon(
+                          onPressed: () => _shareProfileCard(profile),
+                          icon: const Icon(Icons.ios_share_outlined),
+                          label: Text(copy.t('分享', 'Share')),
                         ),
                       ],
                     ),

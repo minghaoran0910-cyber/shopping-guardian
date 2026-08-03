@@ -143,6 +143,7 @@ class ModelClient {
           monthlyBudget: monthlyBudget,
           matchedRules: matchedRules,
           minimumRuleWaitDays: minimumRuleWaitDays,
+          ownedItems: ownedItems,
         );
       } on FormatException {
         final repaired = await _complete(requestClient, [
@@ -160,6 +161,7 @@ class ModelClient {
             monthlyBudget: monthlyBudget,
             matchedRules: matchedRules,
             minimumRuleWaitDays: minimumRuleWaitDays,
+            ownedItems: ownedItems,
           );
         } on FormatException {
           throw const ModelClientException('模型两次返回的 JSON 都无法解析');
@@ -276,6 +278,7 @@ class ModelClient {
     required double? monthlyBudget,
     required List<String> matchedRules,
     required int? minimumRuleWaitDays,
+    required List<String> ownedItems,
   }) {
     if (advice.verdict != PurchaseVerdict.buy) return advice;
     if (monthlyBudget != null && price > monthlyBudget) {
@@ -298,6 +301,15 @@ class ModelClient {
         verdict: PurchaseVerdict.skip,
         summary: '它与仍在使用的同类物品重复，低价本身不足以构成购买理由。',
         reasons: [...advice.reasons, '与已有物品重复'],
+      );
+    }
+    if (ownedItems.isNotEmpty &&
+        advice.ownershipRelation == OwnershipRelation.insufficient) {
+      return advice.copyWith(
+        verdict: PurchaseVerdict.wait,
+        summary: '已经提供了正在使用的同类物品，但还没有判断新商品是替代、补充还是重复，先不要直接购买。',
+        reasons: [...advice.reasons, '缺少与现有物品的明确对比'],
+        waitDays: advice.waitDays ?? 1,
       );
     }
     if (advice.needAssessment != NeedAssessment.established) {

@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import 'analysis/analysis_request_summary.dart';
 import 'analysis/analysis_request_review_dialog.dart';
@@ -1108,6 +1109,8 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
   final budget = TextEditingController();
   final category = TextEditingController();
   final tags = TextEditingController();
+  final selectedOwnedItemIds = <String>{};
+  bool ownedItemSelectionTouched = false;
   bool analyzing = false;
   double get total => widget.items.fold<double>(
     0,
@@ -1165,9 +1168,23 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
       final selectedCategory = category.text.trim().isEmpty
           ? null
           : category.text.trim();
-      final ownedItems = await const OwnedItemStore().activeInCategory(
-        selectedCategory,
-      );
+      final allOwnedItems = await const OwnedItemStore().readAll();
+      final ownedItems = ownedItemSelectionTouched
+          ? allOwnedItems
+                .where(
+                  (item) =>
+                      item.countsAsCurrentlyOwned &&
+                      selectedOwnedItemIds.contains(item.id),
+                )
+                .toList()
+          : allOwnedItems
+                .where(
+                  (item) =>
+                      item.countsAsCurrentlyOwned &&
+                      selectedCategory != null &&
+                      item.category.trim() == selectedCategory,
+                )
+                .toList();
       final ownedSummariesByName = <String, String>{
         for (final item in ownedItems)
           item.name.trim().toLowerCase():
@@ -1306,118 +1323,206 @@ class _AnalysisDialogState extends State<_AnalysisDialog> {
       title: Text(copy.t('买它是为了什么？', 'Why do you want this?')),
       content: SizedBox(
         width: 520,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (widget.batchCount > 1) ...[
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.batchCount > 1) ...[
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    copy.t(
+                      '第 ${widget.batchPosition} 件，共 ${widget.batchCount} 件',
+                      'Item ${widget.batchPosition} of ${widget.batchCount}',
+                    ),
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+                const SizedBox(height: 6),
+              ],
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  copy.t(
-                    '第 ${widget.batchPosition} 件，共 ${widget.batchCount} 件',
-                    'Item ${widget.batchPosition} of ${widget.batchCount}',
-                  ),
-                  style: Theme.of(context).textTheme.labelLarge,
+                  [
+                    itemName,
+                    if (item.price != null)
+                      '¥${(item.price! * item.quantity).toStringAsFixed(2)}',
+                  ].join(' · '),
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
-              const SizedBox(height: 6),
-            ],
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                [
-                  itemName,
-                  if (item.price != null)
-                    '¥${(item.price! * item.quantity).toStringAsFixed(2)}',
-                ].join(' · '),
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: reason,
-              minLines: 3,
-              maxLines: 5,
-              decoration: InputDecoration(labelText: copy.t('购买理由', 'Reason')),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: budget,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: copy.t('本月剩余预算（选填）', 'Budget left (optional)'),
-                prefixText: '¥ ',
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: category,
-              decoration: InputDecoration(
-                labelText: copy.t('分类（选填）', 'Category (optional)'),
-                hintText: copy.t('例如：数码、唱片、家居', 'e.g. Tech, Music, Home'),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    copy.t(
-                      '选择与“我的物品”相同的分类，才能进行同类对照。',
-                      'Use the same category as My items to compare them.',
+              FutureBuilder<List<OwnedItem>>(
+                future: const OwnedItemStore().readAll(),
+                builder: (context, snapshot) {
+                  final currentItems = (snapshot.data ?? const <OwnedItem>[])
+                      .where((item) => item.countsAsCurrentlyOwned)
+                      .toList();
+                  if (currentItems.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          copy.t(
+                            '还没有记录正在使用的同类物品；可先到“习惯 → 我的物品”添加当前设备。',
+                            'No current items are recorded. Add your current device under Insights → My items first.',
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    );
+                  }
+                  final selectedCategory = category.text.trim();
+                  final automaticIds = currentItems
+                      .where(
+                        (item) =>
+                            selectedCategory.isNotEmpty &&
+                            item.category.trim() == selectedCategory,
+                      )
+                      .map((item) => item.id)
+                      .toSet();
+                  final effectiveIds = ownedItemSelectionTouched
+                      ? selectedOwnedItemIds
+                      : automaticIds;
+                  return ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: EdgeInsets.zero,
+                    title: Text(
+                      copy.t(
+                        '选择要对照的现有物品（${effectiveIds.length}）',
+                        'Choose current items to compare (${effectiveIds.length})',
+                      ),
                     ),
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: OwnedItemTemplates.categories
+                    subtitle: Text(
+                      copy.t(
+                        '分类只负责自动预选；请只保留真正会被替代、补充或重复的物品。',
+                        'Category only preselects items. Keep only items this purchase may replace, complement, or duplicate.',
+                      ),
+                    ),
+                    children: currentItems
                         .map(
-                          (value) => ActionChip(
-                            label: Text(
-                              _InsightsPageState._categoryLabel(copy, value),
+                          (ownedItem) => CheckboxListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            value: effectiveIds.contains(ownedItem.id),
+                            title: Text(ownedItem.name),
+                            subtitle: Text(
+                              '${_InsightsPageState._categoryLabel(copy, ownedItem.category)} · '
+                              '${_InsightsPageState._statusLabel(copy, ownedItem.status)}',
                             ),
-                            onPressed: () => setState(() {
-                              category.text = value;
-                            }),
+                            onChanged: analyzing
+                                ? null
+                                : (selected) {
+                                    setState(() {
+                                      if (!ownedItemSelectionTouched) {
+                                        selectedOwnedItemIds
+                                          ..clear()
+                                          ..addAll(automaticIds);
+                                        ownedItemSelectionTouched = true;
+                                      }
+                                      if (selected == true) {
+                                        selectedOwnedItemIds.add(ownedItem.id);
+                                      } else {
+                                        selectedOwnedItemIds.remove(
+                                          ownedItem.id,
+                                        );
+                                      }
+                                    });
+                                  },
                           ),
                         )
                         .toList(),
-                  ),
-                ],
+                  );
+                },
               ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: tags,
-              decoration: InputDecoration(
-                labelText: copy.t('标签（选填）', 'Tags (optional)'),
-                hintText: copy.t('用逗号分隔', 'Separate with commas'),
+              const SizedBox(height: 14),
+              TextField(
+                controller: reason,
+                minLines: 3,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  labelText: copy.t('购买理由', 'Reason'),
+                ),
               ),
-            ),
-            FutureBuilder<List<ConsumptionRule>>(
-              future: const ConsumptionRuleStore().matching(total),
-              builder: (context, snapshot) {
-                final rules = snapshot.data ?? const [];
-                if (rules.isEmpty) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(top: 14),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
+              const SizedBox(height: 14),
+              TextField(
+                controller: budget,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: copy.t('本月剩余预算（选填）', 'Budget left (optional)'),
+                  prefixText: '¥ ',
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: category,
+                decoration: InputDecoration(
+                  labelText: copy.t('分类（选填）', 'Category (optional)'),
+                  hintText: copy.t('例如：数码、唱片、家居', 'e.g. Tech, Music, Home'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
                       copy.t(
-                        '本次命中：${rules.map((rule) => rule.name).join('、')}',
-                        'Matched: ${rules.map((rule) => rule.name).join(', ')}',
+                        '选择与“我的物品”相同的分类，才能进行同类对照。',
+                        'Use the same category as My items to compare them.',
+                      ),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: OwnedItemTemplates.categories
+                          .map(
+                            (value) => ActionChip(
+                              label: Text(
+                                _InsightsPageState._categoryLabel(copy, value),
+                              ),
+                              onPressed: () => setState(() {
+                                category.text = value;
+                              }),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: tags,
+                decoration: InputDecoration(
+                  labelText: copy.t('标签（选填）', 'Tags (optional)'),
+                  hintText: copy.t('用逗号分隔', 'Separate with commas'),
+                ),
+              ),
+              FutureBuilder<List<ConsumptionRule>>(
+                future: const ConsumptionRuleStore().matching(total),
+                builder: (context, snapshot) {
+                  final rules = snapshot.data ?? const [];
+                  if (rules.isEmpty) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        copy.t(
+                          '本次命中：${rules.map((rule) => rule.name).join('、')}',
+                          'Matched: ${rules.map((rule) => rule.name).join(', ')}',
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
-          ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
       actions: [
