@@ -17,6 +17,7 @@ Release：[v1.10.4](https://github.com/minghaoran0910-cyber/shopping-guardian/re
 - `flutter test --exclude-tags=integration`：通过。
 - Android 模拟器（`shopping_guardian_api36`）：通知调度/送达/取消集成测试 2/2 通过；淘宝、京东分享链接解析集成测试通过。
 - iOS Simulator：已有物品、消费人格保存与分享卡、可选外部历史价格设置已人工验收。
+- 补充模拟器集成验收：Android 的安全存储、淘宝/京东分享解析、通知送达与取消均通过；iOS 的安全存储、淘宝/京东分享解析、通知送达与取消均通过。iOS 通知授权弹窗已实际允许后再完成断言。
 - 本地 Android Release APK、macOS Release App 与 iOS Simulator App 均验证版本为 `1.10.4+39`。
 - macOS 发布 ZIP 压缩包完整性校验通过。
 - GitHub Actions 全部通过：Apple [#30798474448](https://github.com/minghaoran0910-cyber/shopping-guardian/actions/runs/30798474448)、Android [#30798474411](https://github.com/minghaoran0910-cyber/shopping-guardian/actions/runs/30798474411)、Windows [#30798474529](https://github.com/minghaoran0910-cyber/shopping-guardian/actions/runs/30798474529)。
